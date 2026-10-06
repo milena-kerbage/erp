@@ -1,5 +1,6 @@
 "use client";
 
+import { authRequest } from "@/lib/auth/client";
 import { useRef, useState } from "react";
 import styled from "@emotion/styled";
 import {
@@ -81,10 +82,10 @@ const ActionRow = styled.div`
 function strength(password: string) {
   if (!password) return null;
   const long = password.length >= 8;
-  const mixed = /\d/.test(password) && /[a-z]/i.test(password);
+  const mixed = /\d/.test(password) && /[\p{L}]/u.test(password) && /[^\p{L}\p{N}\s]/u.test(password);
   if (long && mixed && password.length >= 12) return { ok: true, text: "Senha forte" };
   if (long && mixed) return { ok: true, text: "Senha boa" };
-  return { ok: false, text: "Use pelo menos 8 caracteres, com letras e números." };
+  return { ok: false, text: "Use pelo menos 8 caracteres, com letras, números e símbolos." };
 }
 
 /** Perfil da usuária logada: foto, dados e segurança. */
@@ -99,7 +100,8 @@ export function ProfileSettings() {
   };
   const [draft, setDraft] = useState(saved);
   const [saving, runSave] = usePending();
-  const [changingPassword, runPassword] = usePending(700);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [securityError, setSecurityError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +124,23 @@ export function ProfileSettings() {
     setPasswordOpen(false);
     setPasswords({ current: "", next: "", confirm: "" });
   };
+
+  async function changePassword() {
+    if (changingPassword) return;
+    setChangingPassword(true);
+    setSecurityError(null);
+    try {
+      await authRequest('change-password', { current: passwords.current, password: passwords.next });
+      setPasswordChanged(true);
+      closePassword();
+    } catch (error) { setSecurityError(error instanceof Error ? error.message : 'Não foi possível alterar a senha.'); }
+    finally {setChangingPassword(false); setPasswords({ current: '', next: '', confirm: '' });}
+  }
+  async function signOutOthers() {
+    setSecurityError(null);
+    try { await authRequest('logout-others'); setSignedOut(true); }
+    catch (error) { setSecurityError(error instanceof Error ? error.message : 'Não foi possível encerrar as sessões.'); }
+  }
 
   return (
     <Page>
@@ -229,7 +248,7 @@ export function ProfileSettings() {
                     Alterada agora
                   </Inline>
                 ) : (
-                  "Alterada há 3 meses"
+                  "Senha de acesso ao sistema"
                 )}
               </span>
             </div>
@@ -253,14 +272,16 @@ export function ProfileSettings() {
                   Este navegador
                 </Inline>
               </strong>
-              <span>{signedOut ? "Só este aparelho está conectado." : "Ativo agora. Mais 1 aparelho conectado."}</span>
+              <span>{signedOut ? "Só este aparelho está conectado." : "Sessão atual ativa. Você pode encerrar as outras sessões."}</span>
             </div>
-            <Button variant="ghost" size="sm" icon={SignOutIcon} disabled={signedOut} onClick={() => setSignedOut(true)}>
+            <Button variant="ghost" size="sm" icon={SignOutIcon} disabled={signedOut} onClick={() => void signOutOthers()}>
               Sair dos outros aparelhos
             </Button>
           </ActionRow>
         </Section>
       </div>
+
+      {securityError && !passwordOpen && <p role="alert">{securityError}</p>}
 
       <SaveBar
         visible={dirty}
@@ -298,24 +319,19 @@ export function ProfileSettings() {
               icon={LockSimpleIcon}
               disabled={!canChangePassword}
               loading={changingPassword}
-              onClick={() =>
-                // TODO: enviar para a API (a senha nunca fica guardada no navegador)
-                runPassword(() => {
-                  setPasswordChanged(true);
-                  closePassword();
-                })
-              }
+              onClick={() => void changePassword()}
             >
               Salvar senha
             </Button>
           </>
         }
       >
+        {securityError && <p role="alert">{securityError}</p>}
         <TextField
           label="Senha atual"
           type="password"
           icon={LockSimpleIcon}
-          autoComplete="current-password"
+          autoComplete="off"
           value={passwords.current}
           onChange={(event) => setPasswords({ ...passwords, current: event.target.value })}
         />
@@ -323,7 +339,7 @@ export function ProfileSettings() {
           label="Nova senha"
           type="password"
           icon={KeyIcon}
-          autoComplete="new-password"
+          autoComplete="off"
           value={passwords.next}
           hint={passwordStrength?.ok ? passwordStrength.text : undefined}
           error={passwordStrength && !passwordStrength.ok ? passwordStrength.text : undefined}
@@ -333,7 +349,7 @@ export function ProfileSettings() {
           label="Confirmar nova senha"
           type="password"
           icon={KeyIcon}
-          autoComplete="new-password"
+          autoComplete="off"
           value={passwords.confirm}
           error={mismatch ? "As senhas não são iguais." : undefined}
           onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })}

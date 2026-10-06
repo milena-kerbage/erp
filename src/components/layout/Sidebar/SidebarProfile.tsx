@@ -1,5 +1,6 @@
 "use client";
 
+import { logout } from "@/lib/auth/client";
 import type { ReactNode } from "react";
 import { css } from "@emotion/react";
 import styled from "@emotion/styled";
@@ -212,7 +213,7 @@ export function SidebarProfile({
       <MenuSeparator />
 
       {/* TODO: encerrar a sessão quando a autenticação existir */}
-      <MenuItem icon={SignOutIcon} muted>
+      <MenuItem icon={SignOutIcon} muted onSelect={() => void logout()}>
         Sair
       </MenuItem>
     </Menu>

@@ -1,5 +1,6 @@
 "use client";
 
+import { logout } from "@/lib/auth/client";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -573,8 +574,8 @@ function MobileMenu({ onClose, closing }: { onClose: () => void; closing: boolea
                     </li>
                     {support.map((module) => row(toItem(module)))}
                     <li>
-                      {/* TODO: encerrar a sessão quando a autenticação existir */}
-                      <RowButton type="button" onClick={onClose}>
+
+                      <RowButton type="button" onClick={() => void logout()}>
                         <SignOutIcon size={20} aria-hidden />
                         <span>Sair da conta</span>
                       </RowButton>

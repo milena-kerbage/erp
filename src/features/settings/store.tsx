@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { defaultFunnels, pickFunnel, type Funnel, type FunnelStage } from "@/features/leads/funnels";
 import {
-  currentUserId,
   defaultIntegrations,
   defaultPreferences,
   mockApiKeys,
@@ -86,9 +85,14 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
  * app, então as mudanças aparecem na hora no quadro, nas conversas etc.
  * TODO: trocar pela API quando o back-end existir.
  */
-export function WorkspaceProvider({ children }: { children: ReactNode }) {
+export function WorkspaceProvider({ children, authenticatedUser }: { children: ReactNode; authenticatedUser: { id: string; name: string; email: string } }) {
+  const currentUserId = authenticatedUser.id;
   const [funnels, setFunnels] = useState<readonly Funnel[]>(defaultFunnels);
-  const [members, setMembers] = useState<readonly Member[]>(mockMembers);
+  const [members, setMembers] = useState<readonly Member[]>(() => {
+    const existing = mockMembers.find(member => member.id === authenticatedUser.id);
+    const member: Member = { ...existing, ...authenticatedUser, seed: existing?.seed ?? authenticatedUser.id, role: existing?.role ?? "Administradora", permission: existing?.permission ?? "admin", status: "active", joinedAt: existing?.joinedAt ?? new Date().toISOString().slice(0, 10) };
+    return existing ? mockMembers.map(item => item.id === member.id ? member : item) : [member, ...mockMembers];
+  });
   const [preferences, setPreferences] = useState(defaultPreferences);
   const [integrations, setIntegrations] = useState(defaultIntegrations);
   const [apiKeys, setApiKeys] = useState<readonly ApiKey[]>(mockApiKeys);
