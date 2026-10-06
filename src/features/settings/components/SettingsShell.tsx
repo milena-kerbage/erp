@@ -139,6 +139,7 @@ const Item = styled(Link, transientOptions)<{ $active: boolean }>`
 `;
 
 const Content = styled.div`
+  min-width: 0;
   min-height: 0;
   /* Folga entre a barra de rolagem e a borda do painel */
   margin-right: 4px;

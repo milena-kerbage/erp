@@ -12,6 +12,7 @@ import { formatChange } from "../metrics";
 
 /** Cartão branco da grade: borda fina, cantos suaves e respiro por dentro. */
 export const Card = styled.section`
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing(4)};
@@ -28,6 +29,10 @@ const Head = styled.header`
   justify-content: space-between;
   gap: ${({ theme }) => theme.spacing(3)};
   min-width: 0;
+
+  @container (max-width: 320px) {
+    flex-wrap: wrap;
+  }
 
   > div:first-of-type {
     display: flex;
@@ -154,15 +159,18 @@ export const Eyebrow = styled.span`
 /** Número de destaque dos indicadores. */
 export const Figure = styled.strong`
   display: block;
-  font-size: 1.75rem;
+  min-width: 0;
+  font-size: clamp(1.25rem, 10cqi, 1.75rem);
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   line-height: 1.1;
   letter-spacing: -0.025em;
   color: ${({ theme }) => theme.colors.text.primary};
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 
   small {
-    margin-left: ${({ theme }) => theme.spacing(1.5)};
+    display: block;
+    margin-top: ${({ theme }) => theme.spacing(1)};
     font-size: 0.8125rem;
     font-weight: ${({ theme }) => theme.fontWeights.regular};
     letter-spacing: 0;

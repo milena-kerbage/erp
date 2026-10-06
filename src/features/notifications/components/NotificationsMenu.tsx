@@ -26,13 +26,13 @@ type Tab = "inbox" | "general" | "archived";
 
 const Panel = styled(Surface)`
   gap: 0;
-  max-height: min(36rem, calc(100dvh - 5rem));
+  max-height: min(36rem, calc(var(--app-height, 100dvh) - 5rem));
   padding: 0;
   overflow: hidden;
 
   /* Celular: folha de baixo; alça no topo e a lista vai até embaixo (passa por baixo do dock) */
   ${({ theme }) => theme.media.md} {
-    max-height: min(82dvh, 44rem);
+    max-height: min(calc(var(--app-height, 100dvh) * 0.82), 44rem);
     padding: ${({ theme }) => theme.spacing(5)} 0 0;
   }
 `;

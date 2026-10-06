@@ -266,7 +266,7 @@ export const Budget = styled.span`
 export const CardGrid = styled.div`
   ${staggerChildren(16, 25)};
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
   gap: ${({ theme }) => theme.spacing(3)};
   padding: ${({ theme }) => theme.spacing(1, 5, 5)};
 

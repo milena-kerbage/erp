@@ -153,7 +153,7 @@ const GroupTitle = styled.h3`
 const Grid = styled.div`
   ${staggerChildren(6, 45)};
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
   gap: ${({ theme }) => theme.spacing(3)};
 `;
 

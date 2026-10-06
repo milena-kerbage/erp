@@ -14,7 +14,7 @@ export const Root = styled.div`
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: ${({ theme }) => theme.layout.headerHeight} minmax(0, 1fr);
   height: 100vh;
-  height: 100dvh;
+  height: var(--app-height, 100dvh);
   /* clip (e não hidden): nada consegue rolar a estrutura, nem scrollIntoView/foco */
   overflow: hidden;
   overflow: clip;
@@ -30,7 +30,7 @@ export const Root = styled.div`
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
     height: auto;
-    min-height: 100dvh;
+    min-height: var(--app-height, 100dvh);
     overflow: visible;
     overflow-x: clip;
     /* Fundo branco no celular: o degradê esverdeado destoava do chat e dos cartões */
@@ -46,7 +46,7 @@ export const Root = styled.div`
        fica parada e cada lista rola por dentro */
     &:has([data-fill], [data-flush]) {
       grid-template-rows: minmax(0, 1fr);
-      height: 100dvh;
+      height: var(--app-height, 100dvh);
       min-height: 0;
       overflow: clip;
     }
@@ -90,6 +90,12 @@ export const Main = styled.main`
   flex: 1 0 auto;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+
+  &:has([data-fill], [data-flush]) {
+    flex: 1 1 0;
+  }
+
   padding: ${({ theme }) => theme.spacing(6)};
 
   /* Telas de ponta a ponta (ex.: detalhe do lead) ocupam o painel inteiro */
@@ -110,6 +116,9 @@ export const Main = styled.main`
     /* Sem header: o topo fica logo abaixo da área do relógio */
     padding: calc(${({ theme }) => theme.spacing(3)} + env(safe-area-inset-top)) ${({ theme }) => theme.spacing(4)}
       ${DOCK_SPACE};
+
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
 
     &:has([data-fill]) {
       padding-bottom: calc(${({ theme }) => theme.spacing(2)} + env(safe-area-inset-bottom));

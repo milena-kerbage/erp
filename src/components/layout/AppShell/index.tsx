@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SidebarProvider } from "@/components/layout/Sidebar/SidebarContext";
 import { Main, Panel, Root, SkipLink } from "./styles";
+import { useVisualViewport } from "@/lib/useVisualViewport";
 
 type AppShellProps = {
   children: ReactNode;
@@ -16,6 +17,7 @@ type AppShellProps = {
 
 /** Estrutura das telas internas: header, sidebar e painel de conteúdo. */
 export function AppShell({ children, defaultSidebarExpanded }: AppShellProps) {
+  useVisualViewport();
   return (
     <SidebarProvider defaultExpanded={defaultSidebarExpanded}>
       <HeaderActionsProvider>

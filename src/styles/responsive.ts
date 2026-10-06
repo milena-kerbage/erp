@@ -5,7 +5,7 @@ import styled from "@emotion/styled";
  * primeira tela do servidor já sair certa, sem pular na hidratação.
  */
 
-/** Só no computador (some até 768px). */
+/** Só no computador (some até 1024px). */
 export const WideOnly = styled.span`
   display: contents;
 
@@ -14,7 +14,7 @@ export const WideOnly = styled.span`
   }
 `;
 
-/** Só no celular (até 768px). */
+/** Só no celular (até 1024px). */
 export const NarrowOnly = styled.span`
   display: none;
 

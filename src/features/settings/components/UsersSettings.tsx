@@ -68,7 +68,7 @@ const You = styled.span`
 
 const Legend = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: ${({ theme }) => theme.spacing(3)};
   margin-top: ${({ theme }) => theme.spacing(4)};
 
@@ -85,7 +85,7 @@ const Legend = styled.div`
 const Cards = styled.div`
   ${staggerChildren(12, 30)};
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
   gap: ${({ theme }) => theme.spacing(3)};
 `;
 

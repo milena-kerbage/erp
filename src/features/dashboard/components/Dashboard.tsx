@@ -182,12 +182,13 @@ const HeroTop = styled.div`
 `;
 
 const HeroFigure = styled.strong`
-  font-size: 3rem;
+  font-size: clamp(2rem, 8vw, 3rem);
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   line-height: 1;
   letter-spacing: -0.035em;
   color: ${({ theme }) => theme.colors.text.primary};
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 `;
 
 /** Faixa de quatro números com divisórias, como na referência. */
@@ -247,6 +248,10 @@ const Metrics = styled.div`
   @media (max-width: 1320px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  @media (max-width: 480px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 const MetricRoot = styled(Card)`
@@ -262,6 +267,8 @@ const MetricHead = styled.div`
 
   > span {
     display: inline-flex;
+    flex-wrap: wrap;
+    min-width: 0;
     align-items: center;
     gap: ${({ theme }) => theme.spacing(1.5)};
     padding-top: ${({ theme }) => theme.spacing(1.5)};

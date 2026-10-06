@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 /** Mesmo corte do `theme.media.md`: celular. */
-export const MOBILE_QUERY = "(max-width: 768px)";
+export const MOBILE_QUERY = "(max-width: 1024px)";
 
 /**
  * A media query casa agora? No servidor devolve `false` (primeira tela de

@@ -49,9 +49,8 @@ export async function generateViewport(): Promise<Viewport> {
   return {
     width: "device-width",
     initialScale: 1,
-    // O iOS dá zoom ao focar campos com texto < 16px; com escala máxima 1 ele não
-    // aproxima (e o pinça continua funcionando no iOS)
-    maximumScale: 1,
+    viewportFit: "cover",
+    interactiveWidget: "resizes-content",
     themeColor: buildTheme({ dark, highContrast: accessibility.highContrast }).palette.neutral[0],
   };
 }

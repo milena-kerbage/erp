@@ -212,7 +212,7 @@ export const theme = {
 
   breakpoints: {
     sm: 640,
-    md: 768,
+    md: 1024,
     lg: 1024,
     xl: 1280,
   },
@@ -220,12 +220,12 @@ export const theme = {
   /**
    * Desktop-first: o estilo base é o de desktop e estas queries aplicam
    * ajustes para telas MENORES OU IGUAIS ao breakpoint.
-   * Ex.: `${theme.media.md} { ... }` vale até 768px.
+   * Ex.: `${theme.media.md} { ... }` vale até 1024px.
    */
   media: {
     xl: "@media (max-width: 1280px)",
     lg: "@media (max-width: 1024px)",
-    md: "@media (max-width: 768px)",
+    md: "@media (max-width: 1024px)",
     sm: "@media (max-width: 640px)",
   },
 

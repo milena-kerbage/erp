@@ -87,6 +87,8 @@ export function PageHeader({
 
 const SectionRoot = styled.section`
   display: grid;
+  min-width: 0;
+  > * { min-width: 0; }
   grid-template-columns: 15rem minmax(0, 1fr);
   gap: ${({ theme }) => theme.spacing(8)};
   align-items: start;
@@ -96,8 +98,8 @@ const SectionRoot = styled.section`
     border-top: 1px dashed ${({ theme }) => theme.colors.border.subtle};
   }
 
-  /* Celular: explicação em cima, campos embaixo */
-  ${({ theme }) => theme.media.md} {
+  /* Explicação acima dos campos quando o painel fica estreito. */
+  @media (max-width: 1280px) {
     grid-template-columns: minmax(0, 1fr);
     gap: ${({ theme }) => theme.spacing(3)};
 
@@ -178,7 +180,7 @@ export function Section({
 /** Campos lado a lado (quebra em uma coluna quando falta espaço). */
 export const FieldGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: ${({ theme }) => theme.spacing(4)};
 `;
 
@@ -276,6 +278,13 @@ export function usePending(delay = 550) {
 const SaveBarRoot = styled("div", transientOptions)<{ $visible: boolean }>`
   position: sticky;
   bottom: ${({ theme }) => theme.spacing(4)};
+
+  flex-wrap: wrap;
+
+  > div {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
 
   /* Celular: logo acima do dock flutuante */
   ${({ theme }) => theme.media.md} {
@@ -415,7 +424,7 @@ export function StatCard({
 export const StatGrid = styled.div`
   ${staggerChildren(4, 50)};
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: ${({ theme }) => theme.spacing(3)};
 
   ${({ theme }) => theme.media.md} {

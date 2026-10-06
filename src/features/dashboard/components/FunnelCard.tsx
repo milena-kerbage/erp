@@ -51,6 +51,17 @@ const Row = styled("li", transientOptions)<{ $dim: boolean }>`
     opacity 160ms,
     background-color 160ms;
 
+  @container (max-width: 400px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: ${({ theme }) => theme.spacing(1, 2)};
+    padding-block: ${({ theme }) => theme.spacing(2)};
+
+    > span:first-of-type { grid-column: 1; grid-row: 1; }
+    && > strong { grid-column: 2; grid-row: 1; white-space: normal; overflow-wrap: anywhere; }
+    && > small { grid-column: 1; grid-row: 2; text-align: left; }
+    > em { grid-column: 2; grid-row: 2; }
+  }
+
   &:hover {
     background-color: ${({ theme }) => theme.colors.interactive.hover};
   }

@@ -97,6 +97,7 @@ const Backdrop = styled.div`
 
   /* No celular: folha que sobe de baixo */
   ${({ theme }) => theme.media.md} {
+    bottom: var(--keyboard-inset, 0px);
     align-items: flex-end;
     padding: 0;
   }
@@ -122,8 +123,8 @@ const Panel = styled.div`
   ${({ theme }) => theme.media.md} {
     position: relative;
     width: 100%;
-    height: 88dvh;
-    max-height: 88dvh;
+    height: calc(var(--app-height, 100dvh) * 0.88);
+    max-height: calc(var(--app-height, 100dvh) * 0.88);
     padding-top: ${({ theme }) => theme.spacing(4)};
     ${({ theme }) => sheetStyles(theme)};
 

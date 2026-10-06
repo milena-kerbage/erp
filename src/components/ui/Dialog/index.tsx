@@ -69,6 +69,7 @@ const Backdrop = styled.div`
   }
 
   ${({ theme }) => theme.media.md} {
+    bottom: var(--keyboard-inset, 0px);
     align-items: flex-end;
     padding: 0;
   }
@@ -79,8 +80,8 @@ const Panel = styled("div", transientOptions)<{ $width: string; $height?: string
   display: flex;
   flex-direction: column;
   width: min(${({ $width }) => $width}, 100%);
-  height: ${({ $height }) => ($height ? `min(${$height}, calc(100dvh - 3rem))` : "auto")};
-  max-height: ${({ $height }) => ($height ? "calc(100dvh - 3rem)" : "min(40rem, calc(100dvh - 3rem))")};
+  height: ${({ $height }) => ($height ? `min(${$height}, calc(var(--app-height, 100dvh) - 3rem))` : "auto")};
+  max-height: ${({ $height }) => ($height ? "calc(var(--app-height, 100dvh) - 3rem)" : "min(40rem, calc(var(--app-height, 100dvh) - 3rem))")};
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: ${({ theme }) => theme.radii["2xl"]};
   background-color: ${({ theme }) => theme.palette.neutral[0]};
@@ -94,8 +95,8 @@ const Panel = styled("div", transientOptions)<{ $width: string; $height?: string
   /* Celular: folha de baixo; o fim fica livre para o dock */
   ${({ theme }) => theme.media.md} {
     width: 100%;
-    height: ${({ $height }) => ($height ? "92dvh" : "auto")};
-    max-height: 92dvh;
+    height: ${({ $height }) => ($height ? "calc(var(--app-height, 100dvh) * 0.92)" : "auto")};
+    max-height: calc(var(--app-height, 100dvh) * 0.92);
     padding-top: ${({ theme }) => theme.spacing(3)};
     padding-bottom: ${DOCK_SPACE};
     ${({ theme }) => sheetStyles(theme)};

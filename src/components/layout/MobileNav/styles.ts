@@ -24,12 +24,13 @@ export const Dock = styled.div`
 
   ${({ theme }) => theme.media.md} {
     position: fixed;
-    bottom: calc(${({ theme }) => theme.spacing(4)} + env(safe-area-inset-bottom));
+    bottom: calc(${({ theme }) => theme.spacing(4)} + env(safe-area-inset-bottom) + var(--keyboard-inset, 0px));
     left: 50%;
     z-index: ${({ theme }) => theme.zIndex.toast + 50};
     /* Conteúdo centrado: ao crescer ou encolher, corta igual dos dois lados */
     display: flex;
     justify-content: center;
+    max-width: calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right)));
     height: 3.125rem;
     overflow: hidden;
     border: 1px solid ${({ theme }) => theme.colors.border.subtle};
@@ -241,7 +242,7 @@ export const Sheet = styled.div`
   /* Um pouco mais baixa que a tela: sobra folga no topo */
   top: calc(env(safe-area-inset-top) + ${({ theme }) => theme.spacing(12)});
   right: 0;
-  bottom: 0;
+  bottom: var(--keyboard-inset, 0px);
   left: 0;
   z-index: ${({ theme }) => theme.zIndex.overlay};
   display: flex;

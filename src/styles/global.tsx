@@ -6,6 +6,7 @@ const styles = (theme: Theme) => css`
   html {
     font-size: 100%;
     color-scheme: ${theme.mode};
+    scroll-padding-block: 1rem 6rem;
   }
 
   body {
@@ -62,6 +63,23 @@ const styles = (theme: Theme) => css`
     * {
       scrollbar-width: thin;
       scrollbar-color: ${theme.colors.scrollbar.thumb} transparent;
+    }
+  }
+
+  /* Campos de 16px evitam zoom automático no Safari sem bloquear o zoom manual. */
+  ${theme.media.md} {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    textarea,
+    select {
+      font-size: max(1rem, 16px) !important;
+      scroll-margin-block: 1rem 6rem;
+    }
+  }
+
+  @media (pointer: coarse) {
+    button, a, input, select, textarea { touch-action: manipulation; }
+    button:not([role="switch"]), a[role="button"], input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+      min-height: 44px;
     }
   }
 

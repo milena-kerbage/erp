@@ -71,7 +71,7 @@ export const Surface = styled("div", transientOptions)<{
   display: flex;
   flex-direction: column;
   width: ${({ $width }) => $width};
-  max-height: min(28rem, calc(100dvh - 1rem));
+  max-height: min(28rem, calc(var(--app-height, 100dvh) - 1rem));
   padding: ${({ theme }) => theme.spacing(INSET)};
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: ${({ theme }) => theme.radii.xl};
@@ -97,10 +97,10 @@ export const Surface = styled("div", transientOptions)<{
   ${({ theme }) => theme.media.md} {
     top: auto !important;
     right: 0 !important;
-    bottom: 0 !important;
+    bottom: var(--keyboard-inset, 0px) !important;
     left: 0 !important;
     width: auto !important;
-    max-height: min(78dvh, 42rem);
+    max-height: min(calc(var(--app-height, 100dvh) * 0.78), 42rem);
     /* Itens soltos rolam na própria folha; o fim passa por baixo do dock */
     overflow-y: auto;
     overscroll-behavior: contain;
