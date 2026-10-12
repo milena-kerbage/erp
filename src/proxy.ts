@@ -4,17 +4,31 @@ import { developmentAccess } from './lib/auth/environment';
 import { COOKIE_NAME } from './lib/auth/cookies';
 
 // Verificação em cada requisição, inclusive navegação RSC e prefetch.
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const publicPage = ['/login', '/recuperar-senha', '/redefinir-senha'].includes(path);
+  const publicPage = ['/login', '/recuperar-senha', '/redefinir-senha', '/convite', '/politicas', '/privacidade', '/termos', '/exclusao-de-dados', '/exclusao-de-dados/status', '/cookies', '/politica-de-comunicacao'].includes(path);
   const publicAsset = /^\/(logotipo-horizontal|simbolo|assinatura)-(green|black|white)\.svg$/.test(path) || ['/icon.png', '/apple-icon.png', '/favicon.ico', '/robots.txt'].includes(path);
   const authApi = path.startsWith('/api/auth/');
-  if (!developmentAccess() && !publicPage && !publicAsset && !authApi && !sessionUser(request.cookies.get(COOKIE_NAME)?.value)) {
-    const response = path.startsWith('/api/')
-      ? NextResponse.json({ error: 'Sessão encerrada. Entre novamente.' }, { status: 401 })
-      : NextResponse.redirect(new URL('/login', request.url));
-    response.headers.set('Cache-Control', 'no-store');
-    return response;
+  // ERP Route Handlers validam sessão/papel ou chave de escopo permitido junto aos dados.
+  const erpApi = path === '/api/erp' || path.startsWith('/api/erp/');
+  // Callbacks validam assinatura no próprio handler. As APIs operacionais seguem privadas.
+  const metaCallback = ['/api/whatsapp/webhook', '/api/meta/data-deletion', '/api/meta/data-deletion/status'].includes(path);
+  if (!developmentAccess() && !publicPage && !publicAsset && !authApi && !erpApi && !metaCallback) {
+    let user;
+    try { user = await sessionUser(request.cookies.get(COOKIE_NAME)?.value, false); }
+    catch {
+      const response = NextResponse.json({ error: 'Acesso temporariamente indisponível. Tente novamente.' }, { status: 503 });
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('Referrer-Policy', 'no-referrer');
+      return response;
+    }
+    if (!user) {
+      const response = path.startsWith('/api/')
+        ? NextResponse.json({ error: 'Sessão encerrada. Entre novamente.' }, { status: 401 })
+        : NextResponse.redirect(new URL('/login', request.url));
+      response.headers.set('Cache-Control', 'no-store');
+      return response;
+    }
   }
   const response = NextResponse.next();
   response.headers.set('Cache-Control', 'private, no-store');

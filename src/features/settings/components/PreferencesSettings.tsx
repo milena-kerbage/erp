@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BellIcon,
   ChatCircleDotsIcon,
@@ -35,9 +35,11 @@ const staleOptions = [1, 2, 3, 5, 7, 15].map((days) => ({
 
 /** Preferências do ateliê: dados de contato, horário, conversas, leads e avisos. */
 export function PreferencesSettings() {
-  const { preferences, updatePreferences } = useWorkspace();
+  const { preferences, updatePreferences, currentUser, loading } = useWorkspace();
   const [draft, setDraft] = useState<Preferences>(preferences);
   const [saving, save] = usePending();
+  const initialized = useRef(false);
+  useEffect(() => { if (!loading && !initialized.current) { setDraft(preferences); initialized.current = true; } }, [loading, preferences]);
 
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -52,7 +54,7 @@ export function PreferencesSettings() {
         description="Como o ateliê funciona no sistema: contato, horário de atendimento, conversas e avisos."
       />
 
-      <div>
+      <fieldset disabled={loading || currentUser.permission !== "admin"} style={{ border: 0, padding: 0, minWidth: 0 }}>
         <Section
           title="Ateliê"
           icon={StorefrontIcon}
@@ -162,7 +164,8 @@ export function PreferencesSettings() {
           <Divider />
           <ToggleRow
             title="Mensagem de ausência"
-            description="Resposta automática quando chega mensagem fora do horário de atendimento."
+            description="Preferência reservada para a futura automação de ausência. O envio automático ainda não está ativo."
+            disabled
             checked={draft.awayMessage}
             onChange={(value) => set("awayMessage", value)}
           />
@@ -194,13 +197,14 @@ export function PreferencesSettings() {
           <Divider />
           <ToggleRow
             title="Distribuir novos leads automaticamente"
-            description="Revezamento entre as pessoas da equipe com acesso ativo."
+            description="Distribuição automática aguarda o executor de regras. Por enquanto, defina a pessoa responsável na oportunidade."
+            disabled
             checked={draft.autoAssign}
             onChange={(value) => set("autoAssign", value)}
           />
         </Section>
 
-        <Section title="Notificações" icon={BellIcon} description="Avisos no sininho do topo e por e-mail.">
+        <Section title="Notificações" icon={BellIcon} description="Preferências de avisos da equipe. O envio por e-mail aguarda o serviço de e-mail.">
           <ToggleRow
             title="Novo lead"
             description="Quando alguém entra por qualquer canal."
@@ -224,16 +228,17 @@ export function PreferencesSettings() {
           <Divider />
           <ToggleRow
             title="Resumo diário por e-mail"
-            description="Às 8h: leads novos, conversas abertas e provas do dia."
+            description="Envio de resumo por e-mail aguarda a configuração do serviço de e-mail e agendamento."
+            disabled
             checked={draft.dailySummary}
             onChange={(value) => set("dailySummary", value)}
           />
         </Section>
-      </div>
+      </fieldset>
 
       <SaveBar
         visible={dirty}
-        disabled={invalid}
+        disabled={invalid || loading || currentUser.permission !== "admin"}
         onDiscard={() => setDraft(preferences)}
         saving={saving}
         onSave={() => save(() => updatePreferences(draft))}

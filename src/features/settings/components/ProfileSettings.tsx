@@ -1,7 +1,9 @@
 "use client";
 
+import { erpRequest } from "@/features/erp/client";
+import type { Member } from "../types";
 import { authRequest } from "@/lib/auth/client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled from "@emotion/styled";
 import {
   BriefcaseIcon,
@@ -27,7 +29,7 @@ import { parsePhone } from "@/features/leads/options";
 import { permissionLabels, useWorkspace } from "../store";
 import { Divider, FieldGrid, Inline, Page, PageHeader, Pill, SaveBar, Section, ToggleRow, usePending } from "./ui";
 
-const MAX_PHOTO = 5 * 1024 * 1024;
+const MAX_PHOTO = 3 * 1024 * 1024;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PhotoRow = styled.div`
@@ -90,7 +92,7 @@ function strength(password: string) {
 
 /** Perfil da usuária logada: foto, dados e segurança. */
 export function ProfileSettings() {
-  const { currentUser, updateMember } = useWorkspace();
+  const { currentUser, updateMember, loading, refresh } = useWorkspace();
   const saved = {
     name: currentUser.name,
     email: currentUser.email,
@@ -105,7 +107,9 @@ export function ProfileSettings() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [twoFactor, setTwoFactor] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const initialized = useRef(false);
+  useEffect(() => { if (!loading && !initialized.current) { setDraft({ name: currentUser.name, email: currentUser.email, phone: currentUser.phone ?? "", role: currentUser.role, avatarUrl: currentUser.avatarUrl ?? null }); initialized.current = true; } }, [loading, currentUser]);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [passwordChanged, setPasswordChanged] = useState(false);
@@ -152,7 +156,7 @@ export function ProfileSettings() {
             <Avatar name={draft.name} seed={currentUser.seed} src={draft.avatarUrl} size="xl" shape="circle" />
             <PhotoActions>
               <div>
-                <Button variant="secondary" size="sm" icon={UploadSimpleIcon} onClick={() => fileRef.current?.click()}>
+                <Button variant="secondary" size="sm" icon={UploadSimpleIcon} loading={uploadingPhoto} onClick={() => fileRef.current?.click()}>
                   Trocar foto
                 </Button>
                 {draft.avatarUrl && (
@@ -160,29 +164,27 @@ export function ProfileSettings() {
                     variant="ghost"
                     size="sm"
                     icon={TrashIcon}
-                    onClick={() => setDraft({ ...draft, avatarUrl: null })}
+                    disabled={uploadingPhoto} onClick={async () => { setUploadingPhoto(true); setPhotoError(null); try { await erpRequest("/profile/photo", "DELETE"); setDraft(current => ({ ...current, avatarUrl: null })); await refresh(); } catch (error) { setPhotoError(error instanceof Error ? error.message : "Não foi possível remover a foto."); } finally { setUploadingPhoto(false); } }}
                   >
                     Remover
                   </Button>
                 )}
               </div>
-              <small>{photoError ?? "JPG ou PNG, até 5 MB. Sem foto, usamos um avatar ilustrado."}</small>
+              <small>{photoError ?? "JPG, PNG ou WebP, até 3 MB. A foto é gravada no servidor."}</small>
             </PhotoActions>
             <input
               ref={fileRef}
               type="file"
               accept="image/png,image/jpeg,image/webp"
               hidden
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (!file) return;
-                if (file.size > MAX_PHOTO) {
-                  setPhotoError("A foto passa de 5 MB. Escolha uma menor.");
-                  return;
-                }
-                setPhotoError(null);
-                setDraft({ ...draft, avatarUrl: URL.createObjectURL(file) });
+              onChange={async (event) => {
+                const file = event.target.files?.[0]; event.target.value = "";
+                if (!file || uploadingPhoto) return;
+                if (file.size > MAX_PHOTO || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setPhotoError("Escolha JPG, PNG ou WebP de até 3 MB."); return; }
+                setUploadingPhoto(true); setPhotoError(null);
+                try { const form = new FormData(); form.append("file", file); const result = await erpRequest<{ currentUser: Member }>("/profile/photo", "POST", form); setDraft(current => ({ ...current, avatarUrl: result.currentUser.avatarUrl ?? null })); await refresh(); }
+                catch (error) { setPhotoError(error instanceof Error ? error.message : "Não foi possível gravar a foto."); }
+                finally { setUploadingPhoto(false); }
               }}
             />
           </PhotoRow>
@@ -203,6 +205,8 @@ export function ProfileSettings() {
           <FieldGrid>
             <TextField
               label="E-mail de acesso"
+              readOnly={loading || currentUser.permission !== "admin"}
+              hint={currentUser.permission !== "admin" ? "A administração altera seu e-mail de acesso. Solicite a mudança à pessoa responsável." : undefined}
               icon={EnvelopeSimpleIcon}
               inputMode="email"
               value={draft.email}
@@ -259,9 +263,10 @@ export function ProfileSettings() {
           <Divider />
           <ToggleRow
             title="Verificação em duas etapas"
-            description="Pede um código do celular ao entrar em um aparelho novo."
-            checked={twoFactor}
-            onChange={setTwoFactor}
+            description="A verificação em duas etapas ainda aguarda implementação. Seu acesso atual usa senha e sessões protegidas."
+            checked={false}
+            disabled
+            onChange={() => {}}
           />
           <Divider />
           <ActionRow>
@@ -285,7 +290,7 @@ export function ProfileSettings() {
 
       <SaveBar
         visible={dirty}
-        disabled={invalid}
+        disabled={invalid || loading || uploadingPhoto}
         onDiscard={() => {
           setDraft(saved);
           setPhotoError(null);
@@ -295,10 +300,9 @@ export function ProfileSettings() {
           runSave(() =>
             updateMember(currentUser.id, {
               name: draft.name.trim(),
-              email: draft.email.trim(),
-              phone: draft.phone || undefined,
+              ...(currentUser.permission === "admin" ? { email: draft.email.trim() } : {}),
+              phone: draft.phone,
               role: draft.role.trim(),
-              avatarUrl: draft.avatarUrl,
             }),
           )
         }

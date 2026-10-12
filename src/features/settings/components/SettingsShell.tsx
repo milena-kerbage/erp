@@ -12,6 +12,7 @@ import {
   SlidersHorizontalIcon,
   UserCircleIcon,
   UsersThreeIcon,
+  WhatsappLogoIcon,
   type Icon,
 } from "@phosphor-icons/react";
 import { isPathActive } from "@/lib/navigation";
@@ -37,6 +38,7 @@ const groups: { label: string; items: { label: string; href: string; icon: Icon 
     label: "Conexões",
     items: [
       { label: "Integrações", href: "/configuracoes/integracoes", icon: PlugsConnectedIcon },
+      { label: "WhatsApp Business", href: "/configuracoes/whatsapp", icon: WhatsappLogoIcon },
       { label: "API e webhooks", href: "/configuracoes/api", icon: CodeIcon },
     ],
   },

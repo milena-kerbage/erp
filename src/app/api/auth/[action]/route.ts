@@ -3,58 +3,69 @@ import nodemailer from 'nodemailer';
 import { COOKIE_NAME, cookieOptions } from '@/lib/auth/cookies';
 import { createVerifiedSession, changeUserPassword, db, digest, findUser, issueReset, limited, normalizeEmail, resetPassword, revokeSession, sessionUser, validEmail, validPassword, verifyPassword } from '@/lib/auth/core';
 import { HttpError, readBody, trustedOrigin } from '@/lib/auth/http';
+import { acceptInvitation, currentMember, recordMemberLogin, ApiError } from '@/lib/erp/access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 const invalidLogin = 'E-mail ou senha incorretos.';
 const recoveryMessage = 'Se houver uma conta com esse e-mail, você receberá as instruções de recuperação.';
 const json = (body: unknown, status = 200) => NextResponse.json(body, {status, headers: {'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'}});
-const rateLimit = (key: string, max: number) => { if (limited(key, max)) throw new HttpError(429, 'Muitas tentativas. Aguarde 15 minutos e tente novamente.'); };
+const rateLimit = async (key: string, max: number) => { if (await limited(key, max)) throw new HttpError(429, 'Muitas tentativas. Aguarde 15 minutos e tente novamente.'); };
 
 export async function POST(request: NextRequest, context: RouteContext<'/api/auth/[action]'>) {
   try {
     const origin = trustedOrigin(request);
     const {action} = await context.params;
-    if (!['login','logout','forgot','reset','change-password','logout-others'].includes(action)) return json({error: 'Recurso não encontrado.'}, 404);
+    if (!['login','logout','forgot','reset','change-password','logout-others','accept-invitation'].includes(action)) return json({error: 'Recurso não encontrado.'}, 404);
     const token = request.cookies.get(COOKIE_NAME)?.value;
     if (action === 'logout') {
-      revokeSession(token);
+      await revokeSession(token);
       const response = json({ok: true});
       response.cookies.set(COOKIE_NAME, '', {...cookieOptions, maxAge: 0});
       response.headers.set('Clear-Site-Data', '"cache", "storage"');
       return response;
     }
     if (action === 'logout-others') {
-      const user = sessionUser(token);
+      const user = await sessionUser(token);
       if (!user || !token) return json({error: 'Sessão encerrada. Entre novamente.'}, 401);
-      db().prepare('DELETE FROM sessions WHERE user_id = ? AND hash != ?').run(user.id, digest(token));
+      await db().prepare('DELETE FROM sessions WHERE user_id = ? AND hash != ?').run(user.id, digest(token));
       return json({ok: true});
     }
     // Limite global persistente evita contornar a proteção alternando e-mails ou IPs falsos.
-    rateLimit(`global:${action}`, action === 'forgot' ? 15 : 60);
+    await rateLimit(`global:${action}`, action === 'forgot' ? 15 : 60);
     const body = await readBody(request);
     if (action === 'login') {
       const email = typeof body.email === 'string' ? normalizeEmail(body.email) : '';
       const password = typeof body.password === 'string' ? body.password : '';
-      rateLimit(`login:${digest(email)}`, 5);
+      await rateLimit(`login:${digest(email)}`, 5);
       if (!validEmail(email) || !validPassword(password)) return json({error: invalidLogin}, 401);
-      const user = findUser(email);
+      const user = await findUser(email);
       if (!await verifyPassword(password, user?.password_hash) || !user) return json({error: invalidLogin}, 401);
-      const session = createVerifiedSession(user);
+      try { await currentMember(user); } catch { return json({error:invalidLogin},401); }
+      const session = await createVerifiedSession(user);
       if (!session) return json({error: invalidLogin}, 401);
-      revokeSession(token);
+      await recordMemberLogin(user.id);
+      await revokeSession(token);
       const response = json({ok: true});
       response.cookies.set(COOKIE_NAME, session, cookieOptions);
       return response;
+    }
+    if (action === 'accept-invitation') {
+      const password = typeof body.password === 'string' ? body.password : '';
+      const invitation = typeof body.token === 'string' ? body.token : '';
+      await rateLimit(`invitation:${digest(invitation)}`,5);
+      if (!validPassword(password)) throw new HttpError(400,'Use de 8 a 128 caracteres, com letras, números e símbolos.');
+      return json(await acceptInvitation(invitation,password));
     }
     if (action === 'forgot') {
       const email = typeof body.email === 'string' ? normalizeEmail(body.email) : '';
       if (!validEmail(email)) throw new HttpError(400, 'Informe um e-mail válido.');
       if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD || !process.env.SMTP_FROM || !process.env.AUTH_ORIGIN) throw new HttpError(503, 'Recuperação por e-mail indisponível. Contate a administração.');
-      if (limited(`forgot:${digest(email)}`, 3)) return json({message: recoveryMessage});
-      const user = findUser(email);
+      if (await limited(`forgot:${digest(email)}`, 3)) return json({message: recoveryMessage});
+      const user = await findUser(email);
       if (user) {
-        const resetToken = issueReset(user);
+        const resetToken = await issueReset(user);
+        if (!resetToken) return json({message: recoveryMessage});
         // SMTP ocorre depois da resposta, evitando revelar a existência da conta pelo tempo de envio.
         after(async () => {
           try {
@@ -71,20 +82,20 @@ export async function POST(request: NextRequest, context: RouteContext<'/api/aut
     if (action === 'reset') {
       const password = typeof body.password === 'string' ? body.password : '';
       const resetToken = typeof body.token === 'string' ? body.token : '';
-      rateLimit(`reset:${digest(resetToken)}`, 5);
+      await rateLimit(`reset:${digest(resetToken)}`, 5);
       if (!validPassword(password)) throw new HttpError(400, 'Use de 8 a 128 caracteres, com letras, números e símbolos.');
       if (!await resetPassword(resetToken, password)) throw new HttpError(400, 'Link inválido ou expirado. Solicite outro link.');
       const response = json({ok: true});
       response.cookies.set(COOKIE_NAME, '', {...cookieOptions, maxAge: 0});
       return response;
     }
-    const user = sessionUser(token);
+    const user = await sessionUser(token);
     if (!user) return json({error: 'Sessão encerrada. Entre novamente.'}, 401);
-    rateLimit(`change:${user.id}`, 5);
+    await rateLimit(`change:${user.id}`, 5);
     const current = typeof body.current === 'string' ? body.current : '';
     const password = typeof body.password === 'string' ? body.password : '';
     if (!validPassword(password)) throw new HttpError(400, 'Use de 8 a 128 caracteres, com letras, números e símbolos.');
-    const record = findUser(user.email);
+    const record = await findUser(user.email);
     if (!current || current.length > 128 || !await verifyPassword(current, record?.password_hash)) throw new HttpError(400, 'Não foi possível alterar a senha. Confira os dados.');
     const session = await changeUserPassword(record!, password);
     if (!session) throw new HttpError(400, 'Não foi possível alterar a senha. Confira os dados.');
@@ -92,7 +103,7 @@ export async function POST(request: NextRequest, context: RouteContext<'/api/aut
     response.cookies.set(COOKIE_NAME, session, cookieOptions);
     return response;
   } catch (error) {
-    if (error instanceof HttpError) {
+    if (error instanceof HttpError || error instanceof ApiError) {
       const response = json({error: error.message}, error.status);
       if (error.status === 429) response.headers.set('Retry-After', '900');
       return response;

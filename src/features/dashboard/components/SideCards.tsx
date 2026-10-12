@@ -149,10 +149,10 @@ export function AttentionCard({ waiting, stale, now }: { waiting: AttentionRow[]
       const hours = row.waitingSince ? (now.getTime() - new Date(row.waitingSince).getTime()) / HOUR : 0;
       return {
         id: `reply-${row.lead.id}`,
-        href: `/conversas?c=${row.lead.id}`,
+        href: `/leads/${row.lead.id}`,
         icon: ChatCircleDotsIcon,
         tone: "blue" as Tone,
-        title: `Responder ${row.lead.name}`,
+        title: `Atendimento de ${row.lead.name}`,
         detail: row.last?.text || "Enviou um anexo",
         badge: `há ${formatAgo(row.waitingSince ?? now.toISOString())}`,
         badgeTone: (hours >= 24 ? "rose" : hours >= 2 ? "peach" : "blue") as Tone,

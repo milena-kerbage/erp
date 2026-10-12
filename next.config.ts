@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  outputFileTracingExcludes: { "*": ["./.data/**/*"] },
+  outputFileTracingExcludes: { "/*": ["./.data/**/*", "./.env*", "./.vercel/**/*"] },
+  outputFileTracingIncludes: {
+    "/api/whatsapp/management/guide": ["./docs/painel-gestor-whatsapp.md", "./docs/whatsapp-meta.md", "./docs/pendencias-implantacao-whatsapp.md"],
+    "/api/erp/documentation": ["./docs/erp-backend.md", "./docs/erp-operacao.md"],
+  },
   // Desenvolvimento: libera abrir pelo IP da rede local (celular na mesma Wi-Fi)
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
   devIndicators: {

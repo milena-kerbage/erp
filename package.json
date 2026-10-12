@@ -7,9 +7,19 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "auth:create-user": "node --experimental-strip-types scripts/create-auth-user.mjs",
+    "auth:create-user": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/create-auth-user.mjs",
+    "erp:authorize-admin": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/authorize-erp-admin.mjs",
     "test:auth": "node --experimental-strip-types --test tests/auth.test.mjs",
-    "test:auth:http": "node --experimental-strip-types tests/auth-http.mjs"
+    "test:auth:http": "node --experimental-strip-types tests/auth-http.mjs",
+    "test:whatsapp": "node --experimental-strip-types --test tests/whatsapp.test.mjs tests/meta-deletion.test.mjs",
+    "test:integrations": "node --experimental-strip-types --test tests/integration-manager.test.mjs",
+    "test:erp": "node --experimental-strip-types --test tests/erp-core.test.mjs tests/erp-access.test.mjs",
+    "test:erp:postgres": "ERP_TEST_POSTGRES=1 node --experimental-strip-types --test tests/erp-core.test.mjs",
+    "test:whatsapp:http": "node --experimental-strip-types tests/whatsapp-http.mjs",
+    "test:postgres": "node --experimental-strip-types tests/postgres.mjs",
+    "meta:deletion": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/meta-deletion.mjs",
+    "whatsapp:check": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/check-whatsapp.mjs",
+    "whatsapp:maintenance": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/whatsapp-maintenance.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^10.7.0",
@@ -18,18 +28,22 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@phosphor-icons/react": "^2.1.10",
-    "next": "16.3.6",
+    "next": "16.3.8",
     "nodemailer": "^10.0.15",
+    "pg": "^8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.9",
+    "@electric-sql/pglite-socket": "^0.2.12",
     "@types/node": "^22.20.5",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5",
-    "@types/nodemailer": "^8.0.2"
+    "typescript": "^5"
   },
   "engines": {
     "node": ">=22.13.0"

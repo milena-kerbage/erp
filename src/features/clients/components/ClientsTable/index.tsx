@@ -18,6 +18,7 @@ import {
   ClockIcon,
   DownloadSimpleIcon,
   PhoneIcon,
+  PlusIcon,
   TableIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react";
@@ -40,6 +41,7 @@ import { formatDate, formatDateTime, formatRelativeTime, parseDateOnly } from "@
 import { formatBudget, formatPhone } from "@/features/leads/format";
 import type { Funnel, FunnelStage } from "@/features/leads/funnels";
 import { useFunnels, useTeam, useWorkspace } from "@/features/settings/store";
+import { NewLeadForm } from "@/features/leads/components/NewLeadForm";
 import { LeadModal } from "../LeadModal";
 import { eventTypes, findChoice, leadSources } from "@/features/leads/options";
 import { useLeads } from "@/features/leads/store";
@@ -202,6 +204,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [scrolled, setScrolled] = useState(false);
   /** Lead aberto no modal (Clientes); dentro de Leads, a linha abre a oportunidade. */
+  const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
   const onScroll = (event: UIEvent<HTMLDivElement>) => {
@@ -521,8 +524,10 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
 
   return (
     <Root data-flush>
+      {creating && <NewLeadForm open onClose={() => setCreating(false)} funnelId={funnelId} />}
       {!embedded && (
         <HeaderActions>
+          <Button icon={PlusIcon} onClick={() => setCreating(true)}>Cadastrar cliente</Button>
           <WideOnly>
             <ViewSwitch
               label="Visualização dos clientes"

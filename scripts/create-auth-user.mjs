@@ -37,8 +37,8 @@ let confirm = await hiddenPassword('Confirme a senha: ');
 try {
   if (password !== confirm) throw new Error('As senhas não são iguais.');
   const hash = await hashPassword(password);
-  const first = !db().prepare('SELECT id FROM users LIMIT 1').get();
-  createUser(email, name, hash, first ? 'user-milena' : newToken());
+  const first = !await db().prepare('SELECT id FROM users LIMIT 1').get();
+  await createUser(email, name, hash, first ? 'user-milena' : newToken());
   stdout.write('Conta criada. Entre em /login com suas credenciais.\n');
 } catch { stdout.write('Não foi possível criar a conta. Verifique se o e-mail já está cadastrado e se a senha tem de 8 a 128 caracteres, com letras, números e símbolos.\n'); process.exitCode = 1; }
-finally {password = ''; confirm = ''; db().close();}
+finally {password = ''; confirm = ''; await db().close();}

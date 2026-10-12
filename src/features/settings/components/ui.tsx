@@ -224,10 +224,12 @@ export function ToggleRow({
   description,
   checked,
   onChange,
+  disabled = false,
 }: {
   title: string;
   description?: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
 }) {
   const id = useId();
@@ -240,6 +242,7 @@ export function ToggleRow({
       <Switch
         id={id}
         checked={checked}
+        disabled={disabled}
         onChange={onChange}
         aria-describedby={description ? `${id}-description` : undefined}
       />
@@ -249,27 +252,16 @@ export function ToggleRow({
 
 /* ---------- Ações com espera ---------- */
 
-/**
- * Estado "processando" das ações que vão depender da API (salvar, convidar,
- * conectar...). Por enquanto simula a espera; troque o timeout pela chamada.
- */
-export function usePending(delay = 550) {
+/** Tracks the actual asynchronous persistence action. */
+export function usePending(_delay?: number) {
   const [pending, setPending] = useState(false);
-  const timer = useRef<number | undefined>(undefined);
-
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-
-  const run = useCallback(
-    (action: () => void) => {
-      setPending(true);
-      timer.current = window.setTimeout(() => {
-        action();
-        setPending(false);
-      }, delay);
-    },
-    [delay],
-  );
-
+  const active = useRef(false);
+  const run = useCallback(async (action: () => unknown | Promise<unknown>) => {
+    if (active.current) return;
+    active.current = true; setPending(true);
+    try { await action(); }
+    finally { active.current = false; setPending(false); }
+  }, []);
   return [pending, run] as const;
 }
 

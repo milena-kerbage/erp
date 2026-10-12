@@ -52,7 +52,9 @@ type ChatComposerProps = {
   quickReplies?: readonly QuickReply[];
   /** Enter envia (padrão). Desligado, Enter quebra a linha e Ctrl/⌘+Enter envia. */
   enterSends?: boolean;
-  onSend: (payload: ComposerSendPayload) => void;
+  onSend: (payload: ComposerSendPayload) => void | boolean | Promise<void | boolean>;
+  sendLabel?: string;
+  placeholder?: string;
   /**
    * Celular: as opções (anexar, respostas, áudio/enviar) vão para o
    * dock flutuante e aqui fica só a caixa de texto. Desligue quando o chat
@@ -287,7 +289,7 @@ const firstName = (name: string) => name.split(" ")[0] ?? name;
  * Shift+Enter quebra a linha.
  */
 export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(function ChatComposer(
-  { recipient, quickReplies = [], enterSends = true, onSend, dock = false, onDockClose, dockCloseLabel },
+  { recipient, quickReplies = [], enterSends = true, onSend, dock = false, onDockClose, dockCloseLabel, sendLabel = "Enviar mensagem", placeholder = "Escreva uma mensagem" },
   ref,
 ) {
   const mobile = useIsMobile();
@@ -298,6 +300,8 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
   const recorderRef = useRef<RecorderState | null>(null);
   const pillRef = useRef<HTMLDivElement>(null);
 
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [recording, setRecording] = useState(false);
@@ -367,12 +371,15 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
     });
   };
 
-  const send = () => {
-    if (!canSend) return;
-    onSend({ text: text.trim(), files });
-    setText("");
-    setFiles([]);
-    textareaRef.current?.focus();
+  const send = async () => {
+    if (!canSend || sendingRef.current) return;
+    sendingRef.current = true; setSending(true); setError(null);
+    try {
+      const result = await onSend({ text: text.trim(), files });
+      if (result === false) { setError("Não foi possível salvar. O texto e os arquivos foram mantidos para tentar novamente."); return; }
+      setText(""); setFiles([]); textareaRef.current?.focus();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível salvar. Tente novamente."); }
+    finally { sendingRef.current = false; setSending(false); }
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -468,15 +475,20 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
     if (!state) return;
     const duration = (Date.now() - state.startedAt) / 1000;
 
-    state.recorder.onstop = () => {
-      if (shouldSend && state.chunks.length > 0) {
+    state.recorder.onstop = async () => {
+      const payload = shouldSend && state.chunks.length > 0 ? (() => {
         const type = state.recorder.mimeType || "audio/webm";
         const extension = type.includes("ogg") ? "ogg" : type.includes("mp4") ? "m4a" : "webm";
-        const file = new File(state.chunks, `audio-${Date.now()}.${extension}`, { type });
-        onSend({ text: "", files: [], audio: { file, duration } });
-      }
-      cleanupRecorder();
-      refocus();
+        return { text: "", files: [], audio: { file: new File(state.chunks, `audio-${Date.now()}.${extension}`, { type }), duration } };
+      })() : null;
+      cleanupRecorder(); refocus();
+      if (!payload) return;
+      sendingRef.current = true; setSending(true);
+      try {
+        const result = await onSend(payload);
+        if (result === false) { addFiles([payload.audio.file]); setError("Não foi possível salvar o áudio. Ele foi mantido nos anexos para tentar novamente."); }
+      } catch (cause) { addFiles([payload.audio.file]); setError(cause instanceof Error ? cause.message : "Não foi possível salvar o áudio."); }
+      finally { sendingRef.current = false; setSending(false); }
     };
     state.recorder.stop();
   };
@@ -506,7 +518,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
           },
         ]
       : [
-          { id: "attach", icon: PaperclipIcon, label: "Anexar arquivos", onClick: () => fileRef.current?.click() },
+          { id: "attach", icon: PaperclipIcon, label: "Anexar arquivos", disabled: sending, onClick: () => fileRef.current?.click() },
           ...(hasQuick
             ? [
                 {
@@ -521,7 +533,8 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             ? {
                 id: "send",
                 icon: PaperPlaneRightIcon,
-                label: "Enviar mensagem",
+                label: sendLabel,
+                disabled: sending,
                 primary: true,
                 onClick: () => handlers.current.send(),
               }
@@ -529,12 +542,13 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
                 id: "mic",
                 icon: MicrophoneIcon,
                 label: "Gravar áudio",
+                disabled: sending,
                 primary: true,
                 onClick: () => void handlers.current.startRecording(),
               },
         ];
     return { items, onClose: onDockClose, closeLabel: dockCloseLabel };
-  }, [mobile, dock, recording, canSend, hasQuick, onDockClose, dockCloseLabel]);
+  }, [mobile, dock, recording, canSend, hasQuick, onDockClose, dockCloseLabel, sending, sendLabel]);
   useDockActionsRegistration(dockActions);
 
   return (
@@ -606,8 +620,9 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
               ref={textareaRef}
               rows={1}
               value={text}
-              aria-label={`Mensagem para ${recipient}`}
-              placeholder="Escreva uma mensagem"
+              aria-label={placeholder}
+              disabled={sending}
+              placeholder={placeholder}
               onChange={(event) => setText(event.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
@@ -658,13 +673,13 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
 
             {canSend ? (
               <Tooltip label="Enviar" side="top">
-                <ActionButton type="button" aria-label="Enviar mensagem" data-tool="" onClick={send}>
+                <ActionButton type="button" aria-label={sendLabel} disabled={sending} data-tool="" onClick={() => void send()}>
                   <PaperPlaneRightIcon size={16} weight="fill" aria-hidden />
                 </ActionButton>
               </Tooltip>
             ) : (
               <Tooltip label="Gravar áudio" side="top">
-                <ActionButton type="button" $soft aria-label="Gravar áudio" data-tool="" onClick={startRecording}>
+                <ActionButton type="button" $soft aria-label="Gravar áudio" disabled={sending} data-tool="" onClick={startRecording}>
                   <MicrophoneIcon size={17} weight="fill" aria-hidden />
                 </ActionButton>
               </Tooltip>

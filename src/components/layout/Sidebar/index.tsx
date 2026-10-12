@@ -10,12 +10,12 @@ import { SidebarItem } from "./SidebarItem";
 import { SidebarProfile } from "./SidebarProfile";
 import { Aside, Footer, List, Nav } from "./styles";
 
-// Placeholder fora do app (até a autenticação existir).
+// Neutral fallback only when rendered outside the authenticated provider.
 const fallbackUser = {
-  name: "Milena Kerbage",
-  role: "Administradora",
-  email: "milena@example.com",
-  seed: "user-milena",
+  name: "Conta",
+  role: "",
+  email: "",
+  seed: "account",
   avatarUrl: null,
 };
 

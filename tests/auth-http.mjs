@@ -17,7 +17,7 @@ async function login() {
   return header.split(';')[0];
 }
 try {
-  createUser(email,'Teste temporário',await hashPassword(password),id);
+  await createUser(email,'Teste temporário',await hashPassword(password),id);
   for (const path of ['/','/leads','/clientes','/conversas','/configuracoes/perfil','/leads/lead-001']) {
     const response=await fetch(origin+path,{redirect:'manual'});
     assert.equal(response.status,307,`${path} precisa bloquear acesso anônimo`);
@@ -41,7 +41,7 @@ try {
   assert.equal(page.status,200);
   assert.match(page.headers.get('cache-control'),/no-store|no-cache/);
   console.log('OK: login real permite acesso e resposta não é armazenada em cache');
-  const other=cookie.split('=')[0]+'='+createSession(id);
+  const other=cookie.split('=')[0]+'='+await createSession(id);
   assert.equal((await post('logout-others',{},cookie)).status,200);
   assert.equal((await fetch(origin+'/',{redirect:'manual',headers:{cookie:other}})).status,307);
   assert.equal((await fetch(origin+'/',{redirect:'manual',headers:{cookie}})).status,200);
@@ -62,7 +62,7 @@ try {
   assert.equal((await fetch(origin+'/',{redirect:'manual',headers:{cookie}})).status,307);
   console.log('OK: logout invalida cookie capturado, inclusive no servidor');
   const fresh=await login();
-  const resetToken=issueReset(findUser(email));
+  const resetToken=await issueReset(await findUser(email));
   assert.equal((await post('reset',{token:resetToken,password:'Nova!Senha12345'})).status,200);
   assert.equal((await post('reset',{token:resetToken,password:'Outra!Senha12345'})).status,400);
   assert.equal((await fetch(origin+'/',{redirect:'manual',headers:{cookie:fresh}})).status,307);
@@ -73,7 +73,7 @@ try {
   }
   console.log('OK: limite de tentativas aplicado pelo backend');
 } finally {
-  db().prepare('DELETE FROM users WHERE id = ?').run(id);
-  for (const key of ['login:'+digest(email),'reset:'+digest(''),...createdKeys]) db().prepare('DELETE FROM attempts WHERE key = ?').run(key);
-  db().close();
+  await db().prepare('DELETE FROM users WHERE id = ?').run(id);
+  for (const key of ['login:'+digest(email),'reset:'+digest(''),...createdKeys]) await db().prepare('DELETE FROM attempts WHERE key = ?').run(key);
+  await db().close();
 }

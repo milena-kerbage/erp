@@ -112,6 +112,7 @@ type LeadProfileProps = {
   onUpdateDetails: (patch: DetailsPatch) => void;
   onAddFiles: (files: FileList | File[]) => void;
   onRemoveFile: (id: string) => void;
+  onArchive: () => void;
 };
 
 /** Ficha da oportunidade: os campos das abas mudam direto no clique. */
@@ -126,6 +127,7 @@ export function LeadProfile({
   onUpdateDetails,
   onAddFiles,
   onRemoveFile,
+  onArchive,
 }: LeadProfileProps) {
   const [tab, setTab] = useState<Tab>("details");
   const { funnels } = useFunnels();
@@ -242,8 +244,7 @@ export function LeadProfile({
                 Link da oportunidade
               </MenuItem>
               <MenuSeparator />
-              {/* TODO: arquivamento quando existir o back-end */}
-              <MenuItem icon={ArchiveIcon} muted>
+              <MenuItem icon={ArchiveIcon} muted onSelect={onArchive}>
                 Arquivar
               </MenuItem>
             </Menu>

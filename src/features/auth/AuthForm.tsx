@@ -65,7 +65,7 @@ const Foot = styled.div`
   margin-top: 1.5rem; font-size: .75rem; color: ${({theme})=>theme.colors.text.muted};
 `;
 
-export function AuthForm({mode = 'login'}: {mode?: 'login' | 'forgot' | 'reset'}) {
+export function AuthForm({mode = 'login'}: {mode?: 'login' | 'forgot' | 'reset' | 'invite'}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -75,7 +75,7 @@ export function AuthForm({mode = 'login'}: {mode?: 'login' | 'forgot' | 'reset'}
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
   useEffect(() => {
-    if (mode === 'reset') { setToken(window.location.hash.slice(1)); window.history.replaceState(null, '', '/redefinir-senha'); }
+    if (mode === 'reset' || mode === 'invite') { const value=window.location.hash.slice(1);setToken(value);if(mode==='invite' && !/^[a-f0-9]{64}$/.test(value)) setError('Use o link de convite recebido da administração. Se expirou, solicite um novo link.');window.history.replaceState(null, '', mode === 'invite' ? '/convite' : '/redefinir-senha'); }
     const clear = () => {setPassword(''); setConfirm(''); setShow(false);};
     window.addEventListener('pagehide', clear);
     return () => window.removeEventListener('pagehide', clear);
@@ -86,29 +86,29 @@ export function AuthForm({mode = 'login'}: {mode?: 'login' | 'forgot' | 'reset'}
     event.preventDefault();
     if (pending) return;
     setError(''); setMessage('');
-    if (mode === 'reset' && password !== confirm) {setError('As senhas não são iguais.'); return;}
+    if ((mode === 'reset' || mode === 'invite') && password !== confirm) {setError('As senhas não são iguais.'); return;}
     setPending(true);
     try {
-      const result = await authRequest(mode === 'login' ? 'login' : mode === 'forgot' ? 'forgot' : 'reset', {email, password, token});
+      const result = await authRequest(mode === 'login' ? 'login' : mode === 'forgot' ? 'forgot' : mode === 'invite' ? 'accept-invitation' : 'reset', {email, password, token});
       if (mode === 'login') window.location.replace('/');
-      else setMessage(mode === 'reset' ? 'Senha redefinida. Entre com sua nova senha.' : result.message);
+      else setMessage(mode === 'invite' ? 'Convite aceito. Entre com o e-mail cadastrado pela administração e sua nova senha.' : mode === 'reset' ? 'Senha redefinida. Entre com sua nova senha.' : result.message);
     } catch (failure) {setError(failure instanceof Error ? failure.message : 'Não foi possível conectar. Tente novamente.');}
     finally {setPassword(''); setConfirm(''); setShow(false); setPending(false);}
   }
-  const title = mode === 'login' ? 'Entre na sua conta' : mode === 'forgot' ? 'Recuperar senha' : 'Criar nova senha';
+  const title = mode === 'login' ? 'Entre na sua conta' : mode === 'forgot' ? 'Recuperar senha' : mode === 'invite' ? 'Ativar sua conta' : 'Criar nova senha';
   return <Root>
     <Intro><Logo variant="symbol" size={64} href="/login" /><h1>Cada detalhe,<br />bem cuidado.</h1><p>O seu ateliê em um só lugar. Organize os atendimentos e acompanhe cada oportunidade.</p></Intro>
     <Card aria-label={title}>
       <h2>{title}</h2>
       <p>{mode === 'login' ? 'Acesse o sistema do Ateliê Milena Kerbage.' : mode === 'forgot' ? 'Informe seu e-mail para receber as instruções.' : 'Escolha uma senha com letras, números e símbolos.'}</p>
       <form onSubmit={submit} autoComplete="off">
-        {mode !== 'reset' && <><TextField label="E-mail" icon={EnvelopeSimpleIcon} type="email" name="email" autoComplete="off" autoCapitalize="none" spellCheck={false} inputMode="email" required maxLength={254} list="email-domains" placeholder="seunome@exemplo.com" value={email} onChange={event=>setEmail(event.target.value)} /><datalist id="email-domains">{suggestions.map(value=><option key={value} value={value}/>)}</datalist></>}
-        {mode !== 'forgot' && <TextField label={mode === 'reset' ? 'Nova senha' : 'Senha'} icon={LockSimpleIcon} type={show ? 'text' : 'password'} name="password" autoComplete="off" required minLength={8} maxLength={128} value={password} onChange={event=>setPassword(event.target.value)} hint="Pelo menos 8 caracteres, com letras, números e símbolos." trailing={<IconButton type="button" icon={show ? EyeSlashIcon : EyeIcon} label={show ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={show} tooltip={false} onClick={()=>setShow(!show)} />} />}
-        {mode === 'reset' && <TextField label="Confirmar nova senha" type={show ? 'text' : 'password'} autoComplete="off" required minLength={8} maxLength={128} value={confirm} onChange={event=>setConfirm(event.target.value)} />}
+        {mode !== 'reset' && mode !== 'invite' && <><TextField label="E-mail" icon={EnvelopeSimpleIcon} type="email" name="email" autoComplete="off" autoCapitalize="none" spellCheck={false} inputMode="email" required maxLength={254} list="email-domains" placeholder="seunome@exemplo.com" value={email} onChange={event=>setEmail(event.target.value)} /><datalist id="email-domains">{suggestions.map(value=><option key={value} value={value}/>)}</datalist></>}
+        {mode !== 'forgot' && <TextField label={mode === 'reset' || mode === 'invite' ? 'Nova senha' : 'Senha'} icon={LockSimpleIcon} type={show ? 'text' : 'password'} name="password" autoComplete="off" required minLength={8} maxLength={128} value={password} onChange={event=>setPassword(event.target.value)} hint="Pelo menos 8 caracteres, com letras, números e símbolos." trailing={<IconButton type="button" icon={show ? EyeSlashIcon : EyeIcon} label={show ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={show} tooltip={false} onClick={()=>setShow(!show)} />} />}
+        {(mode === 'reset' || mode === 'invite') && <TextField label="Confirmar nova senha" type={show ? 'text' : 'password'} autoComplete="off" required minLength={8} maxLength={128} value={confirm} onChange={event=>setConfirm(event.target.value)} />}
         {error && <Message role="alert">{error}</Message>}
         {message && <Message role="status">{message}</Message>}
         {mode === 'login' && <Link href="/recuperar-senha">Eu esqueci a minha senha</Link>}
-        {!message && <Button type="submit" loading={pending} disabled={pending || (mode === 'reset' && !token)}>{mode === 'login' ? 'Entrar' : mode === 'forgot' ? 'Enviar instruções' : 'Salvar nova senha'}</Button>}
+        {!message && <Button type="submit" loading={pending} disabled={pending || ((mode === 'reset' || mode === 'invite') && !token)}>{mode === 'login' ? 'Entrar' : mode === 'forgot' ? 'Enviar instruções' : 'Salvar nova senha'}</Button>}
         {mode !== 'login' && <Link href="/login">Voltar para o login</Link>}
       </form>
       <Foot><ShieldCheckIcon size={16} aria-hidden />Acesso exclusivo da equipe</Foot>

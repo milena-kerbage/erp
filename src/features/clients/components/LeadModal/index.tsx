@@ -27,7 +27,7 @@ import { formatRelativeTime, formatTime } from "@/lib/format";
 import { formatBudget, formatPhone } from "@/features/leads/format";
 import { CampaignTab, DetailsTab, FilesTab } from "@/features/leads/components/LeadDetail/LeadProfile";
 import { OwnerSelect } from "@/features/leads/components/OwnerSelect";
-import { filesToAttachments, useLeads } from "@/features/leads/store";
+import { useLeads } from "@/features/leads/store";
 import { useFunnels, useWorkspace } from "@/features/settings/store";
 
 type Tab = "details" | "campaign" | "files" | "chat";
@@ -220,7 +220,7 @@ export function LeadModal({ leadId, onClose }: { leadId: string | null; onClose:
         label: "Copiar telefone",
         onClick: () => void copyText(formatPhone(target.phone)),
       },
-      { id: "chat", icon: ChatsCircleIcon, label: "Ver conversa", onClick: () => go(`/conversas?c=${target.id}`) },
+      { id: "chat", icon: ChatsCircleIcon, label: "Ver notas da oportunidade", onClick: () => go(`/leads/${target.id}`) },
       {
         id: "open",
         icon: ArrowSquareOutIcon,
@@ -271,8 +271,8 @@ export function LeadModal({ leadId, onClose }: { leadId: string | null; onClose:
       footer={
         <>
           <CopyButton icon={PhoneIcon} label="Copiar telefone" text={phone} />
-          <Button variant="secondary" icon={ChatsCircleIcon} href={`/conversas?c=${lead.id}`}>
-            Ver conversa
+          <Button variant="secondary" icon={ChatsCircleIcon} href={`/leads/${lead.id}`}>
+            Ver notas da oportunidade
           </Button>
           <Button iconEnd={ArrowSquareOutIcon} href={`/leads/${lead.id}`}>
             Abrir oportunidade
@@ -381,7 +381,7 @@ export function LeadModal({ leadId, onClose }: { leadId: string | null; onClose:
               {tab === "files" && (
                 <FilesTab
                   details={info}
-                  onAddFiles={(files) => addAttachments(lead.id, filesToAttachments(files), currentUser.name)}
+                  onAddFiles={(files) => addAttachments(lead.id, files, currentUser.name)}
                   onRemoveFile={(id) => removeAttachment(lead.id, id)}
                 />
               )}

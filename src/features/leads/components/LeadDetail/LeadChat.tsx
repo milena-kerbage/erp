@@ -51,7 +51,7 @@ type LeadChatProps = {
   lead: Lead;
   messages: ChatMessage[];
   composerRef: RefObject<ComposerHandle | null>;
-  onSend: (payload: ComposerSendPayload) => void;
+  onSend: (payload: ComposerSendPayload) => Promise<boolean>;
   /** Ações extras no cabeçalho (ex.: status e responsável nas Conversas). */
   actions?: ReactNode;
   /** Antes do avatar: o "voltar" da conversa em tela cheia no celular. */
@@ -220,12 +220,16 @@ export function LeadChat({
           onLoadCapture={() => atBottomRef.current && scrollToBottom("auto")}
           onLoadedMetadataCapture={() => atBottomRef.current && scrollToBottom("auto")}
         >
+          <aside style={{ padding: '1rem', border: '1px solid currentColor', borderRadius: '0.75rem', marginBottom: '1rem', fontSize: '0.875rem', lineHeight: 1.6 }}>
+            Notas internas da oportunidade, salvas no banco de dados e visíveis apenas para a equipe.
+            {' '}<a href={`/conversas?phone=${encodeURIComponent(lead.phone.replace(/\D/g, ''))}`}>Abrir atendimento real pelo WhatsApp</a>.
+          </aside>
           {prelude}
           {messages.length === 0 ? (
             <EmptyState
               icon={<ChatsCircleIcon size={24} />}
-              title="Nenhuma conversa ainda"
-              description={`Envie a primeira mensagem para ${lead.name.split(" ")[0]} pelo WhatsApp.`}
+              title="Nenhuma nota interna ainda"
+              description="Registre o atendimento e as decisões da equipe abaixo. Para mensagens ao cliente, abra o WhatsApp pelo link acima."
             />
           ) : (
             days.map((day) => (
@@ -295,7 +299,9 @@ export function LeadChat({
         <Dock ref={dockRef}>
           <ChatComposer
             ref={composerRef}
-            recipient={lead.name}
+            recipient="Nota interna da oportunidade"
+            sendLabel="Salvar nota interna"
+            placeholder="Escreva uma nota interna"
             quickReplies={quickReplies}
             enterSends={preferences.enterSends}
             onSend={onSend}

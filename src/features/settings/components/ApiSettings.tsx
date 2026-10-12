@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { ERP_ROUTE_CATALOG } from "@/lib/erp/catalog";
+import { useEffect, useState } from "react";
 import styled from "@emotion/styled";
 import {
   CheckCircleIcon,
   CodeIcon,
   CopyIcon,
   DotsThreeIcon,
+  DownloadSimpleIcon,
   KeyIcon,
   LinkIcon,
   PaperPlaneTiltIcon,
@@ -14,6 +16,7 @@ import {
   TrashIcon,
   WarningCircleIcon,
   WebhooksLogoIcon,
+  WhatsappLogoIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -30,12 +33,13 @@ import { formatDate, formatRelativeTime } from "@/lib/format";
 import { useWorkspace } from "../store";
 import type { ApiKey, ApiScope, Webhook, WebhookEvent } from "../types";
 import { Mono, Muted, Page, PageHeader, Pill, Section, Table, TableCard, usePending } from "./ui";
+import { Notice, Note } from "@/features/whatsapp/components/shared";
 
-const BASE_URL = "https://app.ateliemilenakerbage.com.br/api/v1";
+const WHATSAPP_API_PATH = "/api/whatsapp";
 
 const scopes: Record<ApiScope, { label: string; description: string }> = {
-  read: { label: "Leitura", description: "Consulta leads, clientes e conversas" },
-  write: { label: "Leitura e escrita", description: "Também cria e atualiza leads (ex.: formulário do site)" },
+  read: { label: "Leitura", description: "Consulta leads, registros operacionais e relatórios autorizados do ERP" },
+  write: { label: "Leitura e escrita", description: "Também cria e altera leads e registros nas rotas de escrita autorizadas do ERP" },
 };
 
 const webhookEvents: { value: WebhookEvent; label: string; description: string }[] = [
@@ -201,7 +205,9 @@ const EventList = styled.fieldset`
 
 /** Chaves de API, webhooks e o básico da documentação. */
 export function ApiSettings() {
-  const { apiKeys, createApiKey, revokeApiKey, webhooks, addWebhook, updateWebhook, removeWebhook } = useWorkspace();
+  const [baseUrl, setBaseUrl] = useState(WHATSAPP_API_PATH);
+  useEffect(() => setBaseUrl(`${window.location.origin}${WHATSAPP_API_PATH}`), []);
+  const { apiKeys, createApiKey, revokeApiKey, webhooks, addWebhook, updateWebhook, removeWebhook, testWebhook, currentUser, loading, error } = useWorkspace();
 
   // Criar chave: primeiro nome/permissão, depois a chave completa (uma vez só).
   const [keyDialog, setKeyDialog] = useState(false);
@@ -211,6 +217,8 @@ export function ApiSettings() {
   const [creatingKey, runCreateKey] = usePending();
   const [addingHook, runAddHook] = usePending();
   const [testing, setTesting] = useState<string | null>(null);
+  const [testingHook, setTestingHook] = useState<Webhook | null>(null);
+  const [hookSecret, setHookSecret] = useState<string | null>(null);
 
   const [hookDialog, setHookDialog] = useState(false);
   const [hookDraft, setHookDraft] = useState<{ url: string; events: WebhookEvent[] }>({ url: "", events: [] });
@@ -245,6 +253,36 @@ export function ApiSettings() {
       />
 
       <div>
+        <Section title="API oficial do WhatsApp" icon={WhatsappLogoIcon} description="Endpoints reais para diagnóstico, contatos, histórico, modelos, consentimento, envio e leitura. A sessão do sistema controla o acesso.">
+          <TextField label="Endereço base da API WhatsApp" readOnly value={baseUrl} trailing={<CopyButton icon={CopyIcon} label="Copiar endereço da API WhatsApp" text={baseUrl} variant="ghost" size="sm" />} />
+          <Note>GET /status · GET /conversations · GET /messages?phone=… · GET /templates · POST /messages · POST /consent · POST /read · GET /media?messageId=…</Note>
+          <Note>Webhook público da Meta: GET e POST /api/whatsapp/webhook. A verificação do callback e a assinatura das notificações são validadas no servidor.</Note>
+          <Button href="/configuracoes/whatsapp" variant="secondary" icon={WhatsappLogoIcon}>Diagnóstico, URLs e teste de envio</Button>
+        </Section>
+        <Section title="API do ERP" icon={CodeIcon} description="Dados persistidos do ateliê para sites e automações com chave Bearer.">
+          <TextField label="Endereço base da API do ERP" readOnly value={baseUrl.replace(WHATSAPP_API_PATH, "/api/erp")} trailing={<CopyButton icon={CopyIcon} label="Copiar endereço da API do ERP" text={baseUrl.replace(WHATSAPP_API_PATH, "/api/erp")} variant="ghost" size="sm" />} />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+            <Button variant="secondary" size="sm" icon={DownloadSimpleIcon} href="/api/erp/documentation" download="erp-backend.md">Baixar manual técnico</Button>
+            <Button variant="secondary" size="sm" icon={DownloadSimpleIcon} href="/api/erp/documentation?document=operation" download="manual-operacao-erp.md">Baixar guia de operação</Button>
+          </div>
+          <details>
+            <summary style={{ cursor: "pointer", fontWeight: 600, padding: "0.5rem 0" }}>Todas as rotas ERP ({ERP_ROUTE_CATALOG.length})</summary>
+            <Note>O catálogo descreve os métodos, papéis e suporte à chave Bearer de cada rota. Substitua os identificadores entre chaves pelos registros reais. A sessão e a autorização continuam sendo verificadas no servidor.</Note>
+            <TableCard>
+              <Table>
+                <thead><tr><th>Rota</th><th>Métodos</th><th>Permissão</th><th>Autenticação</th><th>Uso</th></tr></thead>
+                <tbody>{ERP_ROUTE_CATALOG.map(route => <tr key={route.path}><td><Mono>{route.path}</Mono></td><td><Mono>{route.methods}</Mono></td><td style={{ whiteSpace: "normal", minWidth: "10rem" }}>{route.roles}</td><td>{route.bearer ? "Sessão ou Bearer" : route.path === "/api/auth/accept-invitation" ? "Token do convite" : "Sessão"}</td><td style={{ whiteSpace: "normal", minWidth: "20rem", maxWidth: "30rem", lineHeight: 1.5 }}>{route.purpose}</td></tr>)}</tbody>
+              </Table>
+            </TableCard>
+            <Button variant="ghost" size="sm" icon={CodeIcon} href="/api/erp" target="_blank" rel="noopener noreferrer">Abrir catálogo JSON</Button>
+          </details>
+          <Note>Rotas com chave Bearer: GET /api/erp/leads · POST /api/erp/leads · PATCH ou DELETE /api/erp/leads/&#123;id&#125; · POST /api/erp/leads/&#123;id&#125;/notes · GET e POST /api/erp/records/&#123;module&#125; · PATCH ou DELETE /api/erp/records/&#123;module&#125;/&#123;id&#125; · GET /api/erp/reports</Note>
+          <Note>Relatórios e dados financeiros exigem perfil de administração ou gestão. Workspace, perfil, equipe, emissão de chaves e gestão de webhooks exigem uma sessão; a gestão da equipe, chaves e webhooks exige administração. A chave não autentica as rotas /api/whatsapp.</Note>
+          <Note>Operações de escrita usam revision para evitar sobrescrever edições de outra pessoa. Guarde a chave inteira somente em seu servidor; ela é exibida uma vez na criação.</Note>
+        </Section>
+        <Section title="Sobre as demais ferramentas" description="Integrações autenticadas com o backend do ERP.">
+          <Notice>As chaves abaixo autenticam /api/erp com Authorization: Bearer. A permissão Leitura consulta dados; Escrita permite as operações autorizadas do ERP. O envio do WhatsApp continua protegido pela sessão e credenciais da Meta. Webhooks são armazenados no servidor e os testes mostram a resposta real do destino.</Notice>
+        </Section>
         <Section
           title="Chaves de API"
           icon={KeyIcon}
@@ -253,7 +291,7 @@ export function ApiSettings() {
         >
           <Toolbar>
             {apiKeys.length} {apiKeys.length === 1 ? "chave ativa" : "chaves ativas"}
-            <Button variant="secondary" size="sm" icon={PlusIcon} onClick={() => setKeyDialog(true)}>
+            <Button variant="secondary" size="sm" icon={PlusIcon} disabled={loading || currentUser.permission !== "admin"} onClick={() => setKeyDialog(true)}>
               Criar chave
             </Button>
           </Toolbar>
@@ -311,12 +349,14 @@ export function ApiSettings() {
         <Section
           title="Webhooks"
           icon={WebhooksLogoIcon}
-          description="Avisos em tempo real para outras ferramentas (planilhas, automações) quando algo acontece."
+          description="Eventos assinados e persistidos para outras ferramentas quando algo acontece. A entrega depende da liberação do destino e do processamento da fila."
           plain
         >
+          <Notice>Antes de testar ou entregar eventos externamente, libere o host do destino na variável ERP_WEBHOOK_ALLOWED_HOSTS da hospedagem. Use somente destinos HTTPS públicos sob seu controle.</Notice>
+          <Note>O corpo contém id, event, occurredAt e data.entityId. O cabeçalho X-MK-Signature-256 contém sha256= seguido do HMAC SHA-256 do corpo bruto usando o segredo do webhook. O evento informa o identificador da entidade e não inclui o conteúdo privado das mensagens.</Note>
           <Toolbar>
             {webhooks.filter((hook) => hook.active).length} de {webhooks.length} ativos
-            <Button variant="secondary" size="sm" icon={PlusIcon} onClick={() => setHookDialog(true)}>
+            <Button variant="secondary" size="sm" icon={PlusIcon} disabled={loading || currentUser.permission !== "admin"} onClick={() => setHookDialog(true)}>
               Adicionar webhook
             </Button>
           </Toolbar>
@@ -342,13 +382,13 @@ export function ApiSettings() {
                       Enviando teste...
                     </Pill>
                   ) : hook.lastDelivery ? (
-                    <Pill $tone={hook.lastDelivery.status < 300 ? "green" : "rose"} title={`Resposta ${hook.lastDelivery.status}`}>
-                      {hook.lastDelivery.status < 300 ? (
+                    <Pill $tone={hook.lastDelivery.status >= 200 && hook.lastDelivery.status < 300 ? "green" : "rose"} title={`Resposta ${hook.lastDelivery.status}`}>
+                      {hook.lastDelivery.status >= 200 && hook.lastDelivery.status < 300 ? (
                         <CheckCircleIcon size={12} weight="bold" aria-hidden />
                       ) : (
                         <WarningCircleIcon size={12} weight="bold" aria-hidden />
                       )}
-                      {hook.lastDelivery.status} / {formatRelativeTime(hook.lastDelivery.at)}
+                      {hook.lastDelivery.status || "Sem resposta"} / {formatRelativeTime(hook.lastDelivery.at)}
                     </Pill>
                   ) : (
                     <Muted>Sem entregas</Muted>
@@ -364,20 +404,11 @@ export function ApiSettings() {
                     <MenuItem
                       icon={PaperPlaneTiltIcon}
                       disabled={!hook.active}
-                      onSelect={() => {
-                        // TODO: disparo real pelo back-end; por enquanto simula o envio de teste
-                        setTesting(hook.id);
-                        window.setTimeout(() => {
-                          updateWebhook(hook.id, { lastDelivery: { at: new Date().toISOString(), status: 200 } });
-                          setTesting(null);
-                        }, 900);
-                      }}
+                      onSelect={() => setTestingHook(hook)}
                     >
                       Enviar teste
                     </MenuItem>
-                    <MenuItem icon={CopyIcon} onSelect={() => void copyText(hook.secret)}>
-                      Copiar segredo
-                    </MenuItem>
+
                     <MenuSeparator />
                     <MenuItem icon={TrashIcon} muted onSelect={() => setRemovingHook(hook)}>
                       Excluir
@@ -392,21 +423,21 @@ export function ApiSettings() {
         </Section>
 
         <Section
-          title="Documentação"
+          title="Documentação da API WhatsApp"
           icon={CodeIcon}
-          description="Endereço base e um exemplo para começar. A API pública entra junto com o back-end."
+          description="Verifique a configuração usando a sessão autenticada. Tokens da Meta ficam somente no servidor."
         >
           <TextField
             label="Endereço base"
             icon={LinkIcon}
             readOnly
-            value={BASE_URL}
-            trailing={<CopyButton icon={CopyIcon} label="Copiar endereço" text={BASE_URL} variant="ghost" size="sm" />}
+            value={baseUrl}
+            trailing={<CopyButton icon={CopyIcon} label="Copiar endereço" text={baseUrl} variant="ghost" size="sm" />}
           />
           <div>
-            <CodeLabel>Exemplo: listar os leads</CodeLabel>
-            <Code>{`curl ${BASE_URL}/leads \\
-  -H "Authorization: Bearer mk_live_sua_chave"`}</Code>
+            <CodeLabel>Exemplo: consultar configuração com uma sessão de teste</CodeLabel>
+            <Code>{`curl --cookie cookies.txt '${baseUrl}/status'`}</Code>
+            <Note>cookies.txt representa a sessão obtida no login do ambiente de teste. Não compartilhe cookies ou tokens. Utilize a página WhatsApp Business para testes guiados e as políticas públicas para os procedimentos de privacidade.</Note>
           </div>
         </Section>
       </div>
@@ -429,7 +460,7 @@ export function ApiSettings() {
                 icon={KeyIcon}
                 disabled={keyDraft.name.trim().length < 2}
                 loading={creatingKey}
-                onClick={() => runCreateKey(() => setSecret(createApiKey(keyDraft.name.trim(), keyDraft.scope)))}
+                onClick={() => runCreateKey(async () => { const created = await createApiKey(keyDraft.name.trim(), keyDraft.scope); if (created) setSecret(created); })}
               >
                 Criar chave
               </Button>
@@ -439,6 +470,7 @@ export function ApiSettings() {
       >
         {secret ? (
           <>
+            {error && <Notice role="alert">{error}</Notice>}
             <SecretBox>
               <code>{secret}</code>
               <CopyButton icon={CopyIcon} label="Copiar chave" text={secret} variant="ghost" size="sm" />
@@ -488,9 +520,8 @@ export function ApiSettings() {
             <Button
               variant="danger"
               icon={TrashIcon}
-              onClick={() => {
-                if (revoking) revokeApiKey(revoking.id);
-                setRevoking(null);
+              onClick={async () => {
+                if (revoking && await revokeApiKey(revoking.id)) setRevoking(null);
               }}
             >
               Revogar
@@ -516,9 +547,9 @@ export function ApiSettings() {
               disabled={!urlValid || hookDraft.events.length === 0}
               loading={addingHook}
               onClick={() =>
-                runAddHook(() => {
-                  addWebhook({ url: hookDraft.url.trim(), events: hookDraft.events });
-                  closeHook();
+                runAddHook(async () => {
+                  const created = await addWebhook({ url: hookDraft.url.trim(), events: hookDraft.events });
+                  if (created) { closeHook(); setHookSecret(created); }
                 })
               }
             >
@@ -570,9 +601,8 @@ export function ApiSettings() {
             <Button
               variant="danger"
               icon={TrashIcon}
-              onClick={() => {
-                if (removingHook) removeWebhook(removingHook.id);
-                setRemovingHook(null);
+              onClick={async () => {
+                if (removingHook && await removeWebhook(removingHook.id)) setRemovingHook(null);
               }}
             >
               Excluir
@@ -580,6 +610,12 @@ export function ApiSettings() {
           </>
         }
       />
+      <Dialog open={hookSecret !== null} onClose={() => setHookSecret(null)} title="Segredo do webhook" description="Guarde agora no serviço que recebe os eventos. O servidor não mostra este segredo novamente." footer={<Button onClick={() => setHookSecret(null)}>Guardei o segredo</Button>}>
+        {error && <Notice role="alert">{error}</Notice>}
+        <TextField label="Segredo de assinatura" readOnly value={hookSecret ?? ""} trailing={<CopyButton icon={CopyIcon} label="Copiar segredo" text={hookSecret ?? ""} variant="ghost" size="sm" />} />
+        <Note>Valide a assinatura HMAC SHA-256 do corpo recebido no seu destino.</Note>
+      </Dialog>
+      <Dialog open={testingHook !== null} onClose={() => setTestingHook(null)} title="Enviar teste real?" description={`O servidor enviará um evento de teste para ${testingHook?.url ?? ""}. Confira que você controla esse destino.`} footer={<><Button variant="ghost" onClick={() => setTestingHook(null)}>Cancelar</Button><Button loading={testing !== null} onClick={async () => { if (!testingHook || testing) return; setTesting(testingHook.id); try { if (await testWebhook(testingHook.id)) setTestingHook(null); } finally { setTesting(null); } }}>Enviar teste</Button></>}>{error && <Notice role="alert">{error}</Notice>}</Dialog>
     </Page>
   );
 }

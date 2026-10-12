@@ -25,7 +25,7 @@ import { startNavigationProgress } from "@/components/layout/NavigationProgress"
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { IconTile } from "@/components/ui/IconTile";
-import { navigation } from "@/config/navigation";
+import { navigation, type NavModule } from "@/config/navigation";
 import { transientOptions } from "@/lib/emotion/transient";
 import { formatRelativeTime } from "@/lib/format";
 import { usePresence } from "@/lib/presence";
@@ -539,9 +539,9 @@ function useSearchData(query: string) {
             id: `message:${lead.id}:${message.id}`,
             group: "messages",
             title: excerpt(message.text, query.trim()),
-            subtitle: `${message.direction === "in" ? lead.name : message.author.name}${message.kind === "note" ? " (nota interna)" : ""} / conversa com ${lead.name}`,
+            subtitle: `${message.direction === "in" ? lead.name : message.author.name}${message.kind === "note" ? " (nota interna)" : ""} / histórico demonstrativo de ${lead.name}`,
             keywords: message.text,
-            href: `/conversas?c=${lead.id}`,
+            href: `/leads/${lead.id}`,
             leading: (
               <IconBubble>
                 <ChatCircleTextIcon size={17} />
@@ -597,21 +597,21 @@ function useSearchData(query: string) {
     }
 
     /* Páginas */
-    for (const module of [...navigation.main, ...navigation.secondary]) {
+    for (const module of [...navigation.main, ...navigation.secondary] as readonly NavModule[]) {
       results.push({
         id: `page:${module.href}`,
         group: "pages",
         title: module.label,
-        subtitle: "soon" in module ? "Em produção" : "Página",
-        locked: "soon" in module,
-        keywords: "soon" in module ? module.soon.description : undefined,
+        subtitle: module.soon ? "Em produção" : "Página",
+        locked: Boolean(module.soon),
+        keywords: module.soon?.description,
         href: module.href,
         leading: (
           <IconBubble>
             <module.icon size={17} />
           </IconBubble>
         ),
-        meta: "soon" in module ? <Badge tone="peach">Produção</Badge> : undefined,
+        meta: module.soon ? <Badge tone="peach">Produção</Badge> : undefined,
       });
     }
     for (const page of settingsPages) {

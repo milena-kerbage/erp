@@ -140,7 +140,7 @@ export function Inbox({ selectedId }: { selectedId?: string }) {
             composerRef={composerRef}
             onSend={(payload) =>
               sendMessage(lead.id, {
-                kind: "message",
+                kind: "note",
                 text: payload.text,
                 attachments: composerAttachments(payload),
                 author: teamMember,

@@ -15,7 +15,6 @@ import {
   MetaLogoIcon,
   PlugsConnectedIcon,
   TableIcon,
-  WhatsappLogoIcon,
   type Icon,
 } from "@phosphor-icons/react";
 import { HeaderActions } from "@/components/layout/Header/HeaderActions";
@@ -27,7 +26,9 @@ import { IconTile } from "@/components/ui/IconTile";
 import { Menu, MenuItem } from "@/components/ui/Menu";
 import { TextField } from "@/components/ui/TextField";
 import { formatDate } from "@/lib/format";
-import { maskEmail, maskInstagram, maskPhone } from "@/lib/masks";
+import { maskEmail, maskInstagram } from "@/lib/masks";
+import { IntegrationManagerPanel } from "@/features/integrations/components/IntegrationManagerPanel";
+import { Notice } from "@/features/whatsapp/components/shared";
 import type { Tone } from "@/styles/theme";
 import { useWorkspace } from "../store";
 import type { IntegrationId } from "../types";
@@ -46,17 +47,6 @@ type CatalogItem = {
 };
 
 const catalog: CatalogItem[] = [
-  {
-    id: "whatsapp",
-    group: "Mensagens",
-    name: "WhatsApp Business",
-    description: "Receba e responda as clientes direto nas Conversas, com áudio, fotos e arquivos.",
-    icon: WhatsappLogoIcon,
-    tone: "green",
-    accountLabel: "Número do WhatsApp",
-    placeholder: "(00) 00000-0000",
-    mask: maskPhone,
-  },
   {
     id: "instagram",
     group: "Mensagens",
@@ -218,7 +208,7 @@ const Foot = styled.div`
 
 /** Integrações com os canais e ferramentas do ateliê. */
 export function IntegrationsSettings() {
-  const { integrations, setIntegration } = useWorkspace();
+  const { integrations } = useWorkspace();
   const [connecting, setConnecting] = useState<CatalogItem | null>(null);
   const [account, setAccount] = useState("");
   const [connectingNow, runConnect] = usePending(900);
@@ -248,13 +238,13 @@ export function IntegrationsSettings() {
           <IconButton {...props} icon={DotsThreeIcon} label="Opções" variant="ghost" size="sm" tooltip={false} />
         )}
       >
-        <MenuItem icon={LinkBreakIcon} muted onSelect={() => setIntegration(item.id, { connected: false })}>
+        <MenuItem icon={LinkBreakIcon} muted onSelect={() => setConnecting(item)}>
           Desconectar
         </MenuItem>
       </Menu>
     ) : (
-      <Button variant="secondary" size="sm" icon={PlugsConnectedIcon} onClick={() => setConnecting(item)}>
-        Conectar
+      <Button variant="secondary" size="sm" icon={PlugsConnectedIcon} disabled={item.id !== "whatsapp"} href={item.id === "whatsapp" ? "/configuracoes/whatsapp" : undefined}>
+        {item.id === "whatsapp" ? "Configurar" : "Pendente"}
       </Button>
     );
 
@@ -279,8 +269,12 @@ export function IntegrationsSettings() {
 
       <PageHeader
         title="Integrações"
-        description={`Conecte os canais por onde as clientes chegam. ${connectedCount} de ${catalog.length} conectadas.`}
+        description="Gerencie a configuração, credenciais, etapas e testes reais da integração WhatsApp."
       />
+
+      <IntegrationManagerPanel />
+
+      <Notice>O WhatsApp é configurado no painel acima. As outras integrações aguardam seus respectivos conectores oficiais.</Notice>
 
       {view === "table" ? (
         <TableCard>
@@ -378,7 +372,7 @@ export function IntegrationsSettings() {
                                 <MenuItem
                                   icon={LinkBreakIcon}
                                   muted
-                                  onSelect={() => setIntegration(item.id, { connected: false })}
+                                  onSelect={() => setConnecting(item)}
                                 >
                                   Desconectar
                                 </MenuItem>
@@ -391,9 +385,9 @@ export function IntegrationsSettings() {
                                 variant="secondary"
                                 size="sm"
                                 icon={PlugsConnectedIcon}
-                                onClick={() => setConnecting(item)}
+                                disabled={item.id !== "whatsapp"} href={item.id === "whatsapp" ? "/configuracoes/whatsapp" : undefined}
                               >
-                                Conectar
+                                {item.id === "whatsapp" ? "Configurar" : "Pendente"}
                               </Button>
                             </>
                           )}
@@ -417,25 +411,7 @@ export function IntegrationsSettings() {
             <Button variant="ghost" onClick={close}>
               Cancelar
             </Button>
-            <Button
-              icon={PlugsConnectedIcon}
-              disabled={account.trim().length < 3}
-              loading={connectingNow}
-              onClick={() =>
-                // TODO: autorização real (OAuth / API oficial) quando existir o back-end
-                runConnect(() => {
-                  if (connecting)
-                    setIntegration(connecting.id, {
-                      connected: true,
-                      account: account.trim(),
-                      connectedAt: new Date().toISOString(),
-                    });
-                  close();
-                })
-              }
-            >
-              Conectar
-            </Button>
+            <Button href="/configuracoes/whatsapp">Abrir configuração oficial</Button>
           </>
         }
       >
@@ -446,7 +422,7 @@ export function IntegrationsSettings() {
             placeholder={connecting.placeholder}
             value={account}
             mask={connecting.mask}
-            hint="Na próxima etapa, é só autorizar o acesso na conta escolhida."
+            hint="Este conector ainda aguarda implementação e autorização do provedor."
             onChange={(event) => setAccount(event.target.value)}
           />
         )}

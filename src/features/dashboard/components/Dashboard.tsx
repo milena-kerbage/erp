@@ -415,7 +415,7 @@ function DashboardSkeleton() {
 export function Dashboard() {
   const theme = useTheme();
   const user = useCurrentUser();
-  const { leads, details, messages, statuses } = useLeads();
+  const { leads, details, messages, statuses, loading, error, refresh } = useLeads();
   const { funnels, findFunnel } = useFunnels();
   const [funnelId, setFunnelId] = useState<string | undefined>(undefined);
   // Datas dependem do fuso de quem vê: calcula só no navegador
@@ -428,7 +428,7 @@ export function Dashboard() {
   }, []);
 
   const data = useMemo(() => {
-    if (!now) return null;
+    if (!now || loading || error) return null;
 
     /* Mês (cartão principal) */
     const month = intakeOfMonth(leads, now);
@@ -495,7 +495,7 @@ export function Dashboard() {
       active: leads.filter((lead) => !isClient(lead, funnels)).length,
       sources,
     };
-  }, [now, leads, details, messages, statuses, funnels]);
+  }, [now, leads, details, messages, statuses, funnels, loading, error]);
 
   const funnel = funnelId ? findFunnel(funnelId) : salesFunnel(funnels);
   const stages = funnel ? valueByStage(leads, funnel) : [];
@@ -547,7 +547,9 @@ export function Dashboard() {
         </Banner>
       )}
 
-      {!data || !now ? (
+      {!loading && !error && leads.length === 0 && <p role="status">O ateliê ainda não tem oportunidades cadastradas. Use Novo lead para começar; os indicadores serão calculados com os registros salvos.</p>}
+
+      {error ? <div role="alert"><p>Não foi possível carregar os dados do ateliê.</p><Button variant="secondary" onClick={() => void refresh()}>Tentar novamente</Button></div> : !data || !now ? (
         <DashboardSkeleton />
       ) : (
         <Layout>
@@ -647,7 +649,7 @@ export function Dashboard() {
               />
               <MetricCard
                 title="Resposta"
-                help="Tempo médio até a primeira resposta da equipe a cada mensagem recebida no mês."
+                help="Tempo até a primeira resposta nas mensagens vinculadas ao histórico do CRM. Notas internas não contam. O atendimento real do WhatsApp fica em Conversas."
                 icon={TimerIcon}
                 tone="lavender"
                 value={data.response === null ? "Sem respostas" : formatDuration(data.response)}
@@ -661,7 +663,7 @@ export function Dashboard() {
               />
               <MetricCard
                 title="Conversas"
-                help="Conversas que ainda não foram resolvidas, agora."
+                help="Históricos com mensagens externas vinculadas ao CRM que ainda não foram resolvidos. Notas internas não entram nesta contagem. Consulte o atendimento real em Conversas."
                 icon={ChatsCircleIcon}
                 tone="teal"
                 value={data.open}

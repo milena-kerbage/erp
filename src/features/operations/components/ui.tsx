@@ -1,0 +1,13 @@
+"use client";
+import styled from "@emotion/styled";
+export { Page, PageHeader, Card, FieldGrid, TableCard, Table, StatGrid, StatCard, Pill, Muted } from "@/features/settings/components/ui";
+export const Actions = styled.div`display: flex; align-items: center; flex-wrap: wrap; gap: ${({ theme }) => theme.spacing(2)};`;
+export const Stack = styled.div`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(4)}; min-width: 0;`;
+export const Toolbar = styled.div`display: flex; gap: ${({ theme }) => theme.spacing(3)}; flex-wrap: wrap; align-items: end; > :first-of-type { flex: 1; min-width: 12rem; }`;
+export const Label = styled.label`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(1.5)}; color: ${({ theme }) => theme.colors.text.primary}; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.medium};`;
+export const NativeSelect = styled.select`min-height: 2.25rem; padding: ${({ theme }) => theme.spacing(1, 3)}; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.palette.neutral[0]}; color: ${({ theme }) => theme.colors.text.primary}; font: inherit; max-width: 100%;`;
+export const Notice = styled.p`padding: ${({ theme }) => theme.spacing(3, 4)}; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.colors.background.surface}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.8125rem; line-height: 1.65; &[role="alert"] { color: ${({ theme }) => theme.colors.danger}; }`;
+export const Empty = styled.div`padding: ${({ theme }) => theme.spacing(9, 5)}; text-align: center; display: flex; flex-direction: column; align-items: center; gap: ${({ theme }) => theme.spacing(3)}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.875rem;`;
+export const Hint = styled.small`color: ${({ theme }) => theme.colors.text.muted}; font-size: 0.75rem; font-weight: 400; line-height: 1.5;`;
+export const ListItem = styled.article`display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.spacing(4)}; padding: ${({ theme }) => theme.spacing(4)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle}; &:last-of-type { border-bottom: 0; } h3 { font-size: 0.875rem; margin-bottom: ${({ theme }) => theme.spacing(1)}; } p { font-size: 0.8125rem; color: ${({ theme }) => theme.colors.text.muted}; line-height: 1.6; }`;
+export const Form = styled.form`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(5)};`;

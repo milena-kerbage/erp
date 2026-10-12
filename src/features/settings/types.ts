@@ -10,8 +10,9 @@ export type Member = Person & {
   /** Função no ateliê (ex.: "Modelista"). */
   role: string;
   permission: Permission;
-  /** `invited`: convite enviado, ainda não entrou. */
-  status: "active" | "invited";
+  /** `invited`: ativação pendente; `disabled`: acesso desativado. */
+  status: "active" | "invited" | "disabled";
+  invitationPending?: boolean;
   joinedAt: string;
   lastSeenAt?: string;
 };
@@ -79,7 +80,8 @@ export type Webhook = {
   url: string;
   events: WebhookEvent[];
   active: boolean;
-  secret: string;
+  /** Existing secrets are never returned by listing endpoints. */
+  secret?: string;
   createdAt: string;
   lastDelivery?: { at: string; status: number };
 };

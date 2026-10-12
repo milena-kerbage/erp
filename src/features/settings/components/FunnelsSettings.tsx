@@ -228,9 +228,10 @@ const Foot = styled.div`
 
 /* ---------- Partes ---------- */
 
-function AddStage({ onAdd }: { onAdd: (label: string) => void }) {
+function AddStage({ onAdd }: { onAdd: (label: string) => Promise<boolean> }) {
   const [adding, setAdding] = useState(false);
   const [label, setLabel] = useState("");
+  const [savingStage, setSavingStage] = useState(false);
 
   const close = () => {
     setAdding(false);
@@ -249,11 +250,11 @@ function AddStage({ onAdd }: { onAdd: (label: string) => void }) {
 
   return (
     <AddForm
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        if (!label.trim()) return;
-        onAdd(label.trim());
-        setLabel("");
+        if (!label.trim() || savingStage) return;
+        setSavingStage(true);
+        try { if (await onAdd(label.trim())) setLabel(""); } finally { setSavingStage(false); }
       }}
       onKeyDown={(event) => event.key === "Escape" && close()}
     >
@@ -265,7 +266,7 @@ function AddStage({ onAdd }: { onAdd: (label: string) => void }) {
         value={label}
         onChange={(event) => setLabel(event.target.value)}
       />
-      <Button type="submit" size="sm" disabled={!label.trim()}>
+      <Button type="submit" size="sm" disabled={!label.trim()} loading={savingStage}>
         Adicionar
       </Button>
       <Button type="button" variant="ghost" size="sm" onClick={close}>
@@ -291,9 +292,9 @@ function FunnelEditor({ funnel, index, total, counts, onAskRemove, onBlockedStag
 
   const leadsInFunnel = funnel.stages.reduce((sum, stage) => sum + (counts[stage.id] ?? 0), 0);
 
-  const move = (stage: FunnelStage, to: number) => {
+  const move = async (stage: FunnelStage, to: number) => {
     if (to < 0 || to >= funnel.stages.length) return;
-    moveStage(funnel.id, stage.id, to);
+    if (!await moveStage(funnel.id, stage.id, to)) return;
     setAnnouncement(`${stage.label} agora é a etapa ${to + 1} de ${funnel.stages.length}.`);
   };
 
@@ -465,7 +466,7 @@ function FunnelEditor({ funnel, index, total, counts, onAskRemove, onBlockedStag
 
 /** Funis e etapas do quadro de leads: nomes, cores, ícones e ordem. */
 export function FunnelsSettings() {
-  const { funnels, addFunnel, removeFunnel } = useWorkspace();
+  const { funnels, addFunnel, removeFunnel, currentUser, loading } = useWorkspace();
   const { leads } = useLeads();
   const [removing, setRemoving] = useState<Funnel | null>(null);
   const [blocked, setBlocked] = useState<{ funnel: Funnel; stage: FunnelStage; count: number } | null>(null);
@@ -480,8 +481,9 @@ export function FunnelsSettings() {
 
   const removingCount = removing ? leads.filter((lead) => lead.funnelId === removing.id).length : 0;
 
-  const create = () => {
-    const funnel = addFunnel({ name: "Novo funil", icon: funnelIcons[0].icon, tone: "blue" });
+  const create = async () => {
+    const funnel = await addFunnel({ name: "Novo funil", icon: funnelIcons[0].icon, tone: "blue" });
+    if (!funnel) return;
     requestAnimationFrame(() =>
       document.getElementById(`funil-${funnel.id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
     );
@@ -490,7 +492,7 @@ export function FunnelsSettings() {
   return (
     <Page>
       <HeaderActions>
-        <Button icon={PlusIcon} onClick={create}>
+        <Button disabled={loading || currentUser.permission !== "admin"} icon={PlusIcon} onClick={() => void create()}>
           Novo funil
         </Button>
       </HeaderActions>
@@ -500,6 +502,7 @@ export function FunnelsSettings() {
         description="O caminho de cada tipo de cliente no quadro de leads. As mudanças aparecem na hora em Leads, Conversas e Clientes."
       />
 
+      <fieldset disabled={loading || currentUser.permission !== "admin"} style={{ border: 0, padding: 0, minWidth: 0 }}>
       <List>
         {funnels.map((funnel, index) => (
           <FunnelEditor
@@ -513,6 +516,7 @@ export function FunnelsSettings() {
           />
         ))}
       </List>
+      </fieldset>
 
       <Dialog
         open={removing !== null}
@@ -542,9 +546,8 @@ export function FunnelsSettings() {
               <Button
                 variant="danger"
                 icon={TrashIcon}
-                onClick={() => {
-                  if (removing) removeFunnel(removing.id);
-                  setRemoving(null);
+                onClick={async () => {
+                  if (removing && await removeFunnel(removing.id)) setRemoving(null);
                 }}
               >
                 Excluir funil

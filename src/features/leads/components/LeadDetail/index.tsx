@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { notFound, useRouter } from "next/navigation";
 import { ArrowRightIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 import { PageTitle } from "@/components/layout/Header/HeaderActions";
 import { startNavigationProgress } from "@/components/layout/NavigationProgress";
 import type { ComposerHandle } from "@/components/ui/Chat/Composer";
 import { useDockActionsRegistration, type DockActions } from "@/lib/dock";
 import { useIsMobile } from "@/lib/useMediaQuery";
 import { useFunnels, useWorkspace } from "@/features/settings/store";
-import { composerAttachments, filesToAttachments, useLeads } from "../../store";
+import { composerAttachments, useLeads } from "../../store";
 import { LeadChat } from "./LeadChat";
 import { LeadProfile } from "./LeadProfile";
 import { Aside, Card, PaneSwitch, PaneSwitchItem, PaneThumb, Root } from "./styles";
@@ -24,9 +26,15 @@ type Pane = "info" | "chat";
 export function LeadDetail({ leadId }: { leadId: string }) {
   const router = useRouter();
   const mobile = useIsMobile();
+  const [archiving, setArchiving] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [pane, setPane] = useState<Pane>("info");
   const {
     leads,
+    loading,
+    error,
+    refresh,
+    archiveLead,
     details,
     messages,
     unread,
@@ -105,6 +113,8 @@ export function LeadDetail({ leadId }: { leadId: string }) {
     return () => observer.disconnect();
   }, [pane, pendingMessages]);
 
+  if (loading) return <div role="status" style={{ padding: "2rem" }}>Carregando oportunidade…</div>;
+  if (error && (!lead || !leadDetails)) return <div role="alert" style={{ padding: "2rem" }}>{error} <Button onClick={() => void refresh()}>Tentar novamente</Button></div>;
   if (!lead || !leadDetails) notFound();
 
   return (
@@ -134,6 +144,7 @@ export function LeadDetail({ leadId }: { leadId: string }) {
         </PaneSwitchItem>
       </PaneSwitch>
 
+      <Dialog open={confirmArchive} onClose={() => setConfirmArchive(false)} title="Arquivar oportunidade?" description="A oportunidade sai do quadro ativo. O histórico continua armazenado e poderá ser recuperado pela API." footer={<><Button variant="ghost" onClick={() => setConfirmArchive(false)}>Cancelar</Button><Button variant="danger" loading={archiving} onClick={async () => { setArchiving(true); try { if (await archiveLead(lead.id)) close(); } finally { setArchiving(false); } }}>Arquivar</Button></>} />
       <Aside aria-label="Dados da oportunidade" data-pane-id="info">
         <LeadProfile
           lead={lead}
@@ -144,8 +155,9 @@ export function LeadDetail({ leadId }: { leadId: string }) {
           onChangeFunnel={(funnelId) => changeFunnel(lead.id, funnelId, teamMember.name)}
           onUpdateLead={(patch) => updateLead(lead.id, patch)}
           onUpdateDetails={(patch) => updateDetails(lead.id, patch, teamMember.name)}
-          onAddFiles={(files) => addAttachments(lead.id, filesToAttachments(files), teamMember.name)}
+          onAddFiles={(files) => addAttachments(lead.id, files, teamMember.name)}
           onRemoveFile={(id) => removeAttachment(lead.id, id)}
+          onArchive={() => setConfirmArchive(true)}
         />
       </Aside>
 
@@ -160,7 +172,7 @@ export function LeadDetail({ leadId }: { leadId: string }) {
           dockCloseLabel="Voltar aos leads"
           onSend={(payload) =>
             sendMessage(lead.id, {
-              kind: "message",
+              kind: "note",
               text: payload.text,
               attachments: composerAttachments(payload),
               author: teamMember,

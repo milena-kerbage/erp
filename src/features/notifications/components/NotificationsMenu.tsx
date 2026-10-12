@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import styled from "@emotion/styled";
 import { NarrowOnly, WideOnly } from "@/styles/responsive";
 import { DOCK_SPACE } from "@/styles/sheet";
-import { BellIcon, BellSlashIcon, GearSixIcon, PaperclipIcon, SparkleIcon } from "@phosphor-icons/react";
+import { ArchiveIcon, ArrowUUpLeftIcon, BellIcon, BellSlashIcon, GearSixIcon, PaperclipIcon, SparkleIcon } from "@phosphor-icons/react";
 import { startNavigationProgress } from "@/components/layout/NavigationProgress";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +18,8 @@ import { formatRelativeTime } from "@/lib/format";
 import { staggerChildren } from "@/styles/animations";
 import { useLeads } from "@/features/leads/store";
 import { useWorkspace } from "@/features/settings/store";
-import { mockNotifications, type AppNotification, type NotificationActor } from "../mock";
+import type { AppNotification, NotificationActor } from "../mock";
+import { erpRequest, errorMessage } from "@/features/erp/client";
 
 type Tab = "inbox" | "general" | "archived";
 
@@ -306,7 +307,11 @@ export function NotificationsMenu() {
   const { open, position, contentRef, close } = popover;
   const { leads, updateDetails } = useLeads();
   const { members, currentUser } = useWorkspace();
-  const [items, setItems] = useState<AppNotification[]>(() => mockNotifications());
+  const [items, setItems] = useState<AppNotification[]>([]);
+  const [error, setError] = useState("");
+  const refresh = useCallback(async () => {try {const result = await erpRequest<{notifications: AppNotification[]}>("/notifications"); setItems(result.notifications); setError("");} catch (failure) {setError(errorMessage(failure));}}, []);
+  useEffect(() => {void refresh(); const changed = () => {void refresh();}; window.addEventListener("erp:changed", changed); return () => window.removeEventListener("erp:changed", changed);}, [refresh]);
+  useEffect(() => {if(open) void refresh();}, [open, refresh]);
   const [tab, setTab] = useState<Tab>("inbox");
 
   const unreadInbox = items.filter((item) => item.tab === "inbox" && !item.archived && !item.read).length;
@@ -318,10 +323,10 @@ export function NotificationsMenu() {
     [items, tab],
   );
 
-  const patch = (id: string, change: Partial<AppNotification>) =>
-    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...change } : item)));
-
-  const markAllRead = () => setItems((current) => current.map((item) => ({ ...item, read: true })));
+  const patch = async (id: string, change: Partial<AppNotification>) => {
+    try {const result = await erpRequest<{notifications: AppNotification[]}>("/notifications", "PATCH", {id, ...(change.read === undefined ? {} : {read:change.read}), ...(change.archived === undefined ? {} : {archived:change.archived})}); setItems(result.notifications);} catch(failure) {setError(errorMessage(failure));}
+  };
+  const markAllRead = async () => {try {const result = await erpRequest<{notifications: AppNotification[]}>("/notifications", "PATCH", {all:true}); setItems(result.notifications);} catch(failure) {setError(errorMessage(failure));}};
 
   const openItem = (item: AppNotification) => {
     patch(item.id, { read: true });
@@ -428,6 +433,7 @@ export function NotificationsMenu() {
               </TabsEnd>
             </Tabs>
 
+            {error && <Empty role="alert">{error}</Empty>}
             {visible.length === 0 ? (
               <Empty>
                 <BellSlashIcon size={22} aria-hidden />
@@ -452,6 +458,7 @@ export function NotificationsMenu() {
                       <Meta>
                         {formatRelativeTime(item.at)} / {item.context}
                       </Meta>
+                      <Actions><Button size="sm" variant="ghost" icon={item.archived ? ArrowUUpLeftIcon : ArchiveIcon} onClick={() => void patch(item.id, {archived: !item.archived, read:true})}>{item.archived ? "Restaurar notificação" : "Arquivar notificação"}</Button></Actions>
 
                       {item.file && (
                         <File>

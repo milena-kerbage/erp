@@ -2,6 +2,29 @@
 
 ERP em Next.js (App Router) + TypeScript + Emotion.
 
+O WhatsApp Cloud API tem backend persistente, caixa de entrada real em `/conversas`, diagnóstico em `/configuracoes/whatsapp` e políticas públicas em `/politicas`. A implantação escolhida é Vercel com PostgreSQL do Supabase; SQLite permanece para desenvolvimento e testes locais. A conta Meta, o número e os projetos remotos ainda precisam ser configurados.
+
+- [Manual técnico e operacional do WhatsApp](docs/whatsapp-meta.md)
+- [Pendências de implantação para o gestor](docs/pendencias-implantacao-whatsapp.md)
+- [Backend do ERP, contratos e implantação PostgreSQL](docs/erp-backend.md)
+- [Autenticação, papéis e criação de usuários](docs/autenticacao.md)
+- [Configuração de ambiente sem segredos](.env.example)
+- Migrações de produção, na ordem: `001_auth.sql`, `002_whatsapp.sql`, `003_meta_deletion.sql`, `004_integration_settings.sql`, `005_integration_manager.sql`, `006_erp.sql` e `007_workspace_access.sql`, em `supabase/migrations/`.
+
+O ERP utiliza dados persistidos nas rotas `/api/erp`: leads e clientes, funis, agenda, orçamentos, pedidos, catálogo, produção, materiais, movimentações, financeiro e relatórios. A interface consulta snapshots autenticados, aguarda as respostas de gravação e apresenta erros e conflitos de revisão. A inicialização cria as preferências do ateliê e três funis; não cria clientes, vendas, conversas ou usuários fictícios. Os antigos arquivos de mock não alimentam essas páginas.
+
+As notas da oportunidade são internas. Mensagens enviadas pelo WhatsApp e seus status vêm da integração real em `/conversas`, sem presumir vínculo entre uma ficha CRM e um identificador da Meta.
+
+## Primeiro acesso e papéis
+
+1. Configure a conexão privada `DATABASE_URL`, a origem exata `AUTH_ORIGIN`, a chave estável `INTEGRATION_ENCRYPTION_KEY` e aplique as sete migrações no banco correto.
+2. Inclua o e-mail real da administração em `ERP_ADMIN_EMAILS` antes da primeira atribuição de papel dessa conta. Crie a conta com `npm run auth:create-user -- email-real` e informe a senha somente no prompt privado do terminal.
+3. Entre em `/login`. O servidor persiste os papéis `admin`, `manager` ou `member`; escolhas do navegador não concedem acesso. Alterar a lista de bootstrap depois não muda um papel já armazenado. Para autorizar uma conta existente que já recebeu outro papel, use `npm run erp:authorize-admin -- email-real` no ambiente privado com esse e-mail em `ERP_ADMIN_EMAILS`; o comando revoga as sessões anteriores, e a pessoa entra novamente.
+4. A administração usa Configurações → Usuários para convidar pessoas. O sistema entrega um link privado de ativação para compartilhar manualmente; a pessoa cria sua senha em `/convite`. O convite não simula envio de e-mail. Na lista, a administração pode reativar contas desativadas que já concluíram a ativação ou reemitir um link para contas pendentes; a reemissão invalida o link anterior.
+5. Para a gestão WhatsApp, configure também `INTEGRATION_MANAGER_EMAILS`, autorização independente dos papéis do ERP. Para entregas de webhooks do ERP, configure `ERP_WEBHOOK_ALLOWED_HOSTS` e a execução da fila descrita no manual do backend.
+
+Fotos e anexos são enviados ao servidor, com limite de 3 MiB e leitura autenticada. Chaves Bearer do ERP e segredos de webhook aparecem integralmente uma vez; as listagens posteriores apresentam apenas metadados. Configure os recursos remotos antes de testar entrega externa. MFA, conectores externos além do WhatsApp e automações sem executor permanecem identificados como pendentes na interface.
+
 ## Scripts
 
 ```bash
@@ -68,7 +91,7 @@ informações; use barra (`Celular / iOS`) ou badge (`2/5`).
 | `DatePicker`     | Calendário em dropdown: mês e ano clicáveis, setas, hoje contornado, escolhido em destaque, teclado (setas, PageUp/Down, Home/End) |
 | `FileItem`       | Arquivo com ícone pelo tipo, tamanho, baixar/remover (`row` ou `compact`)      |
 | `CopyButton`     | Botão de ícone que copia um texto e confirma com check (tooltip "Copiado!")        |
-| `Chat`           | `ChatBubble` (recebida/enviada/nota, rabinho na primeira da sequência, imagens e arquivos colados na borda com legenda embaixo, hora dentro, status), `ChatFile` (arquivo embutido: tipo / tamanho), `DateDivider` (fixa no topo), `MediaGrid` (imagens em caixa fixa 16×12rem), `AudioPlayer`, `EmojiPicker`, `QuickReplies` (colunas + "Usar resposta") e `ChatComposer` (pílula flutuante só de WhatsApp, sem nota interna: anexos por botão/arrastar/colar, até 4 linhas, áudio, Enter envia) |
+| `Chat`           | `ChatBubble` (recebida/enviada/nota, rabinho na primeira da sequência, imagens e arquivos colados na borda com legenda embaixo, hora dentro, status), `ChatFile` (arquivo embutido: tipo / tamanho), `DateDivider` (fixa no topo), `MediaGrid` (imagens em caixa fixa 16×12rem), `AudioPlayer`, `EmojiPicker`, `QuickReplies` (colunas + "Usar resposta") e `ChatComposer` (compositor que aguarda confirmação do servidor para enviar ou registrar nota interna: anexos por botão/arrastar/colar, até 4 linhas, áudio, Enter envia) |
 | `Badge`          | Selo curto de status/destaque. Tons `neutral`, `brand`, `success`, `warning`, `danger` |
 | `NavTabs`        | Abas de navegação para uso dentro do conteúdo de uma tela (ex.: detalhes de um pedido) |
 | `Breadcrumbs`    | Trilha de navegação; itens com `sections` viram seletor                              |
@@ -287,8 +310,8 @@ do módulo. A logo leva para a primeira tela liberada (`firstAvailableHref`).
 ### Painel (`/`)
 
 Resumo do ateliê **no mês** numa grade de cartões brancos
-(`src/features/dashboard/`). Os números saem do estado atual (leads, fichas e
-conversas) e são calculados no navegador (`metrics.ts`), porque dependem do
+(`src/features/dashboard/`). Os números saem dos snapshots persistidos (leads, fichas e
+históricos do CRM) e são calculados no navegador (`metrics.ts`), porque dependem do
 fuso de quem vê; até lá aparece o esqueleto da mesma grade. As duas colunas
 fecham na mesma altura (a última peça de cada uma estica).
 
@@ -316,8 +339,7 @@ fecham na mesma altura (a última peça de cada uma estica).
 Leads organizados em **funis** (ex.: Noivas, Festas e madrinhas, Debutantes),
 cada um com as próprias etapas, em `src/features/leads/`:
 
-- `funnels.ts` — funis (ícone, cor e etapas; **exemplos** até existir o
-  cadastro de funis). Importe direto nos Client Components: o ícone é um
+- `funnels.ts` — catálogo visual de ícones e definição inicial dos funis. O cadastro e a ordem são persistidos pelo backend. Importe direto nos Client Components: o ícone é um
   componente e não pode ir do servidor ao cliente como prop.
 - `components/FunnelSelect` — seletor no header; o funil fica na URL
   (`/leads?funil=noivas`), então o link é compartilhável.
@@ -331,7 +353,7 @@ cada um com as próprias etapas, em `src/features/leads/`:
   vazadas.
 - `store.tsx` — estado compartilhado entre o quadro, a oportunidade e as
   conversas (fica em `app/(app)/layout.tsx`, então sobrevive à navegação):
-  leads, ficha, mensagens, não lidas, status da conversa e atividade
+  snapshots de leads, fichas, notas internas, status do atendimento e atividade
   (entrada, responsável, status, etapa e arquivos entram em `history`).
 - `components/LeadDetail` — oportunidade (`/leads/[id]`), de ponta a ponta no
   painel: à esquerda a ficha (voltar, responsável, ações e cliente numa faixa
@@ -339,15 +361,14 @@ cada um com as próprias etapas, em `src/features/leads/`:
   menu do chevron duplo, que confirma com check; bloco de funil e etapa;
   abas Detalhes, Campanha com UTMs e Arquivos, com **todos os campos
   editáveis no clique** e máscaras de R$, telefone e @); à direita o chat,
-  separado por uma linha suave, que no futuro conversa com o WhatsApp.
+  separado por uma linha suave, para notas internas persistidas. O link de atendimento leva à caixa WhatsApp real.
 - `components/StagePipeline` — funil e etapa atual (dropdowns) sobre a barra
   de etapas clicável (cada trecho leva para a etapa, com prévia no hover).
 - `options.ts` — opções dos campos (tipo de evento, origem com ícone e tom,
   etiquetas sugeridas) e leitura de telefone/valor. **Exemplos.**
 - `quick-replies.ts` — respostas rápidas com categoria, ícone e tom (`{nome}`
   vira o primeiro nome).
-- `mock.ts` / `mock-details.ts` — **dados fictícios** (e-mails em example.com)
-  até a API existir.
+- `mock.ts` / `mock-details.ts` — antigos exemplos visuais, fora da inicialização das páginas e dos providers.
 
 Tons pastel ficam em `theme.tones` (`bg` coluna, `soft` destaque, `fg` texto),
 todos com contraste AA.
@@ -392,17 +413,15 @@ resto do sistema:
   excluir etapa ou funil com leads. Todo o app lê `useFunnels()`.
 - **Preferências** — contato do ateliê, fuso e horário, conversas ("Enter
   envia" já vale no chat), leads parados e notificações; salvar explícito.
-- **Perfil** — foto, dados (refletem no menu lateral), senha, verificação em
-  duas etapas e sessões.
+- **Perfil** — foto persistida, dados que refletem no menu lateral, senha e revogação de sessões. Alterar e-mail de acesso exige administração; equipe e gestão veem esse campo somente para leitura. A opção de duas etapas permanece indisponível até existir MFA real.
 - **Acessibilidade** — aparência (claro, **escuro** ou como no sistema),
   tamanho do texto, espaçamento de leitura, alto contraste, sublinhar links,
   animações e foco sempre visível; atalhos do teclado. Guardado num cookie
   deste navegador (`mk_a11y`; `mk_scheme` guarda o tema do sistema), lido no
   servidor para a primeira tela já sair no tema certo. Temas em
   `buildTheme({ dark, highContrast })`; cores sempre por token.
-- **Integrações** e **API e webhooks** — conexões por canal, chaves de API
-  (a chave completa aparece uma vez) e webhooks por evento. **Simulados** até
-  existir o back-end.
+- **Integrações** — painel real de configuração, testes e credenciais do WhatsApp. Conectores dos demais provedores permanecem indisponíveis.
+- **API e webhooks** — chaves Bearer do ERP e webhooks persistidos por evento. O segredo aparece uma vez; teste de entrega apresenta o resultado real do destino.
 
 Componentes novos: `TextField` (com máscara), `Switch`, `Checkbox`, `Dialog`
 (modal com foco preso; `height` fixa, `scroll="content"` para só uma parte

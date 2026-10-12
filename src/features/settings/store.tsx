@@ -1,347 +1,175 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { defaultFunnels, pickFunnel, type Funnel, type FunnelStage } from "@/features/leads/funnels";
-import {
-  defaultIntegrations,
-  defaultPreferences,
-  mockApiKeys,
-  mockMembers,
-  mockWebhooks,
-} from "./mock";
-import type {
-  ApiKey,
-  ApiScope,
-  IntegrationId,
-  IntegrationState,
-  Member,
-  Permission,
-  Preferences,
-  Webhook,
-} from "./types";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { defaultFunnels, funnelIcons, pickFunnel, type Funnel, type FunnelStage } from "@/features/leads/funnels";
+import { erpRequest, errorMessage } from "@/features/erp/client";
+import type { ApiKey, ApiScope, IntegrationId, IntegrationState, Member, Permission, Preferences, Webhook } from "./types";
 
-const uid = () => Math.random().toString(36).slice(2, 10);
-
-/** "Pós-venda VIP" → "pos-venda-vip" (id estável e legível). */
-const slugify = (text: string) =>
-  text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || uid();
-
-/** Segredo aleatório gerado no navegador (hex). */
-function randomSecret(bytes: number) {
-  const values = new Uint8Array(bytes);
-  crypto.getRandomValues(values);
-  return Array.from(values, (value) => value.toString(16).padStart(2, "0")).join("");
-}
+type StoredFunnel = Omit<Funnel, "icon"> & { icon: string; revision: number };
+type LiveFunnel = Funnel & { revision?: number };
+type WorkspaceSnapshot = { funnels: StoredFunnel[]; preferences: Preferences; revision: number };
+const deserializeFunnel = (funnel: StoredFunnel): LiveFunnel => ({ ...funnel, icon: funnelIcons.find(item => item.name === funnel.icon)?.icon ?? funnelIcons[0].icon });
+const serializeFunnel = (funnel: Partial<Funnel>) => ({ ...funnel, ...(funnel.icon ? { icon: funnelIcons.find(item => item.icon === funnel.icon)?.name ?? funnelIcons[0].name } : {}) });
+const uid = () => crypto.randomUUID();
+const slugify = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid();
+const initialPreferences: Preferences = {
+  workspaceName: "Ateliê Milena Kerbage", businessPhone: "", businessEmail: "milenakerbageatelie@gmail.com", city: "Fortaleza, CE", timeZone: "America/Sao_Paulo", weekStart: "sunday", openingTime: "09:00", closingTime: "18:00", saturday: false, enterSends: true, signMessages: false, awayMessage: false, awayText: "", staleLeadDays: 3, autoAssign: false, notifyNewLead: true, notifyNewMessage: true, notifyStaleLead: true, dailySummary: false,
+};
+const initialIntegrations: Record<IntegrationId, IntegrationState> = { whatsapp: { connected: false }, instagram: { connected: false }, "meta-ads": { connected: false }, "google-calendar": { connected: false }, gmail: { connected: false }, "google-analytics": { connected: false } };
 
 type WorkspaceContextValue = {
-  /* Funis e etapas */
-  funnels: readonly Funnel[];
-  addFunnel: (funnel: Pick<Funnel, "name" | "icon" | "tone">) => Funnel;
-  updateFunnel: (id: string, patch: Partial<Pick<Funnel, "name" | "icon" | "tone">>) => void;
-  removeFunnel: (id: string) => void;
-  moveFunnel: (id: string, direction: -1 | 1) => void;
-  addStage: (funnelId: string, label: string) => void;
-  updateStage: (funnelId: string, stageId: string, patch: Partial<Omit<FunnelStage, "id">>) => void;
-  removeStage: (funnelId: string, stageId: string) => void;
-  /** Move a etapa para a posição `to` (arrastar ou setas). */
-  moveStage: (funnelId: string, stageId: string, to: number) => void;
-
-  /* Equipe */
-  members: readonly Member[];
-  currentUser: Member;
-  inviteMember: (member: Pick<Member, "name" | "email" | "role" | "permission">) => void;
-  updateMember: (id: string, patch: Partial<Omit<Member, "id">>) => void;
-  removeMember: (id: string) => void;
-
-  /* Preferências */
-  preferences: Preferences;
-  updatePreferences: (patch: Partial<Preferences>) => void;
-
-  /* Integrações */
+  loading: boolean; error: string | null; refresh: () => Promise<void>;
+  funnels: readonly LiveFunnel[];
+  addFunnel: (funnel: Pick<Funnel, "name" | "icon" | "tone">) => Promise<Funnel | null>;
+  updateFunnel: (id: string, patch: Partial<Pick<Funnel, "name" | "icon" | "tone">>) => Promise<boolean>;
+  removeFunnel: (id: string) => Promise<boolean>;
+  moveFunnel: (id: string, direction: -1 | 1) => Promise<boolean>;
+  addStage: (funnelId: string, label: string) => Promise<boolean>;
+  updateStage: (funnelId: string, stageId: string, patch: Partial<Omit<FunnelStage, "id">>) => Promise<boolean>;
+  removeStage: (funnelId: string, stageId: string) => Promise<boolean>;
+  moveStage: (funnelId: string, stageId: string, to: number) => Promise<boolean>;
+  members: readonly Member[]; currentUser: Member;
+  inviteMember: (member: Pick<Member, "name" | "email" | "role" | "permission">) => Promise<string | null>;
+  reissueInvitation: (id: string) => Promise<string | null>;
+  updateMember: (id: string, patch: Partial<Omit<Member, "id">>) => Promise<boolean>;
+  removeMember: (id: string) => Promise<boolean>;
+  preferences: Preferences; updatePreferences: (patch: Partial<Preferences>) => Promise<boolean>;
   integrations: Record<IntegrationId, IntegrationState>;
-  setIntegration: (id: IntegrationId, state: IntegrationState) => void;
-
-  /* API e webhooks */
   apiKeys: readonly ApiKey[];
-  /** Cria a chave e devolve o valor completo (mostrado uma única vez). */
-  createApiKey: (name: string, scope: ApiScope) => string;
-  revokeApiKey: (id: string) => void;
+  createApiKey: (name: string, scope: ApiScope) => Promise<string | null>;
+  revokeApiKey: (id: string) => Promise<boolean>;
   webhooks: readonly Webhook[];
-  addWebhook: (webhook: Pick<Webhook, "url" | "events">) => void;
-  updateWebhook: (id: string, patch: Partial<Omit<Webhook, "id">>) => void;
-  removeWebhook: (id: string) => void;
+  addWebhook: (webhook: Pick<Webhook, "url" | "events">) => Promise<string | null>;
+  updateWebhook: (id: string, patch: Pick<Partial<Webhook>, "url" | "events" | "active">) => Promise<boolean>;
+  removeWebhook: (id: string) => Promise<boolean>;
+  testWebhook: (id: string) => Promise<boolean>;
 };
-
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
-/**
- * Estado do ateliê editado em Configurações: funis e etapas, equipe,
- * preferências, integrações, chaves de API e webhooks. Fica no layout do
- * app, então as mudanças aparecem na hora no quadro, nas conversas etc.
- * TODO: trocar pela API quando o back-end existir.
- */
+/** Configuration is refreshed from authenticated backend snapshots; client state never grants permissions. */
 export function WorkspaceProvider({ children, authenticatedUser }: { children: ReactNode; authenticatedUser: { id: string; name: string; email: string } }) {
-  const currentUserId = authenticatedUser.id;
-  const [funnels, setFunnels] = useState<readonly Funnel[]>(defaultFunnels);
-  const [members, setMembers] = useState<readonly Member[]>(() => {
-    const existing = mockMembers.find(member => member.id === authenticatedUser.id);
-    const member: Member = { ...existing, ...authenticatedUser, seed: existing?.seed ?? authenticatedUser.id, role: existing?.role ?? "Administradora", permission: existing?.permission ?? "admin", status: "active", joinedAt: existing?.joinedAt ?? new Date().toISOString().slice(0, 10) };
-    return existing ? mockMembers.map(item => item.id === member.id ? member : item) : [member, ...mockMembers];
-  });
-  const [preferences, setPreferences] = useState(defaultPreferences);
-  const [integrations, setIntegrations] = useState(defaultIntegrations);
-  const [apiKeys, setApiKeys] = useState<readonly ApiKey[]>(mockApiKeys);
-  const [webhooks, setWebhooks] = useState<readonly Webhook[]>(mockWebhooks);
+  const [funnels, setFunnels] = useState<readonly LiveFunnel[]>(defaultFunnels);
+  const [members, setMembers] = useState<readonly Member[]>([]);
+  const [currentUser, setCurrentUser] = useState<Member>({ ...authenticatedUser, seed: authenticatedUser.id, role: "", permission: "member", status: "active", joinedAt: "" });
+  const [preferences, setPreferences] = useState(initialPreferences);
+  const [integrations, setIntegrations] = useState(initialIntegrations);
+  const [apiKeys, setApiKeys] = useState<readonly ApiKey[]>([]);
+  const [webhooks, setWebhooks] = useState<readonly Webhook[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const revision = useRef(0);
 
-  const currentUser = members.find((member) => member.id === currentUserId) ?? members[0];
-
-  /* Funis */
-
-  const editFunnel = useCallback((id: string, edit: (funnel: Funnel) => Funnel) => {
-    setFunnels((current) => current.map((funnel) => (funnel.id === id ? edit(funnel) : funnel)));
+  const loadWorkspace = useCallback(async () => {
+    const snapshot = await erpRequest<WorkspaceSnapshot>("/workspace");
+    if (!snapshot.funnels?.length) throw new Error("O servidor não retornou os funis do ateliê.");
+    setFunnels(snapshot.funnels.map(deserializeFunnel)); setPreferences(snapshot.preferences); revision.current = snapshot.revision;
   }, []);
-
-  const addFunnel = useCallback<WorkspaceContextValue["addFunnel"]>(
-    (input) => {
-      let id = slugify(input.name);
-      if (funnels.some((funnel) => funnel.id === id)) id = `${id}-${uid().slice(0, 4)}`;
-      const funnel: Funnel = {
-        ...input,
-        id,
-        stages: [
-          { id: "novo", label: "Novo lead", tone: "blue" },
-          { id: "contato", label: "Em contato", tone: "lavender" },
-          { id: "fechado", label: "Fechado", tone: "green" },
-        ],
-      };
-      setFunnels((current) => [...current, funnel]);
-      return funnel;
-    },
-    [funnels],
-  );
-
-  const updateFunnel = useCallback<WorkspaceContextValue["updateFunnel"]>(
-    (id, patch) => editFunnel(id, (funnel) => ({ ...funnel, ...patch })),
-    [editFunnel],
-  );
-
-  const removeFunnel = useCallback((id: string) => {
-    setFunnels((current) => (current.length > 1 ? current.filter((funnel) => funnel.id !== id) : current));
+  const loadTeam = useCallback(async () => {
+    const snapshot = await erpRequest<{ members: Member[]; currentUser: Member }>("/team");
+    setMembers(snapshot.members); setCurrentUser(snapshot.currentUser);
+    return snapshot.currentUser;
   }, []);
-
-  const moveFunnel = useCallback((id: string, direction: -1 | 1) => {
-    setFunnels((current) => {
-      const index = current.findIndex((funnel) => funnel.id === id);
-      const target = index + direction;
-      if (index < 0 || target < 0 || target >= current.length) return current;
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
+  const loadTools = useCallback(async () => {
+    const results = await Promise.allSettled([erpRequest<{ apiKeys: ApiKey[] }>("/api-keys"), erpRequest<{ webhooks: Webhook[] }>("/webhooks")]);
+    if (results[0].status === "fulfilled") setApiKeys(results[0].value.apiKeys);
+    if (results[1].status === "fulfilled") setWebhooks(results[1].value.webhooks);
+    const failed = results.find(result => result.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
   }, []);
+  const refresh = useCallback(async () => {
+    setError(null);
+    try {
+      const results = await Promise.allSettled([loadWorkspace(), loadTeam()]);
+      const failed = results.find(result => result.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
+      if (results[1].status === "fulfilled" && results[1].value.permission === "admin") await loadTools();
+      const response = await fetch("/api/whatsapp/status", { cache: "no-store" });
+      if (response.ok) {
+        const status = await response.json();
+        setIntegrations({ ...initialIntegrations, whatsapp: { connected: Boolean(status.configured), account: status.phone?.display_phone_number } });
+      }
+    } catch (cause) { setError(errorMessage(cause)); }
+    finally { setLoading(false); }
+  }, [loadWorkspace, loadTeam, loadTools]);
+  useEffect(() => { void refresh(); }, [refresh]);
 
-  const addStage = useCallback(
-    (funnelId: string, label: string) =>
-      editFunnel(funnelId, (funnel) => {
-        let id = slugify(label);
-        if (funnel.stages.some((stage) => stage.id === id)) id = `${id}-${uid().slice(0, 4)}`;
-        return { ...funnel, stages: [...funnel.stages, { id, label, tone: "neutral" }] };
-      }),
-    [editFunnel],
-  );
-
-  const updateStage = useCallback<WorkspaceContextValue["updateStage"]>(
-    (funnelId, stageId, patch) =>
-      editFunnel(funnelId, (funnel) => ({
-        ...funnel,
-        stages: funnel.stages.map((stage) => (stage.id === stageId ? { ...stage, ...patch } : stage)),
-      })),
-    [editFunnel],
-  );
-
-  const removeStage = useCallback(
-    (funnelId: string, stageId: string) =>
-      editFunnel(funnelId, (funnel) =>
-        funnel.stages.length > 1
-          ? { ...funnel, stages: funnel.stages.filter((stage) => stage.id !== stageId) }
-          : funnel,
-      ),
-    [editFunnel],
-  );
-
-  const moveStage = useCallback(
-    (funnelId: string, stageId: string, to: number) =>
-      editFunnel(funnelId, (funnel) => {
-        const from = funnel.stages.findIndex((stage) => stage.id === stageId);
-        if (from < 0 || to < 0 || to >= funnel.stages.length || from === to) return funnel;
-        const stages = [...funnel.stages];
-        const [stage] = stages.splice(from, 1);
-        stages.splice(to, 0, stage);
-        return { ...funnel, stages };
-      }),
-    [editFunnel],
-  );
-
-  /* Equipe */
-
-  const inviteMember = useCallback<WorkspaceContextValue["inviteMember"]>((input) => {
-    const id = `user-${uid()}`;
-    setMembers((current) => [
-      ...current,
-      { ...input, id, seed: id, status: "invited", joinedAt: new Date().toISOString().slice(0, 10) },
-    ]);
+  const mutate = useCallback(async <T,>(action: () => Promise<T>): Promise<T | null> => {
+    setError(null);
+    try { return await action(); }
+    catch (cause) { setError(errorMessage(cause)); return null; }
   }, []);
-
-  const updateMember = useCallback<WorkspaceContextValue["updateMember"]>((id, patch) => {
-    setMembers((current) => current.map((member) => (member.id === id ? { ...member, ...patch } : member)));
-  }, []);
-
-  const removeMember = useCallback((id: string) => {
-    setMembers((current) => (id === currentUserId ? current : current.filter((member) => member.id !== id)));
-  }, []);
-
-  /* Preferências e integrações */
-
-  const updatePreferences = useCallback((patch: Partial<Preferences>) => {
-    setPreferences((current) => ({ ...current, ...patch }));
-  }, []);
-
-  const setIntegration = useCallback((id: IntegrationId, state: IntegrationState) => {
-    setIntegrations((current) => ({ ...current, [id]: state }));
-  }, []);
-
-  /* API e webhooks */
-
-  const createApiKey = useCallback(
-    (name: string, scope: ApiScope) => {
-      const secret = `mk_live_${randomSecret(20)}`;
-      setApiKeys((current) => [
-        ...current,
-        {
-          id: uid(),
-          name,
-          scope,
-          prefix: "mk_live_",
-          last4: secret.slice(-4),
-          createdAt: new Date().toISOString(),
-          createdBy: currentUser.name,
-        },
-      ]);
-      return secret;
-    },
-    [currentUser.name],
-  );
-
-  const revokeApiKey = useCallback((id: string) => {
-    setApiKeys((current) => current.filter((key) => key.id !== id));
-  }, []);
-
-  const addWebhook = useCallback((input: Pick<Webhook, "url" | "events">) => {
-    setWebhooks((current) => [
-      ...current,
-      { ...input, id: uid(), active: true, secret: `whsec_${randomSecret(12)}`, createdAt: new Date().toISOString() },
-    ]);
-  }, []);
-
-  const updateWebhook = useCallback((id: string, patch: Partial<Omit<Webhook, "id">>) => {
-    setWebhooks((current) => current.map((webhook) => (webhook.id === id ? { ...webhook, ...patch } : webhook)));
-  }, []);
-
-  const removeWebhook = useCallback((id: string) => {
-    setWebhooks((current) => current.filter((webhook) => webhook.id !== id));
-  }, []);
-
-  const value = useMemo<WorkspaceContextValue>(
-    () => ({
-      funnels,
-      addFunnel,
-      updateFunnel,
-      removeFunnel,
-      moveFunnel,
-      addStage,
-      updateStage,
-      removeStage,
-      moveStage,
-      members,
-      currentUser,
-      inviteMember,
-      updateMember,
-      removeMember,
-      preferences,
-      updatePreferences,
-      integrations,
-      setIntegration,
-      apiKeys,
-      createApiKey,
-      revokeApiKey,
-      webhooks,
-      addWebhook,
-      updateWebhook,
-      removeWebhook,
-    }),
-    [
-      funnels,
-      addFunnel,
-      updateFunnel,
-      removeFunnel,
-      moveFunnel,
-      addStage,
-      updateStage,
-      removeStage,
-      moveStage,
-      members,
-      currentUser,
-      inviteMember,
-      updateMember,
-      removeMember,
-      preferences,
-      updatePreferences,
-      integrations,
-      setIntegration,
-      apiKeys,
-      createApiKey,
-      revokeApiKey,
-      webhooks,
-      addWebhook,
-      updateWebhook,
-      removeWebhook,
-    ],
-  );
-
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+  const funnelPatch = useCallback(async (id: string, patch: Partial<Funnel>) => {
+    const current = funnels.find(item => item.id === id);
+    if (!current) return false;
+    return (await mutate(async () => { await erpRequest(`/funnels/${encodeURIComponent(id)}`, "PATCH", { revision: current.revision, funnel: serializeFunnel(patch) }); await loadWorkspace(); return true; })) ?? false;
+  }, [funnels, mutate, loadWorkspace]);
+  const addFunnel = useCallback<WorkspaceContextValue["addFunnel"]>(input => mutate(async () => {
+    const response = await erpRequest<{ funnel: StoredFunnel }>("/funnels", "POST", { funnel: { ...serializeFunnel(input), stages: [{ id: "novo", label: "Novo lead", tone: "blue" }, { id: "contato", label: "Em contato", tone: "lavender" }, { id: "fechado", label: "Fechado", tone: "green" }] } });
+    await loadWorkspace(); return deserializeFunnel(response.funnel);
+  }), [mutate, loadWorkspace]);
+  const removeFunnel = useCallback(async (id: string) => (await mutate(async () => { await erpRequest(`/funnels/${encodeURIComponent(id)}?revision=${funnels.find(item => item.id === id)?.revision}`, "DELETE"); await loadWorkspace(); return true; })) ?? false, [funnels, mutate, loadWorkspace]);
+  const moveFunnel = useCallback(async (id: string, direction: -1 | 1) => {
+    const index = funnels.findIndex(item => item.id === id); const target = index + direction;
+    if (index < 0 || target < 0 || target >= funnels.length) return false;
+    const order = funnels.map(item => item.id); [order[index], order[target]] = [order[target], order[index]];
+    return (await mutate(async () => { await erpRequest("/funnels/reorder", "POST", { revision: revision.current, ids: order }); await loadWorkspace(); return true; })) ?? false;
+  }, [funnels, mutate, loadWorkspace]);
+  const editStages = useCallback(async (id: string, edit: (stages: readonly FunnelStage[]) => readonly FunnelStage[]) => {
+    const current = funnels.find(item => item.id === id); return current ? funnelPatch(id, { stages: edit(current.stages) }) : false;
+  }, [funnels, funnelPatch]);
+  const addStage = useCallback((id: string, label: string) => editStages(id, stages => [...stages, { id: `${slugify(label)}-${uid().slice(0, 6)}`, label, tone: "neutral" }]), [editStages]);
+  const updateStage = useCallback<WorkspaceContextValue["updateStage"]>((id, stageId, patch) => editStages(id, stages => stages.map(stage => stage.id === stageId ? { ...stage, ...patch } : stage)), [editStages]);
+  const removeStage = useCallback((id: string, stageId: string) => editStages(id, stages => stages.filter(stage => stage.id !== stageId)), [editStages]);
+  const moveStage = useCallback((id: string, stageId: string, to: number) => editStages(id, stages => {
+    const next = [...stages]; const from = next.findIndex(stage => stage.id === stageId);
+    if (from < 0 || to < 0 || to >= stages.length) return stages;
+    const [stage] = next.splice(from, 1); next.splice(to, 0, stage); return next;
+  }), [editStages]);
+  const inviteMember = useCallback<WorkspaceContextValue["inviteMember"]>(input => mutate(async () => {
+    const response = await erpRequest<{ inviteUrl: string }>("/team", "POST", input);
+    try { await loadTeam(); }
+    catch (cause) { setError(`O convite foi criado. Copie o link de ativação agora; a listagem ainda precisa ser atualizada. ${errorMessage(cause)}`); }
+    return response.inviteUrl;
+  }), [mutate, loadTeam]);
+  const reissueInvitation = useCallback((id: string) => mutate(async () => {
+    const response = await erpRequest<{ inviteUrl: string }>(`/team/${encodeURIComponent(id)}/invite`, "POST", {});
+    try { await loadTeam(); }
+    catch (cause) { setError(`O convite foi reemitido. Copie o novo link agora; a listagem ainda precisa ser atualizada. ${errorMessage(cause)}`); }
+    return response.inviteUrl;
+  }), [mutate, loadTeam]);
+  const updateMember = useCallback<WorkspaceContextValue["updateMember"]>((id, patch) => mutate(async () => {
+    await erpRequest(id === authenticatedUser.id && patch.permission === undefined && patch.status === undefined ? "/profile" : `/team/${encodeURIComponent(id)}`, "PATCH", patch); await loadTeam(); return true;
+  }).then(Boolean), [mutate, loadTeam, authenticatedUser.id]);
+  const removeMember = useCallback((id: string) => mutate(async () => { await erpRequest(`/team/${encodeURIComponent(id)}`, "DELETE"); await loadTeam(); return true; }).then(Boolean), [mutate, loadTeam]);
+  const updatePreferences = useCallback((patch: Partial<Preferences>) => mutate(async () => { await erpRequest("/preferences", "PATCH", { revision: revision.current, preferences: patch }); await loadWorkspace(); return true; }).then(Boolean), [mutate, loadWorkspace]);
+  const createApiKey = useCallback((name: string, scope: ApiScope) => mutate(async () => {
+    const value = await erpRequest<{ key: string }>("/api-keys", "POST", { name, scope });
+    try { await loadTools(); }
+    catch (cause) { setError(`A chave foi criada. Copie o segredo agora; a listagem ainda precisa ser atualizada. ${errorMessage(cause)}`); }
+    return value.key;
+  }), [mutate, loadTools]);
+  const revokeApiKey = useCallback((id: string) => mutate(async () => { await erpRequest(`/api-keys/${encodeURIComponent(id)}`, "DELETE"); await loadTools(); return true; }).then(Boolean), [mutate, loadTools]);
+  const addWebhook = useCallback<WorkspaceContextValue["addWebhook"]>(input => mutate(async () => {
+    const value = await erpRequest<{ secret: string }>("/webhooks", "POST", input);
+    try { await loadTools(); }
+    catch (cause) { setError(`O webhook foi criado. Copie o segredo agora; a listagem ainda precisa ser atualizada. ${errorMessage(cause)}`); }
+    return value.secret;
+  }), [mutate, loadTools]);
+  const updateWebhook = useCallback<WorkspaceContextValue["updateWebhook"]>((id, patch) => mutate(async () => { await erpRequest(`/webhooks/${encodeURIComponent(id)}`, "PATCH", patch); await loadTools(); return true; }).then(Boolean), [mutate, loadTools]);
+  const removeWebhook = useCallback((id: string) => mutate(async () => { await erpRequest(`/webhooks/${encodeURIComponent(id)}`, "DELETE"); await loadTools(); return true; }).then(Boolean), [mutate, loadTools]);
+  const testWebhook = useCallback((id: string) => mutate(async () => {
+    const result = await erpRequest<{ ok: boolean; status: number | null; error?: string }>(`/webhooks/${encodeURIComponent(id)}/test`, "POST", { confirmation: "TESTAR" });
+    await loadTools();
+    if (!result.ok) throw new Error(typeof result.error === "string" ? result.error.slice(0, 500) : result.status ? `O destino recusou a entrega com HTTP ${result.status}.` : "O destino não confirmou a entrega do teste.");
+    return true;
+  }).then(Boolean), [mutate, loadTools]);
+  const value: WorkspaceContextValue = { loading, error, refresh, funnels, addFunnel, updateFunnel: funnelPatch, removeFunnel, moveFunnel, addStage, updateStage, removeStage, moveStage, members, currentUser, inviteMember, reissueInvitation, updateMember, removeMember, preferences, updatePreferences, integrations, apiKeys, createApiKey, revokeApiKey, webhooks, addWebhook, updateWebhook, removeWebhook, testWebhook };
+  return <WorkspaceContext.Provider value={value}>{error && <div role="alert" style={{ padding: "1rem", background: "#fff1ef", color: "#8b2920" }}>Dados do ateliê: {error} <button type="button" onClick={() => void refresh()}>Atualizar dados</button></div>}{children}</WorkspaceContext.Provider>;
 }
-
-export function useWorkspace() {
-  const context = useContext(WorkspaceContext);
-  if (!context) throw new Error("useWorkspace precisa estar dentro de <WorkspaceProvider>");
-  return context;
-}
-
-/** Funis atuais e a busca por id (cai no primeiro se não existir). */
-export function useFunnels() {
-  const { funnels } = useWorkspace();
-  const findFunnel = useCallback((id: string | undefined) => pickFunnel(funnels, id), [funnels]);
-  return { funnels, findFunnel };
-}
-
-/** Quem pode ser responsável: equipe ativa (convites pendentes ficam de fora). */
-export function useTeam() {
-  const { members } = useWorkspace();
-  return useMemo(() => members.filter((member) => member.status === "active"), [members]);
-}
-
-/** Usuária logada (null fora do provider, ex.: telas sem o app). */
-export function useCurrentUser() {
-  return useContext(WorkspaceContext)?.currentUser ?? null;
-}
-
+export function useWorkspace() { const context = useContext(WorkspaceContext); if (!context) throw new Error("useWorkspace precisa estar dentro de <WorkspaceProvider>"); return context; }
+export function useFunnels() { const { funnels } = useWorkspace(); const findFunnel = useCallback((id: string | undefined) => pickFunnel(funnels, id), [funnels]); return { funnels, findFunnel }; }
+export function useTeam() { const { members } = useWorkspace(); return useMemo(() => members.filter(member => member.status === "active"), [members]); }
+export function useCurrentUser() { return useContext(WorkspaceContext)?.currentUser ?? null; }
 export const permissionLabels: Record<Permission, { label: string; description: string }> = {
-  admin: { label: "Admin", description: "Acesso total, incluindo configurações" },
-  manager: { label: "Gestão", description: "Tudo, menos as configurações do ateliê" },
-  member: { label: "Equipe", description: "Leads, conversas e clientes do dia a dia" },
+  admin: { label: "Admin", description: "Acesso total, incluindo configurações" }, manager: { label: "Gestão", description: "Gestão operacional do ateliê" }, member: { label: "Equipe", description: "Leads, conversas e clientes do dia a dia" },
 };

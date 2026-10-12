@@ -227,7 +227,7 @@ export function ActivityFeed({ now, className }: { now: Date; className?: string
           title: `Mensagem de ${first}`,
           detail: <>“{text.length > 70 ? `${text.slice(0, 70).trimEnd()}…` : text}”</>,
           text: `${lead.name} ${text}`,
-          href: `/conversas?c=${lead.id}`,
+          href: `/leads/${lead.id}`,
         });
       }
     }

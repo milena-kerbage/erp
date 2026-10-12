@@ -1,5 +1,6 @@
 export type Lead = {
   id: string;
+  revision?: number;
   /** Funil ao qual o lead pertence. */
   funnelId: string;
   /** Etapa dentro do funil (ver `funnels.ts`). */
@@ -32,7 +33,7 @@ export type Attachment = {
   /** MIME type. */
   type: string;
   addedAt: string;
-  /** URL para abrir/baixar (arquivos enviados agora usam URL local). */
+  /** Rota autenticada para abrir/baixar o arquivo persistido. */
   url?: string;
   /** Duração em segundos (áudio e vídeo). */
   duration?: number;

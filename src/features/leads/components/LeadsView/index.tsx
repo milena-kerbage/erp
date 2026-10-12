@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { ArchivedLeads } from "../ArchivedLeads";
+import { NewLeadForm } from "../NewLeadForm";
 import styled from "@emotion/styled";
-import { KanbanIcon, PlusIcon, TableIcon } from "@phosphor-icons/react";
+import { ArchiveIcon, KanbanIcon, PlusIcon, TableIcon } from "@phosphor-icons/react";
 import { HeaderActions } from "@/components/layout/Header/HeaderActions";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -29,6 +32,8 @@ const Screen = styled.div`
  * visões, como a tela de tarefas do web-specular.
  */
 export function LeadsView({ funnelId }: { funnelId?: string }) {
+  const [showArchived, setShowArchived] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [view, setView] = useViewMode<View>("leads", "kanban", VIEWS, "kanban");
   // Sem ?funil= na URL vale o primeiro funil, igual ao kanban
   const funnel = useFunnels().findFunnel(funnelId);
@@ -48,18 +53,20 @@ export function LeadsView({ funnelId }: { funnelId?: string }) {
           { value: "table", label: "Tabela", icon: TableIcon },
         ]}
       />
-      {/* TODO: abrir o formulário de novo lead */}
+      <IconButton icon={ArchiveIcon} label="Oportunidades arquivadas" variant="ghost" onClick={() => setShowArchived(true)} />
       <WideOnly>
-        <Button icon={PlusIcon}>Novo lead</Button>
+        <Button icon={PlusIcon} onClick={() => setCreating(true)}>Novo lead</Button>
       </WideOnly>
       <NarrowOnly>
-        <IconButton icon={PlusIcon} label="Novo lead" variant="primary" tooltip={false} />
+        <IconButton icon={PlusIcon} label="Novo lead" variant="primary" tooltip={false} onClick={() => setCreating(true)} />
       </NarrowOnly>
     </>
   );
 
   return (
     <>
+      {showArchived && <ArchivedLeads open onClose={() => setShowArchived(false)} />}
+      {creating && <NewLeadForm open onClose={() => setCreating(false)} funnelId={funnel.id} />}
       <HeaderActions>
         <FunnelSelect funnelId={funnelId} />
       </HeaderActions>

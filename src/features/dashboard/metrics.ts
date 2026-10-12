@@ -311,7 +311,7 @@ export function attentionRows(
   statuses: Record<string, ConversationStatus>,
 ) {
   return leads
-    .filter((lead) => (messages[lead.id]?.length ?? 0) > 0)
+    .filter((lead) => (messages[lead.id] ?? []).some(message => message.kind === "message"))
     .map<AttentionRow>((lead) => {
       const conversation = (messages[lead.id] ?? []).filter((message) => message.kind === "message");
       let waitingSince: string | null = null;

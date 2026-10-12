@@ -24,6 +24,7 @@ import { leadSources } from "../../options";
 import { sortLeads } from "../../format";
 import { useFunnels, useTeam, useWorkspace } from "@/features/settings/store";
 import { useLeads } from "../../store";
+import { NewLeadForm } from "../NewLeadForm";
 import { LeadCard } from "../LeadCard";
 
 type LeadsBoardProps = {
@@ -68,6 +69,7 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
   const team = useTeam();
   const funnel = findFunnel(funnelId);
   const { leads: allLeads, details, unread, moveLead: move } = useLeads();
+  const [creatingStage, setCreatingStage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [sources, setSources] = useState<string[]>([]);
   const [owners, setOwners] = useState<string[]>([]);
@@ -229,20 +231,20 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
   );
   useDockPagerRegistration(pager);
 
-  const moveLead = (id: string, stage: string) => {
+  const moveLead = async (id: string, stage: string) => {
     const lead = allLeads.find((item) => item.id === id);
     if (!lead || lead.stage === stage) return;
 
-    move(id, stage, teamMember.name);
+    if (!await move(id, stage, teamMember.name)) return;
     const label = funnel.stages.find((item) => item.id === stage)?.label;
     setAnnouncement(`${lead.name} foi para ${label}.`);
   };
 
-  // TODO: abrir o formulário de novo lead.
-  const addLead = (stage: string) => void stage;
+  const addLead = (stage: string) => setCreatingStage(stage);
 
   return (
     <Screen>
+      {creatingStage && <NewLeadForm open onClose={() => setCreatingStage(null)} funnelId={funnel.id} stageId={creatingStage} />}
       <FilterBar
         search={{ label: "Buscar leads", placeholder: "Buscar leads", value: query, onChange: setQuery }}
         sections={sections}

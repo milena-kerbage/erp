@@ -169,11 +169,12 @@ function PermissionSelect({ member, onChange }: { member: Member; onChange: (per
 /** Equipe do ateliê: quem acessa, o que pode fazer e convites. */
 export function UsersSettings() {
   const theme = useTheme();
-  const { members, currentUser, inviteMember, updateMember, removeMember } = useWorkspace();
+  const { members, currentUser, inviteMember, reissueInvitation, updateMember, removeMember, loading, error } = useWorkspace();
   const [query, setQuery] = useState("");
   const [permissionFilter, setPermissionFilter] = useState<Permission[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | Member["status"]>("all");
   const [inviting, setInviting] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [sending, runInvite] = usePending(650);
   const [removing, setRemoving] = useState<Member | null>(null);
   const [draft, setDraft] = useState({ name: "", email: "", role: "", permission: "member" as Permission });
@@ -181,6 +182,7 @@ export function UsersSettings() {
 
   const active = members.filter((member) => member.status === "active");
   const invited = members.filter((member) => member.status === "invited");
+  const disabled = members.filter((member) => member.status === "disabled");
   const admins = active.filter((member) => member.permission === "admin");
   const recent = active.filter(
     (member) => member.lastSeenAt && Date.now() - new Date(member.lastSeenAt).getTime() < 7 * DAY,
@@ -201,7 +203,7 @@ export function UsersSettings() {
   };
 
   const permissionCell = (member: Member, self: boolean) =>
-    self ? (
+    self || currentUser.permission !== "admin" ? (
       <Pill $tone={permissionTones[member.permission]} title="Você não pode mudar a própria permissão">
         {permissionLabels[member.permission].label}
       </Pill>
@@ -215,7 +217,7 @@ export function UsersSettings() {
         <CheckCircleIcon size={12} weight="bold" aria-hidden />
         Ativa
       </Pill>
-    ) : (
+    ) : member.status === "disabled" ? <Pill $tone="neutral" $outline>Acesso desativado</Pill> : (
       <Pill $tone="peach" $outline>
         <PaperPlaneTiltIcon size={12} weight="bold" aria-hidden />
         Convite pendente
@@ -232,7 +234,7 @@ export function UsersSettings() {
       <Muted>Nunca entrou</Muted>
     );
 
-  const roleField = (member: Member) => (
+  const roleField = (member: Member) => currentUser.permission !== "admin" ? <Muted>{member.role || "Sem função definida"}</Muted> : (
     <EditableText
       label={`Função de ${member.name}`}
       placeholder="Definir função"
@@ -250,13 +252,14 @@ export function UsersSettings() {
         <IconButton {...props} icon={DotsThreeIcon} label="Ações" variant="ghost" size="sm" tooltip={false} />
       )}
     >
-      {member.status === "invited" && <MenuItem icon={EnvelopeSimpleIcon}>Reenviar convite</MenuItem>}
+      {(member.status === "invited" || member.status === "disabled" && member.invitationPending) && <MenuItem icon={EnvelopeSimpleIcon} disabled={sending || currentUser.permission !== "admin"} onSelect={() => void runInvite(async () => { const link = await reissueInvitation(member.id); if (link) setInviteUrl(link); })}>Reemitir convite</MenuItem>}
+      {member.status === "disabled" && !member.invitationPending && <MenuItem icon={CheckCircleIcon} disabled={currentUser.permission !== "admin"} onSelect={() => void updateMember(member.id, { status: "active" })}>Reativar acesso</MenuItem>}
       <MenuItem icon={CopyIcon} onSelect={() => void copyText(member.email)}>
         Copiar e-mail
       </MenuItem>
       <MenuSeparator />
-      <MenuItem icon={TrashIcon} muted disabled={self} onSelect={() => setRemoving(member)}>
-        {member.status === "invited" ? "Cancelar convite" : "Remover da equipe"}
+      <MenuItem icon={TrashIcon} muted disabled={self || member.status === "disabled" || currentUser.permission !== "admin"} onSelect={() => setRemoving(member)}>
+        {member.status === "invited" ? "Cancelar convite" : "Desativar acesso"}
       </MenuItem>
     </Menu>
   );
@@ -273,7 +276,7 @@ export function UsersSettings() {
             { value: "cards", label: "Cards", icon: CardsIcon },
           ]}
         />
-        <Button icon={UserPlusIcon} onClick={() => setInviting(true)}>
+        <Button disabled={loading || currentUser.permission !== "admin"} icon={UserPlusIcon} onClick={() => setInviting(true)}>
           Convidar pessoa
         </Button>
       </HeaderActions>
@@ -343,6 +346,7 @@ export function UsersSettings() {
                   leading: <PaperPlaneTiltIcon size={16} />,
                   count: invited.length,
                 },
+                { value: "disabled", label: "Acesso desativado", leading: <ShieldCheckIcon size={16} />, count: disabled.length },
                 { value: "all", label: "Todas", leading: <UsersThreeIcon size={16} />, count: members.length },
               ],
             },
@@ -460,7 +464,7 @@ export function UsersSettings() {
         open={inviting}
         onClose={closeInvite}
         title="Convidar pessoa"
-        description="Ela recebe um e-mail para criar a senha e entrar no sistema."
+        description="O sistema gera um link de ativação para você compartilhar com a pessoa. Nenhum e-mail é enviado automaticamente."
         footer={
           <>
             <Button variant="ghost" onClick={closeInvite}>
@@ -471,18 +475,18 @@ export function UsersSettings() {
               disabled={!validInvite || emailTaken}
               loading={sending}
               onClick={() =>
-                runInvite(() => {
-                  inviteMember({
+                runInvite(async () => {
+                  const link = await inviteMember({
                     name: draft.name.trim(),
                     email: draft.email.trim(),
                     role: draft.role.trim(),
                     permission: draft.permission,
                   });
-                  closeInvite();
+                  if (link) { closeInvite(); setInviteUrl(link); }
                 })
               }
             >
-              Enviar convite
+              Gerar convite
             </Button>
           </>
         }
@@ -528,7 +532,7 @@ export function UsersSettings() {
       <Dialog
         open={removing !== null}
         onClose={() => setRemoving(null)}
-        title={removing?.status === "invited" ? "Cancelar convite?" : "Remover da equipe?"}
+        title={removing?.status === "invited" ? "Cancelar convite?" : "Desativar acesso?"}
         description={
           removing?.status === "invited"
             ? `O convite de ${removing?.name} deixa de valer.`
@@ -543,16 +547,19 @@ export function UsersSettings() {
             <Button
               variant="danger"
               icon={TrashIcon}
-              onClick={() => {
-                if (removing) removeMember(removing.id);
-                setRemoving(null);
+              onClick={async () => {
+                if (removing && await removeMember(removing.id)) setRemoving(null);
               }}
             >
-              {removing?.status === "invited" ? "Cancelar convite" : "Remover"}
+              {removing?.status === "invited" ? "Cancelar convite" : "Desativar"}
             </Button>
           </>
         }
       />
+      <Dialog open={inviteUrl !== null} onClose={() => setInviteUrl(null)} title="Link de ativação" description="Compartilhe este link em particular com a pessoa convidada. Ela definirá a própria senha. O link deixa de valer após a ativação ou expiração." footer={<><Button variant="secondary" icon={CopyIcon} onClick={() => void copyText(inviteUrl ?? "")}>Copiar link</Button><Button onClick={() => setInviteUrl(null)}>Concluir</Button></>}>
+        {error && <p role="alert">{error}</p>}
+        <TextField label="Link do convite" readOnly value={inviteUrl ?? ""} />
+      </Dialog>
     </Page>
   );
 }
