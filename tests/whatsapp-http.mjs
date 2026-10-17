@@ -14,7 +14,7 @@ const publicOrigin = 'https://app.ateliemilenakerbage.com.br';
 const appSecret = randomBytes(32).toString('hex');
 let verifyToken = randomBytes(32).toString('hex');
 process.env.AUTH_DB_PATH = join(folder, 'auth.sqlite');
-delete process.env.DATABASE_URL;
+delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true';
 delete process.env.VERCEL;
 const auth = await import('../src/lib/auth/core.ts');
 const userId = randomBytes(16).toString('hex');
@@ -27,7 +27,8 @@ await auth.createUser(`staff-${staffId}@example.test`, 'Operador sem gestão', '
 let staffCookie = `__Host-mk_session=${await auth.createSession(staffId)}`;
 let output = '';
 const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', String(port)], {
-  env: { ...process.env, NODE_ENV: 'production', AUTH_REQUIRE_LOGIN: 'true', AUTH_ORIGIN: publicOrigin, PUBLIC_BASE_URL: publicOrigin,
+  // DATABASE_URL vazia (definida, mas vazia) impede o Next de carregar a conexão real de .env.local: este teste só usa SQLite temporário.
+  env: { ...process.env, DATABASE_URL: '', DATABASE_SSL_CA: '', SUPABASE_PROJECT_ID: '', SUPABASE_URL: '', ALLOW_LOCAL_SQLITE: 'true', NODE_ENV: 'production', AUTH_REQUIRE_LOGIN: 'true', AUTH_ORIGIN: publicOrigin, PUBLIC_BASE_URL: publicOrigin,
     AUTH_DB_PATH: process.env.AUTH_DB_PATH, ERP_DB_PATH: join(folder,'erp.sqlite'), WHATSAPP_DB_PATH: join(folder, 'whatsapp.sqlite'), META_DELETION_DB_PATH: join(folder, 'deletion.sqlite'), ERP_WEBHOOK_ALLOWED_HOSTS:'',
     INTEGRATION_MANAGER_EMAILS: `${managerEmail},${unusedManagerEmail}`, ERP_ADMIN_EMAILS: managerEmail, INTEGRATION_ENCRYPTION_KEY: randomBytes(32).toString('base64'), META_OAUTH_ENABLED: 'false', META_APP_ID: '',
     WHATSAPP_GRAPH_VERSION: '', WHATSAPP_ACCESS_TOKEN: '', WHATSAPP_APP_SECRET: appSecret, META_APP_SECRET: appSecret,

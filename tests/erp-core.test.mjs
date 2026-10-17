@@ -20,7 +20,7 @@ before(async () => {
 });
 beforeEach(async () => {
  directory=await mkdtemp(join(tmpdir(),'erp-core-'));process.env.ERP_DB_PATH=join(directory,'erp.sqlite');delete process.env.VERCEL;
- if (!postgres) delete process.env.DATABASE_URL;
+ if (!postgres) { delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true'; }
  else { await engine.exec('DROP SCHEMA IF EXISTS erp_core CASCADE;');await engine.exec(await readFile(new URL('../supabase/migrations/006_erp.sql',import.meta.url),'utf8')); }
 });
 afterEach(async () => { await closeDatabases(); await rm(directory,{recursive:true,force:true}); });

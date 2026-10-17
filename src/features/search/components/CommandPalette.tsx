@@ -539,7 +539,7 @@ function useSearchData(query: string) {
             id: `message:${lead.id}:${message.id}`,
             group: "messages",
             title: excerpt(message.text, query.trim()),
-            subtitle: `${message.direction === "in" ? lead.name : message.author.name}${message.kind === "note" ? " (nota interna)" : ""} / histórico demonstrativo de ${lead.name}`,
+            subtitle: message.direction === "in" ? lead.name : `${message.author.name}${message.kind === "note" ? " (nota interna)" : ""} / ${lead.name}`,
             keywords: message.text,
             href: `/leads/${lead.id}`,
             leading: (

@@ -171,9 +171,9 @@ As variáveis WhatsApp/legais abaixo também identificam o contrato do servidor 
 | `WHATSAPP_PHONE_NUMBER_ID` | ID Graph do número comercial, 5–30 dígitos na validação local |
 | `WHATSAPP_BUSINESS_ACCOUNT_ID` | WABA, 5–30 dígitos na validação local |
 | `WHATSAPP_SUPPRESSION_SECRET` | Chave estável aleatória com pelo menos 32 caracteres, distinta dos demais segredos |
-| `WHATSAPP_DB_PATH` | Padrão `.data/whatsapp.sqlite` no adaptador local de desenvolvimento/teste; não usar como banco Vercel |
+| `WHATSAPP_DB_PATH` | Padrão `.data/whatsapp.sqlite`, usado só com `ALLOW_LOCAL_SQLITE=true` (testes); não usar como banco Vercel |
 | `WHATSAPP_RETENTION_DAYS` | Padrão 90; inteiro entre 1 e 3650; valor inválido retorna ao padrão |
-| `AUTH_DB_PATH` | Banco local de autenticação no desenvolvimento/teste, padrão `.data/auth.sqlite` |
+| `AUTH_DB_PATH` | Banco local de autenticação, só com `ALLOW_LOCAL_SQLITE=true` (testes), padrão `.data/auth.sqlite` |
 | `META_DELETION_DB_PATH` | Protocolos locais de teste, padrão `.data/meta-deletion.sqlite` |
 | `LEGAL_ENTITY_NAME`, `LEGAL_CNPJ`, `LEGAL_ADDRESS` | Sobrescrevem a identificação empresarial informada |
 | `LEGAL_PRIVACY_EMAIL`, `LEGAL_SUPPORT_EMAIL` | Canais válidos que precisam ser acompanhados pela empresa |
@@ -409,7 +409,7 @@ Em produção, os dados ficam no PostgreSQL Supabase configurado por `DATABASE_U
 
 Apenas o servidor deve consultar esses esquemas. O ERP usa autorização própria por papéis nas migrações `006_erp.sql` e `007_workspace_access.sql`, descrita no [manual do backend](erp-backend.md); não usa Supabase Auth nem isolamento multiempresa. Grants e exposição de API precisam ser conferidos no projeto real, além das verificações de sessão/origem feitas pelo ERP.
 
-No desenvolvimento/teste, o adaptador SQLite utiliza:
+Nos testes isolados (`ALLOW_LOCAL_SQLITE=true`), o adaptador SQLite utiliza:
 
 | Banco | Conteúdo |
 | --- | --- |

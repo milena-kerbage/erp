@@ -1,4 +1,4 @@
-/** Permissões reais de gestão; não utiliza o perfil demonstrativo da interface. */
+/** Permissões reais de gestão, sempre derivadas da sessão e da allowlist no servidor. */
 export function managerEmails() {
   return new Set((process.env.INTEGRATION_MANAGER_EMAILS || '').split(',').map(value => value.trim().toLowerCase()).filter(value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)));
 }

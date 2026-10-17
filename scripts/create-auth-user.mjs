@@ -1,6 +1,6 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { createUser, db, hashPassword, normalizeEmail, validEmail, newToken } from '../src/lib/auth/core.ts';
+import { createUser, db, findUser, hashPassword, normalizeEmail, validEmail, validPassword, newToken } from '../src/lib/auth/core.ts';
 
 if (!stdin.isTTY || !stdout.isTTY) throw new Error('Execute em um terminal interativo. Não informe a senha como argumento ou variável de ambiente.');
 const prompts = createInterface({input: stdin, output: stdout});
@@ -35,10 +35,17 @@ async function hiddenPassword(label) {
 let password = await hiddenPassword('Senha (não será exibida): ');
 let confirm = await hiddenPassword('Confirme a senha: ');
 try {
-  if (password !== confirm) throw new Error('As senhas não são iguais.');
+  // Mensagens específicas: só estes erros (e a configuração do banco) explicam o motivo; o resto fica genérico.
+  const reason = message => Object.assign(new Error(message), { explained: true });
+  if (password !== confirm) throw reason('As senhas digitadas não são iguais. Tente de novo.');
+  if (!validPassword(password)) throw reason('Senha fora da política: use de 8 a 128 caracteres, com pelo menos uma letra, um número e um símbolo (por exemplo ! @ # ?).');
+  if (await findUser(email)) throw reason('Este e-mail já está cadastrado. Entre em /login ou use outro e-mail.');
   const hash = await hashPassword(password);
-  const first = !await db().prepare('SELECT id FROM users LIMIT 1').get();
-  await createUser(email, name, hash, first ? 'user-milena' : newToken());
+  await createUser(email, name, hash, newToken());
   stdout.write('Conta criada. Entre em /login com suas credenciais.\n');
-} catch { stdout.write('Não foi possível criar a conta. Verifique se o e-mail já está cadastrado e se a senha tem de 8 a 128 caracteres, com letras, números e símbolos.\n'); process.exitCode = 1; }
-finally {password = ''; confirm = ''; await db().close();}
+} catch (error) {
+  if (error?.code === 'DATABASE_NOT_CONFIGURED' || error?.explained) stdout.write(`${error.message}\n`);
+  else stdout.write(`Não foi possível criar a conta (${error?.code || error?.name || 'erro'}). Rode npm run db:check para conferir a conexão com o banco.\n`);
+  process.exitCode = 1;
+}
+finally {password = ''; confirm = ''; try { await db().close(); } catch { /* banco não configurado: nada a fechar */ }}

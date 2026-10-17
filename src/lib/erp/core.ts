@@ -113,13 +113,17 @@ const initialFunnels: Omit<FunnelDTO,'revision'|'position'>[] = [
 ];
 export async function lockErpCore() { if (erpDB().backend === 'postgres') await erpDB().prepare('SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(?, 0))').get('erp-core-mutations'); }
 const lock=lockErpCore;
+// A configuração inicial só precisa ser conferida uma vez por conexão/processo; repetir em cada requisição custa várias idas e voltas ao banco.
+const initialized = new WeakSet<object>();
 export async function initializeERP() {
   const database = erpDB();
+  if (initialized.has(database)) return;
   await database.transaction(async () => {
     await lock();
     const result = await database.prepare('INSERT INTO workspace_settings (id,data_json,revision,updated) VALUES (?, ?, 1, ?) ON CONFLICT(id) DO NOTHING').run('workspace', JSON.stringify(initialPreferences), Date.now());
     if (Number(result.changes)) for (const [position,funnel] of initialFunnels.entries()) await database.prepare('INSERT INTO funnels VALUES (?, ?, 1, ?, ?) ON CONFLICT(id) DO NOTHING').run(funnel.id,JSON.stringify(funnel),position,Date.now());
   });
+  initialized.add(database);
 }
 async function audit(actor: ERPActor, action: string, resource: string, id: string) {
   await erpDB().prepare('INSERT INTO erp_audit VALUES (?, ?, ?, ?, ?, ?)').run(randomUUID(),actor.id,action,resource,id,Date.now());

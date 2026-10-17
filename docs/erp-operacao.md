@@ -194,7 +194,7 @@ Movimentações de estoque não aceitam edição dos campos. Arquivamento e rest
 
 ## Persistência e PostgreSQL
 
-As telas chamam o backend, que usa o adaptador de banco do sistema. O ambiente local pode trabalhar com SQLite para desenvolvimento; Vercel requer a conexão PostgreSQL configurada em `DATABASE_URL` e as migrações Supabase aplicadas.
+As telas chamam o backend, que usa o adaptador de banco do sistema. Desenvolvimento local e produção usam o PostgreSQL do projeto Supabase configurado em `DATABASE_URL`, com as migrações aplicadas; sem essa variável as telas mostram erro de configuração e não exibem dados. SQLite local só existe como escolha explícita para testes (`ALLOW_LOCAL_SQLITE=true`).
 
 Os dados operacionais usam o domínio/schema dedicado ao ERP, separado de autenticação, WhatsApp e exclusão Meta. Revise o catálogo de migrações atual no diretório `supabase/migrations` e o documento de implantação antes de publicar. A interface não pede a URL do banco e não conecta diretamente ao Supabase com uma chave administrativa no navegador.
 

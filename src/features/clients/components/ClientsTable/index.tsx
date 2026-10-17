@@ -181,7 +181,7 @@ type ClientsTableProps = {
 export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: ClientsTableProps = {}) {
   const theme = useTheme();
   const router = useRouter();
-  const { leads, details, unread, moveLead } = useLeads();
+  const { leads, details, unread, moveLead, loading, error, refresh } = useLeads();
   const { funnels, findFunnel } = useFunnels();
   const { currentUser } = useWorkspace();
   const team = useTeam();
@@ -261,6 +261,14 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
       return sort.direction === "asc" ? order : -order;
     });
 
+  /** Vazio de verdade (banco sem clientes), carregando ou com erro: nunca "ajuste os filtros" sem motivo. */
+  const emptyState = loading
+    ? { title: "Carregando clientes…", description: "Buscando os cadastros no banco de dados.", retry: false, clear: false }
+    : error && leads.length === 0
+      ? { title: "Não foi possível carregar os clientes", description: error, retry: true, clear: false }
+      : leads.length === 0
+        ? { title: "Nenhum cliente cadastrado", description: "Os clientes e leads cadastrados no banco do ateliê aparecem aqui. Use Novo lead para começar.", retry: false, clear: false }
+        : { title: "Nenhum cliente encontrado", description: "Ajuste a busca ou os filtros para ver mais clientes.", retry: false, clear: true };
   const filtered =
     query !== "" ||
     funnelFilter.length > 0 ||
@@ -604,12 +612,13 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
       <TableScroll data-scrolled={scrolled ? "" : undefined} onScroll={onScroll}>
         {view === "cards" ? (
           visible.length === 0 ? (
-            <EmptyState
-              icon={<UsersThreeIcon size={24} />}
-              title="Nenhum cliente encontrado"
-              description="Ajuste a busca ou os filtros para ver mais clientes."
-            >
-              {filtered && (
+            <EmptyState icon={<UsersThreeIcon size={24} />} title={emptyState.title} description={emptyState.description}>
+              {emptyState.retry && (
+                <Button variant="secondary" size="sm" onClick={() => void refresh()}>
+                  Tentar novamente
+                </Button>
+              )}
+              {emptyState.clear && filtered && (
                 <Button variant="secondary" size="sm" onClick={clearFilters}>
                   Limpar busca e filtros
                 </Button>
@@ -735,12 +744,13 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
               {visible.length === 0 && (
                 <tr>
                   <EmptyRow colSpan={11}>
-                    <EmptyState
-                      icon={<UsersThreeIcon size={24} />}
-                      title="Nenhum cliente encontrado"
-                      description="Ajuste a busca ou os filtros para ver mais clientes."
-                    >
-                      {filtered && (
+                    <EmptyState icon={<UsersThreeIcon size={24} />} title={emptyState.title} description={emptyState.description}>
+                      {emptyState.retry && (
+                        <Button variant="secondary" size="sm" onClick={() => void refresh()}>
+                          Tentar novamente
+                        </Button>
+                      )}
+                      {emptyState.clear && filtered && (
                         <Button variant="secondary" size="sm" onClick={clearFilters}>
                           Limpar busca e filtros
                         </Button>

@@ -4,6 +4,7 @@ import { COOKIE_NAME, cookieOptions } from '@/lib/auth/cookies';
 import { createVerifiedSession, changeUserPassword, db, digest, findUser, issueReset, limited, normalizeEmail, resetPassword, revokeSession, sessionUser, validEmail, validPassword, verifyPassword } from '@/lib/auth/core';
 import { HttpError, readBody, trustedOrigin } from '@/lib/auth/http';
 import { acceptInvitation, currentMember, recordMemberLogin, ApiError } from '@/lib/erp/access';
+import { DatabaseConfigurationError } from '@/lib/database';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -108,6 +109,8 @@ export async function POST(request: NextRequest, context: RouteContext<'/api/aut
       if (error.status === 429) response.headers.set('Retry-After', '900');
       return response;
     }
+    // Variável ausente ou inválida: a mensagem cita só nomes de variáveis e orienta a correção.
+    if (error instanceof DatabaseConfigurationError) return json({error: error.message, code: error.code}, 503);
     console.error('Falha interna de autenticação.');
     return json({error: 'Acesso temporariamente indisponível. Tente novamente.'}, 503);
   }

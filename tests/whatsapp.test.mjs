@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHmac } from 'node:crypto';
 
-delete process.env.DATABASE_URL;
+delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true';
 delete process.env.VERCEL;
 const folder = mkdtempSync(join(tmpdir(), 'mk-whatsapp-'));
 Object.assign(process.env, {

@@ -1,6 +1,6 @@
 import { erpDb,initializeERP } from './core.ts';
 import { accessDb,ApiError,listTeam,type Actor } from './access.ts';
-import type { AppNotification } from '../../features/notifications/mock.ts';
+import type { AppNotification } from '../../features/notifications/types.ts';
 export async function notifications(actor:Actor) {
   await initializeERP();
   const events=await erpDb().prepare('SELECT * FROM erp_audit ORDER BY created DESC LIMIT 100').all() as Array<{id:string;actor:string;action:string;resource:string;record_id:string;created:number}>;

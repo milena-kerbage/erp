@@ -18,7 +18,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { staggerChildren } from "@/styles/animations";
 import { useLeads } from "@/features/leads/store";
 import { useWorkspace } from "@/features/settings/store";
-import type { AppNotification, NotificationActor } from "../mock";
+import type { AppNotification, NotificationActor } from "../types";
 import { erpRequest, errorMessage } from "@/features/erp/client";
 
 type Tab = "inbox" | "general" | "archived";

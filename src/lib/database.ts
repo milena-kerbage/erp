@@ -4,6 +4,7 @@ import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { Pool, types, type PoolClient, type QueryResult } from 'pg';
+import { databaseTargetProblems } from './supabase.ts';
 
 export type DatabaseDomain = 'auth' | 'whatsapp' | 'meta' | 'erp';
 type Row = Record<string, unknown>;
@@ -20,7 +21,9 @@ types.setTypeParser(20, value => { const parsed = Number(value); if (!Number.isS
 export class DatabaseConfigurationError extends Error {
   code = 'DATABASE_NOT_CONFIGURED';
   status = 503;
-  constructor() { super('Configure DATABASE_URL do pooler PostgreSQL/Supabase para este ambiente.'); }
+  /** Nomes das variáveis de ambiente envolvidas (nunca seus valores). */
+  variables: string[];
+  constructor(message = 'Configure DATABASE_URL do pooler PostgreSQL/Supabase para este ambiente.', variables: string[] = ['DATABASE_URL']) { super(message); this.variables = variables; }
 }
 export class DatabaseOperationError extends Error {
   code = 'DATABASE_UNAVAILABLE';
@@ -31,9 +34,11 @@ async function safeQuery<T>(operation: () => Promise<T>): Promise<T> {
   try { return await operation(); }
   catch (error) { if (error instanceof DatabaseConfigurationError) throw error; throw new DatabaseOperationError(); }
 }
+// SQLite local só existe como escolha explícita (ALLOW_LOCAL_SQLITE=true) fora da Vercel; o padrão é o banco remoto.
+const localSqliteAllowed = () => process.env.VERCEL !== '1' && process.env.ALLOW_LOCAL_SQLITE === 'true';
 export function storageConfiguration() {
   const configured = Boolean(process.env.DATABASE_URL);
-  return {backend: configured ? 'postgres' : 'sqlite', configured: configured || process.env.VERCEL !== '1', persistent: configured || process.env.VERCEL !== '1'};
+  return {backend: configured ? 'postgres' : 'sqlite', configured: configured || localSqliteAllowed(), persistent: configured || localSqliteAllowed()};
 }
 
 // Substitui parâmetros posicionais, preservando '?' em strings, identificadores e comentários.
@@ -67,19 +72,23 @@ export function postgresParameters(sql: string) {
   return result;
 }
 
+// Padrão 1 (serverless/pooler de transações). Em desenvolvimento com banco remoto distante, DATABASE_POOL_MAX (1 a 10)
+// paraleliza as requisições; a consistência não depende do pool (cada transação usa o próprio cliente e o bloqueio consultivo).
+function poolSize() { const value = Number(process.env.DATABASE_POOL_MAX); return Number.isInteger(value) && value >= 1 && value <= 10 ? value : 1; }
+
 function poolFor(connectionString: string) {
   const key = createHash('sha256').update(connectionString).digest('hex');
   const existing = pools.get(key); if (existing) return existing;
   let url: URL;
   try { url = new URL(connectionString); if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname || !url.username || !url.password) throw new Error(); }
-  catch { throw new DatabaseConfigurationError(); }
+  catch { throw new DatabaseConfigurationError('DATABASE_URL inválida: use a connection string postgresql://usuario:senha@host:porta/banco copiada do painel Supabase (Connect).'); }
   // pg connection-string sslmode pode sobrescrever ssl: retiramos esses parâmetros
   // para sempre verificar o certificado com a cadeia confiável do runtime.
   for (const parameter of ['sslmode', 'sslcert', 'sslkey', 'sslrootcert']) url.searchParams.delete(parameter);
   const certificate = process.env.DATABASE_SSL_CA?.replace(/\\n/g, '\n');
   const disableTls = process.env.DATABASE_SSL_MODE === 'disable';
   if (disableTls && !(process.env.NODE_ENV === 'test' && process.env.VERCEL !== '1' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) throw new DatabaseConfigurationError();
-  const pool = new Pool({connectionString: url.toString(), ssl: disableTls ? false : {rejectUnauthorized: true, ...(certificate ? {ca: certificate} : {})}, max: 1, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000, query_timeout: 15_000, allowExitOnIdle: true});
+  const pool = new Pool({connectionString: url.toString(), ssl: disableTls ? false : {rejectUnauthorized: true, ...(certificate ? {ca: certificate} : {})}, max: poolSize(), idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000, query_timeout: 15_000, allowExitOnIdle: true});
   pool.on('error', () => { /* O consumidor recebe erros seguros, sem imprimir URL/credenciais. */ });
   pools.set(key, pool); return pool;
 }
@@ -135,7 +144,7 @@ export class Database {
     if (this.backend === 'sqlite') return this.locked(async () => executeSqlite(this.local()));
     const client = await safeQuery(() => poolFor(this.connectionString).connect());
     try {
-      await client.query('BEGIN'); await client.query(`SET LOCAL search_path TO ${schemas[this.domain]}`);
+      await client.query(`BEGIN; SET LOCAL search_path TO ${schemas[this.domain]}`);
       const value = await executePostgres(client); await client.query('COMMIT'); return value;
     } catch (error) { await client.query('ROLLBACK'); throw error; }
     finally { client.release(); }
@@ -156,7 +165,7 @@ export class Database {
     }
     if (this.backend === 'sqlite') { await this.locked(async () => { this.local().exec(sql); }); return; }
     const client = await safeQuery(() => poolFor(this.connectionString).connect());
-    try { await client.query('BEGIN'); await client.query(`SET LOCAL search_path TO ${schemas[this.domain]}`); await client.query(sql); await client.query('COMMIT'); }
+    try { await client.query(`BEGIN; SET LOCAL search_path TO ${schemas[this.domain]}`); await client.query(sql); await client.query('COMMIT'); }
     catch (error) { await client.query('ROLLBACK'); if (error instanceof DatabaseConfigurationError) throw error; throw new DatabaseOperationError(); }
     finally { client.release(); }
   }
@@ -165,7 +174,7 @@ export class Database {
     if (context.getStore() && this.backend === 'postgres') throw new Error('Transações entre domínios devem ser coordenadas fora de uma transação aberta.');
     const execute = async (client: DatabaseSync | PoolClient) => context.run({database: this, client}, async () => {
       if (this.backend === 'sqlite') (client as DatabaseSync).exec('BEGIN IMMEDIATE');
-      else await safeQuery(async () => { await (client as PoolClient).query('BEGIN'); await (client as PoolClient).query(`SET LOCAL search_path TO ${schemas[this.domain]}`); });
+      else await safeQuery(() => (client as PoolClient).query(`BEGIN; SET LOCAL search_path TO ${schemas[this.domain]}`));
       try {
         const value = await operation();
         if (this.backend === 'sqlite') (client as DatabaseSync).exec('COMMIT'); else await safeQuery(() => (client as PoolClient).query('COMMIT'));
@@ -184,7 +193,11 @@ export class Database {
 
 export function databaseFor(domain: DatabaseDomain, sqlitePath: string, sqliteSchema: string) {
   const connectionString = process.env.DATABASE_URL || '';
-  if (!connectionString && process.env.VERCEL === '1') throw new DatabaseConfigurationError();
+  if (!connectionString && !localSqliteAllowed()) throw new DatabaseConfigurationError('Variável de ambiente obrigatória ausente: DATABASE_URL (conexão do Transaction Pooler do projeto Supabase). Defina-a em .env.local e reinicie o servidor.');
+  if (connectionString && process.env.NODE_ENV !== 'test') {
+    const problems = databaseTargetProblems(connectionString);
+    if (problems.length) throw new DatabaseConfigurationError(problems.join(' '), ['DATABASE_URL', 'SUPABASE_PROJECT_ID', 'SUPABASE_URL']);
+  }
   const key = `${domain}:${connectionString ? createHash('sha256').update(connectionString).digest('hex') : resolve(/* turbopackIgnore: true */ sqlitePath)}`;
   let database = databases.get(key);
   if (!database) { database = new Database(domain, sqlitePath, sqliteSchema, connectionString); databases.set(key, database); }

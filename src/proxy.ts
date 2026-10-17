@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { sessionUser } from './lib/auth/core';
 import { developmentAccess } from './lib/auth/environment';
 import { COOKIE_NAME } from './lib/auth/cookies';
+import { DatabaseConfigurationError } from './lib/database';
 
 // Verificação em cada requisição, inclusive navegação RSC e prefetch.
 export async function proxy(request: NextRequest) {
@@ -16,8 +17,11 @@ export async function proxy(request: NextRequest) {
   if (!developmentAccess() && !publicPage && !publicAsset && !authApi && !erpApi && !metaCallback) {
     let user;
     try { user = await sessionUser(request.cookies.get(COOKIE_NAME)?.value, false); }
-    catch {
-      const response = NextResponse.json({ error: 'Acesso temporariamente indisponível. Tente novamente.' }, { status: 503 });
+    catch (error) {
+      // Variável de banco ausente/inválida: páginas vão a /login, que explica o problema; APIs recebem a mensagem (só nomes de variáveis).
+      const unconfigured = error instanceof DatabaseConfigurationError;
+      if (unconfigured && !path.startsWith('/api/')) return NextResponse.redirect(new URL('/login', request.url));
+      const response = NextResponse.json(unconfigured ? { error: error.message, code: error.code } : { error: 'Acesso temporariamente indisponível. Tente novamente.' }, { status: 503 });
       response.headers.set('Cache-Control', 'no-store');
       response.headers.set('Referrer-Policy', 'no-referrer');
       return response;

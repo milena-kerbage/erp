@@ -15,7 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Tone } from "@/styles/theme";
 
-/** Opções dos campos de escolha do lead. EXEMPLOS: ajustar com o ateliê. */
+/** Vocabulário dos campos de escolha do lead; o valor escolhido é gravado na ficha, no banco. */
 
 export type ChoiceOption = {
   value: string;

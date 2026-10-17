@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 
 const directory = mkdtempSync(join(tmpdir(), 'mk-manager-'));
 process.env.NODE_ENV = 'test';
-delete process.env.DATABASE_URL; delete process.env.VERCEL;
+delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true'; delete process.env.VERCEL;
 process.env.WHATSAPP_DB_PATH = join(directory, 'manager.sqlite');
 process.env.INTEGRATION_ENCRYPTION_KEY = randomBytes(32).toString('base64');
 process.env.META_APP_ID = '123456789';

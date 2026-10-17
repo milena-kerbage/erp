@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const folder = mkdtempSync(join(tmpdir(), 'mk-auth-'));
-delete process.env.DATABASE_URL;
+delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true';
 delete process.env.VERCEL;
 process.env.AUTH_DB_PATH = join(folder, 'auth.sqlite');
 const auth = await import('../src/lib/auth/core.ts');

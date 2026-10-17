@@ -10,7 +10,7 @@ O guia de operação da interface está em [erp-operacao.md](erp-operacao.md), e
 
 ## 1. Preparação e banco
 
-Aplicar, em ordem, as sete migrações de `supabase/migrations`:
+Aplicar, em ordem, as sete migrações de `supabase/migrations` (todas idempotentes: `IF NOT EXISTS`, sem `DROP`/`DELETE`; a aplicação no projeto real exige autorização do responsável):
 
 | Migração | Conteúdo |
 | --- | --- |
@@ -36,7 +36,23 @@ Variáveis privadas:
 | `INTEGRATION_MANAGER_EMAILS` | Allowlist adicional para gestão da integração Meta |
 | `INTEGRATION_ENCRYPTION_KEY` | 32 bytes aleatórios em base64; preservar para decifrar segredos existentes |
 | `ERP_WEBHOOK_ALLOWED_HOSTS` | Hosts HTTPS exatos autorizados para saída de webhooks, separados por vírgula |
-| `ERP_DB_PATH` | Arquivo SQLite do ERP somente no ambiente local |
+| `SUPABASE_PROJECT_ID` | Identificador público do projeto Supabase; o app recusa `DATABASE_URL` de outro projeto |
+| `SUPABASE_URL` | `https://<project-id>.supabase.co`; deve corresponder ao `SUPABASE_PROJECT_ID` |
+| `DATABASE_POOL_MAX` | Conexões simultâneas por instância (1 a 10, padrão 1). Cada operação faz várias idas e voltas ao banco; com o banco a ~130 ms (desenvolvimento no Brasil, projeto nos EUA) uma tela pode levar dezenas de segundos com 1 conexão. Em desenvolvimento use 4; no pooler serverless mantenha o padrão |
+| `ALLOW_LOCAL_SQLITE` | `true` apenas para testes isolados em SQLite (`ERP_DB_PATH`, `AUTH_DB_PATH`, `WHATSAPP_DB_PATH`); fora disso o padrão é exigir `DATABASE_URL` |
+| `ERP_DB_PATH` | Arquivo SQLite do ERP, só com `ALLOW_LOCAL_SQLITE=true` |
+
+O servidor **não usa** a anon/publishable key nem a service_role key do Supabase: não há cliente `supabase-js`, e os esquemas `erp_*` ficam fora da Data API. Por isso essas chaves não são variáveis do projeto e não devem ser adicionadas sem um uso real. A única credencial é a senha embutida em `DATABASE_URL`, colocada pelo responsável em `.env.local` (ignorado pelo Git), nunca em código, documentação, chat ou logs.
+
+Faltando `DATABASE_URL`, qualquer rota que toque o banco responde 503 `DATABASE_NOT_CONFIGURED` citando só o nome da variável, e as telas mostram o aviso "Banco de dados não configurado". Se `SUPABASE_PROJECT_ID`/`SUPABASE_URL` estão definidos, a conexão precisa pertencer a esse projeto (usuário `postgres.<project-id>` no pooler, ou host `db.<project-id>.supabase.co`). Com `DATABASE_URL` definido o acesso anônimo de desenvolvimento é sempre desligado, mesmo sem `AUTH_REQUIRE_LOGIN`.
+
+Para gravar `DATABASE_URL` sem expô-la, rode `npm run env:set-database-url` num terminal: o prompt é oculto e o valor vai direto para `.env.local` (permissão 0600), sem aparecer no chat, no histórico do shell ou em logs. Basta a senha do banco: o comando monta a conexão direta `postgres@db.<project-id>.supabase.co:5432` (exige IPv6; o host do pooler depende de região e índice e precisa ser copiado do painel Connect). O Supabase usa uma CA própria: baixe o certificado em Database Settings > SSL Configuration e informe o caminho quando o comando perguntar (vira `DATABASE_SSL_CA`).
+
+`npm run db:migrate -- --confirm=APLICAR-MIGRACOES` aplica as sete migrações em ordem (cada arquivo na sua transação, idempotentes). Ele recusa rodar sem a confirmação explícita e, se já houver tabelas `erp_*`, só reaplica com `--allow-existing`. Em 17/10/2026 as sete foram aplicadas no projeto Supabase de produção (4 esquemas, 35 tabelas, RLS em todas).
+
+`npm run db:crud -- --confirm=ESCREVER-DADOS-DE-TESTE` exercita o código real do ERP contra o banco configurado em processos separados (criar lead, mudar de etapa, nota, reler após reiniciar, arquivar, filtros) e remove ao final só o lead `[TESTE-INTEGRACAO]`, suas notas e a auditoria do ator de teste. A configuração inicial criada no primeiro acesso (1 linha de `workspace_settings` e 3 funis) permanece.
+
+`npm run db:check` confere variáveis (só nomes), conexão TLS, tabelas das sete migrações, RLS, privilégios de `anon`/`authenticated` e contagens, tudo em transação somente leitura. A escrita de teste é opt-in e reversível: `npm run db:check -- --write-test --confirm=ESCREVER-DADOS-DE-TESTE` (insere e desfaz com ROLLBACK) e, adicionando `--persist`, grava, lê por outra conexão e remove o registro `teste-integracao-…`.
 
 O pool `pg` compartilha uma conexão por instância. Cada operação usa uma transação e `SET LOCAL search_path`. Consultas usam parâmetros, sem prepared statements nomeados. TLS verifica o servidor; nenhuma dispensa de certificado é permitida na produção. Na Vercel, faltar `DATABASE_URL` provoca erro: não há fallback para SQLite efêmero.
 
@@ -177,6 +193,10 @@ npm run test:integrations
 npm run test:erp
 npm run test:erp:postgres
 npm run test:postgres
+npm run test:config
+npm run test:db-check
+npm run test:db-migrate
+npm run test:db-crud
 npm run build
 npm run test:whatsapp:http
 ```

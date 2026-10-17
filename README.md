@@ -365,10 +365,7 @@ cada um com as próprias etapas, em `src/features/leads/`:
 - `components/StagePipeline` — funil e etapa atual (dropdowns) sobre a barra
   de etapas clicável (cada trecho leva para a etapa, com prévia no hover).
 - `options.ts` — opções dos campos (tipo de evento, origem com ícone e tom,
-  etiquetas sugeridas) e leitura de telefone/valor. **Exemplos.**
-- `quick-replies.ts` — respostas rápidas com categoria, ícone e tom (`{nome}`
-  vira o primeiro nome).
-- `mock.ts` / `mock-details.ts` — antigos exemplos visuais, fora da inicialização das páginas e dos providers.
+  etiquetas sugeridas) e leitura de telefone/valor (vocabulário dos formulários; os valores escolhidos são gravados no banco).
 
 Tons pastel ficam em `theme.tones` (`bg` coluna, `soft` destaque, `fg` texto),
 todos com contraste AA.

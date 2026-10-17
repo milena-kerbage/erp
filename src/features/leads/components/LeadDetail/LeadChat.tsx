@@ -32,7 +32,6 @@ import { copyText } from "@/lib/clipboard";
 import { formatDayLabel, formatTime } from "@/lib/format";
 import { formatPhone } from "../../format";
 import { useWorkspace } from "@/features/settings/store";
-import { quickReplies } from "../../quick-replies";
 import type { Attachment, ChatMessage, Lead } from "../../types";
 import {
   ChatHeader,
@@ -302,7 +301,6 @@ export function LeadChat({
             recipient="Nota interna da oportunidade"
             sendLabel="Salvar nota interna"
             placeholder="Escreva uma nota interna"
-            quickReplies={quickReplies}
             enterSends={preferences.enterSends}
             onSend={onSend}
             dock={dock}

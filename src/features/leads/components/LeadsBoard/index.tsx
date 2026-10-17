@@ -68,7 +68,7 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
   const { currentUser: teamMember } = useWorkspace();
   const team = useTeam();
   const funnel = findFunnel(funnelId);
-  const { leads: allLeads, details, unread, moveLead: move } = useLeads();
+  const { leads: allLeads, details, unread, moveLead: move, loading, error, refresh } = useLeads();
   const [creatingStage, setCreatingStage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [sources, setSources] = useState<string[]>([]);
@@ -251,7 +251,21 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
         trailing={toolbarEnd}
       />
 
-      {filtering && leads.length === 0 ? (
+      {allLeads.length === 0 && (loading || error) ? (
+        <Empty>
+          <EmptyState
+            icon={<UserFocusIcon size={24} />}
+            title={loading ? "Carregando leads…" : "Não foi possível carregar os leads"}
+            description={loading ? "Buscando as oportunidades no banco de dados." : error}
+          >
+            {!loading && (
+              <Button variant="secondary" size="sm" onClick={() => void refresh()}>
+                Tentar novamente
+              </Button>
+            )}
+          </EmptyState>
+        </Empty>
+      ) : filtering && leads.length === 0 ? (
         <Empty>
           <EmptyState
             icon={<UserFocusIcon size={24} />}

@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { defaultFunnels, funnelIcons, pickFunnel, type Funnel, type FunnelStage } from "@/features/leads/funnels";
+import { funnelIcons, pickFunnel, type Funnel, type FunnelStage } from "@/features/leads/funnels";
 import { erpRequest, errorMessage } from "@/features/erp/client";
+import { WorkspaceGate } from "./components/WorkspaceGate";
 import type { ApiKey, ApiScope, IntegrationId, IntegrationState, Member, Permission, Preferences, Webhook } from "./types";
 
 type StoredFunnel = Omit<Funnel, "icon"> & { icon: string; revision: number };
@@ -12,8 +13,9 @@ const deserializeFunnel = (funnel: StoredFunnel): LiveFunnel => ({ ...funnel, ic
 const serializeFunnel = (funnel: Partial<Funnel>) => ({ ...funnel, ...(funnel.icon ? { icon: funnelIcons.find(item => item.icon === funnel.icon)?.name ?? funnelIcons[0].name } : {}) });
 const uid = () => crypto.randomUUID();
 const slugify = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid();
+/** Valores neutros apenas para tipagem: a interface só é exibida depois que o servidor responde. */
 const initialPreferences: Preferences = {
-  workspaceName: "Ateliê Milena Kerbage", businessPhone: "", businessEmail: "milenakerbageatelie@gmail.com", city: "Fortaleza, CE", timeZone: "America/Sao_Paulo", weekStart: "sunday", openingTime: "09:00", closingTime: "18:00", saturday: false, enterSends: true, signMessages: false, awayMessage: false, awayText: "", staleLeadDays: 3, autoAssign: false, notifyNewLead: true, notifyNewMessage: true, notifyStaleLead: true, dailySummary: false,
+  workspaceName: "", businessPhone: "", businessEmail: "", city: "", timeZone: "America/Sao_Paulo", weekStart: "sunday", openingTime: "09:00", closingTime: "18:00", saturday: false, enterSends: true, signMessages: false, awayMessage: false, awayText: "", staleLeadDays: 3, autoAssign: false, notifyNewLead: true, notifyNewMessage: true, notifyStaleLead: true, dailySummary: false,
 };
 const initialIntegrations: Record<IntegrationId, IntegrationState> = { whatsapp: { connected: false }, instagram: { connected: false }, "meta-ads": { connected: false }, "google-calendar": { connected: false }, gmail: { connected: false }, "google-analytics": { connected: false } };
 
@@ -48,7 +50,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 /** Configuration is refreshed from authenticated backend snapshots; client state never grants permissions. */
 export function WorkspaceProvider({ children, authenticatedUser }: { children: ReactNode; authenticatedUser: { id: string; name: string; email: string } }) {
-  const [funnels, setFunnels] = useState<readonly LiveFunnel[]>(defaultFunnels);
+  const [funnels, setFunnels] = useState<readonly LiveFunnel[]>([]);
   const [members, setMembers] = useState<readonly Member[]>([]);
   const [currentUser, setCurrentUser] = useState<Member>({ ...authenticatedUser, seed: authenticatedUser.id, role: "", permission: "member", status: "active", joinedAt: "" });
   const [preferences, setPreferences] = useState(initialPreferences);
@@ -164,6 +166,8 @@ export function WorkspaceProvider({ children, authenticatedUser }: { children: R
     return true;
   }).then(Boolean), [mutate, loadTools]);
   const value: WorkspaceContextValue = { loading, error, refresh, funnels, addFunnel, updateFunnel: funnelPatch, removeFunnel, moveFunnel, addStage, updateStage, removeStage, moveStage, members, currentUser, inviteMember, reissueInvitation, updateMember, removeMember, preferences, updatePreferences, integrations, apiKeys, createApiKey, revokeApiKey, webhooks, addWebhook, updateWebhook, removeWebhook, testWebhook };
+  // Sem funis vindos do banco não há o que mostrar: carregamento ou erro, nunca dados de exemplo.
+  if (funnels.length === 0) return <WorkspaceGate loading={loading} error={error} onRetry={() => { setLoading(true); void refresh(); }} />;
   return <WorkspaceContext.Provider value={value}>{error && <div role="alert" style={{ padding: "1rem", background: "#fff1ef", color: "#8b2920" }}>Dados do ateliê: {error} <button type="button" onClick={() => void refresh()}>Atualizar dados</button></div>}{children}</WorkspaceContext.Provider>;
 }
 export function useWorkspace() { const context = useContext(WorkspaceContext); if (!context) throw new Error("useWorkspace precisa estar dentro de <WorkspaceProvider>"); return context; }

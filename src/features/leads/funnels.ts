@@ -47,53 +47,6 @@ export type Funnel = {
   stages: readonly FunnelStage[];
 };
 
-/**
- * Funis iniciais: vendas (quem ainda não comprou), clientes (quem comprou, do
- * pedido à entrega) e remarketing (quem esfriou). Depois disso eles vivem no
- * estado do ateliê (`useFunnels()` em `features/settings/store`) e são
- * editados em Configurações > Funis e etapas. EXEMPLOS até existir o back-end.
- */
-export const defaultFunnels: readonly Funnel[] = [
-  {
-    id: "vendas",
-    name: "Vendas",
-    icon: HandCoinsIcon,
-    tone: "green",
-    stages: [
-      { id: "novo", label: "Novo lead", tone: "blue" },
-      { id: "contato", label: "Em contato", tone: "lavender" },
-      { id: "orcamento", label: "Orçamento", tone: "peach" },
-      { id: "negociacao", label: "Negociação", tone: "rose" },
-      { id: "fechado", label: "Fechado", tone: "green" },
-    ],
-  },
-  {
-    id: "clientes",
-    name: "Clientes",
-    icon: DressIcon,
-    tone: "rose",
-    stages: [
-      { id: "confirmado", label: "Pedido confirmado", tone: "blue" },
-      { id: "provas", label: "Em provas", tone: "lavender" },
-      { id: "ajustes", label: "Ajustes", tone: "peach" },
-      { id: "pronto", label: "Pronto para retirar", tone: "teal" },
-      { id: "entregue", label: "Entregue", tone: "green" },
-    ],
-  },
-  {
-    id: "remarketing",
-    name: "Remarketing",
-    icon: ArrowsClockwiseIcon,
-    tone: "lavender",
-    stages: [
-      { id: "reativar", label: "Para reativar", tone: "neutral" },
-      { id: "contato", label: "Contato feito", tone: "lavender" },
-      { id: "interesse", label: "Com interesse", tone: "peach" },
-      { id: "recuperado", label: "Recuperado", tone: "green" },
-    ],
-  },
-];
-
 /** Ícones disponíveis para um funil, agrupados por tema. */
 export const funnelIcons: readonly { name: string; group: string; icon: Icon }[] = [
   { name: "Vendas", group: "Comercial", icon: HandCoinsIcon },

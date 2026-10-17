@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const folder = mkdtempSync(join(tmpdir(), 'mk-meta-deletion-'));
-delete process.env.DATABASE_URL;
+delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true';
 delete process.env.VERCEL;
 process.env.META_DELETION_DB_PATH = join(folder, 'meta.sqlite');
 process.env.WHATSAPP_DB_PATH = join(folder, 'whatsapp.sqlite');

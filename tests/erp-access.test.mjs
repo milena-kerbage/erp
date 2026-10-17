@@ -15,7 +15,7 @@ let directory;
 const admin={id:'admin-test',name:'Gestora de teste',email:'admin@example.test',permission:'admin'};
 const member={id:'member-test',name:'Operador de teste',email:'member@example.test',permission:'member'};
 beforeEach(async()=>{
- directory=mkdtempSync(join(tmpdir(),'mk-erp-access-'));delete process.env.DATABASE_URL;delete process.env.VERCEL;
+ directory=mkdtempSync(join(tmpdir(),'mk-erp-access-'));delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true';delete process.env.VERCEL;
  process.env.AUTH_DB_PATH=join(directory,'auth.sqlite');process.env.ERP_DB_PATH=join(directory,'erp.sqlite');process.env.ERP_ADMIN_EMAILS=admin.email;process.env.INTEGRATION_ENCRYPTION_KEY=randomBytes(32).toString('base64');process.env.ERP_WEBHOOK_ALLOWED_HOSTS='hooks.example.com';
  await auth.createUser(admin.email,admin.name,'unused-hash',admin.id);await auth.createUser(member.email,member.name,'unused-hash',member.id);
  await access.currentMember(admin);await access.currentMember(member);
