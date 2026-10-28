@@ -31,9 +31,13 @@ const actor = 'isolated-manager';
 const inspection = (type = 'USER', overrides = {}) => Response.json({ data: { app_id: process.env.META_APP_ID, is_valid: true, type, scopes: ['whatsapp_business_management', 'whatsapp_business_messaging'], expires_at: Math.floor(Date.now() / 1000) + 3600, ...overrides } });
 after(async () => { await storage.closeDatabases(); rmSync(directory, { recursive: true, force: true }); });
 
-test('gestor depende da allowlist de servidor e bootstrap depende do loopback de desenvolvimento', () => {
+test('administração gerencia pelo papel, gestão depende da allowlist de servidor e bootstrap depende do loopback de desenvolvimento', () => {
   assert.equal(access.allowedManager('gestor@example.test'), true);
   assert.equal(access.allowedManager('operador@example.test'), false);
+  assert.equal(access.managerDenial('admin', 'operador@example.test'), null, 'Administração do ERP dispensa a allowlist');
+  assert.equal(access.managerDenial('manager', 'gestor@example.test'), null);
+  assert.match(access.managerDenial('manager', 'operador@example.test'), /INTEGRATION_MANAGER_EMAILS/);
+  assert.match(access.managerDenial('member', 'gestor@example.test'), /perfil de administração ou gestão/);
   assert.equal(access.loopbackOrigin('http://127.0.0.1:3000'), true);
   assert.equal(access.loopbackOrigin('https://localhost.attacker.example'), false);
   assert.equal(bootstrap.localBootstrapAvailable('http://127.0.0.1:3000'), false);

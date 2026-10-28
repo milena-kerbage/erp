@@ -47,7 +47,7 @@ export async function managementOverview(requestOrigin: string, development = fa
     bootstrap: [
       { key: 'DATABASE_URL', label: 'Banco Supabase', ready: Boolean(process.env.DATABASE_URL), detail: 'Configurado uma vez na hospedagem. A integração é salva neste banco.' },
       { key: 'INTEGRATION_ENCRYPTION_KEY', label: 'Chave de criptografia dos segredos', ready: encryptionConfigured(), detail: 'Chave base64 de 32 bytes no ambiente da hospedagem; não é gravada junto aos segredos.' },
-      { key: 'INTEGRATION_MANAGER_EMAILS', label: 'Gestores autorizados', ready: managerEmails().size > 0, detail: 'E-mails autorizados pelo administrador no ambiente da hospedagem.' },
+      { key: 'INTEGRATION_MANAGER_EMAILS', label: 'Gestores autorizados (opcional)', ready: true, detail: managerEmails().size > 0 ? 'Administradores do ERP e os perfis de gestão listados no ambiente administram a integração.' : 'Administradores do ERP já administram a integração. Use a lista somente para liberar perfis de gestão.' },
       { key: 'AUTH_ORIGIN', label: 'Origem HTTPS de autenticação', ready: originConfigured, detail: 'Deve corresponder ao domínio publicado do ERP.' },
     ], stages, routes: INTEGRATION_ENDPOINTS.map(route => ({ ...route, label: route.title, auth: route.access, url: `${base}${route.path}` })),
     progress: { complete: stages.filter(stage => stage.status === 'complete').length, total: stages.length }, recentTests: await recentTests(), lastWebhookAt: await lastWebhookAt(),

@@ -18,7 +18,7 @@ Três informações de banco, criptografia e autorização ficam exclusivamente 
 | --- | --- | --- |
 | `DATABASE_URL` | Conexão privada ao PostgreSQL do Supabase | Administrador do banco e da Vercel |
 | `INTEGRATION_ENCRYPTION_KEY` | Chave aleatória de 32 bytes em base64 que protege as credenciais guardadas no banco | Administrador de infraestrutura, em cofre privado |
-| `INTEGRATION_MANAGER_EMAILS` | Lista de e-mails de usuários autorizados a administrar a integração | Gestor responsável e administrador |
+| `INTEGRATION_MANAGER_EMAILS` | Opcional: e-mails com perfil de gestão autorizados a administrar a integração; administradores do ERP já têm acesso | Gestor responsável e administrador |
 | `AUTH_ORIGIN` | Origem HTTPS exata da autenticação, por exemplo `https://app.ateliemilenakerbage.com.br` | Administrador de infraestrutura |
 
 A chave de criptografia não deve ser trocada sem um procedimento de migração/recriptografia e recuperação. Perder essa chave pode tornar as credenciais salvas inutilizáveis; alterá-la não revoga o token existente na Meta. A conexão do banco não é editável pelo formulário do gestor. Certificado/CA, DNS, projeto, usuário inicial e permissões do banco são configuração técnica da instalação.
