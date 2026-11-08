@@ -78,7 +78,7 @@ Desativar uma pessoa preserva cadastro e histórico, mas revoga sessões e chave
 
 ## 3. Catálogo de rotas
 
-`GET /api/erp` fornece catálogo, recursos e modo de armazenamento. O endereço base local depende de `AUTH_ORIGIN`; a origem planejada de produção é `https://app.ateliemilenakerbage.com.br`. Publicação desse endereço ainda depende de DNS, Vercel e HTTPS reais.
+`GET /api/erp` fornece catálogo, recursos e modo de armazenamento. O endereço base local depende de `AUTH_ORIGIN`; a origem planejada de produção é `https://erp.ateliemilenakerbage.com.br`. Publicação desse endereço ainda depende de DNS, Vercel e HTTPS reais.
 
 | Rota | Métodos | Finalidade |
 | --- | --- | --- |

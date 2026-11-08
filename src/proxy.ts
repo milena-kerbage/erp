@@ -3,10 +3,18 @@ import { sessionUser } from './lib/auth/core';
 import { developmentAccess } from './lib/auth/environment';
 import { COOKIE_NAME } from './lib/auth/cookies';
 import { DatabaseConfigurationError } from './lib/database';
+import { ehHostDaLoja, PASTA_PUBLICA_LOJA, PREFIXO_LOJA } from './lib/hosts';
+import { proxyLoja } from './loja/proxy';
 
 // Verificação em cada requisição, inclusive navegação RSC e prefetch.
+// Primeiro separa por host: www./domínio principal é a loja pública (src/loja/proxy.ts);
+// qualquer outro host (erp., localhost, prévias) é o ERP, com autenticação.
 export async function proxy(request: NextRequest) {
+  if (ehHostDaLoja(request.headers.get('host'))) return proxyLoja(request);
   const path = request.nextUrl.pathname;
+  // Rotas internas e arquivos da loja não existem no host do ERP.
+  const storePath = [PREFIXO_LOJA, PASTA_PUBLICA_LOJA].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
+  if (storePath) return new NextResponse('Not Found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
   const publicPage = ['/login', '/recuperar-senha', '/redefinir-senha', '/convite', '/politicas', '/privacidade', '/termos', '/exclusao-de-dados', '/exclusao-de-dados/status', '/cookies', '/politica-de-comunicacao'].includes(path);
   const publicAsset = /^\/(logotipo-horizontal|simbolo|assinatura)-(green|black|white)\.svg$/.test(path) || ['/icon.png', '/apple-icon.png', '/favicon.ico', '/robots.txt'].includes(path);
   const authApi = path.startsWith('/api/auth/');

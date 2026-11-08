@@ -19,7 +19,7 @@ Três informações de banco, criptografia e autorização ficam exclusivamente 
 | `DATABASE_URL` | Conexão privada ao PostgreSQL do Supabase | Administrador do banco e da Vercel |
 | `INTEGRATION_ENCRYPTION_KEY` | Chave aleatória de 32 bytes em base64 que protege as credenciais guardadas no banco | Administrador de infraestrutura, em cofre privado |
 | `INTEGRATION_MANAGER_EMAILS` | Opcional: e-mails com perfil de gestão autorizados a administrar a integração; administradores do ERP já têm acesso | Gestor responsável e administrador |
-| `AUTH_ORIGIN` | Origem HTTPS exata da autenticação, por exemplo `https://app.ateliemilenakerbage.com.br` | Administrador de infraestrutura |
+| `AUTH_ORIGIN` | Origem HTTPS exata da autenticação, por exemplo `https://erp.ateliemilenakerbage.com.br` | Administrador de infraestrutura |
 
 A chave de criptografia não deve ser trocada sem um procedimento de migração/recriptografia e recuperação. Perder essa chave pode tornar as credenciais salvas inutilizáveis; alterá-la não revoga o token existente na Meta. A conexão do banco não é editável pelo formulário do gestor. Certificado/CA, DNS, projeto, usuário inicial e permissões do banco são configuração técnica da instalação.
 
@@ -31,7 +31,7 @@ Se a chave válida já existir, a preparação a preserva e não revela seu valo
 
 ## 2. Entrar e entender os estados
 
-1. Abra a URL publicada, por exemplo `https://app.ateliemilenakerbage.com.br/login`.
+1. Abra a URL publicada, por exemplo `https://erp.ateliemilenakerbage.com.br/login`.
 2. Use a conta interna que o responsável técnico provisionou com seu e-mail autorizado.
 3. Acesse **Configurações → Integrações**.
 4. Confira as pendências de infraestrutura, dados e ativos antes de realizar qualquer envio.
@@ -66,7 +66,7 @@ Confira os dados informados para esta instalação:
 - Responsável informado: Milena Cavalcante Kerbage.
 - CNPJ: 13.592.162/0001-08.
 - Endereço: Rua Professor Heraclito, 233, Vicente Pinzon, Fortaleza - CE, CEP 60181-245.
-- Origem planejada: `https://app.ateliemilenakerbage.com.br`.
+- Origem planejada: `https://erp.ateliemilenakerbage.com.br`.
 - E-mail de privacidade e suporte confirmado: `milenakerbageatelie@gmail.com`.
 
 O endereço de e-mail já foi informado e está configurado para as duas finalidades; confirme a publicação e teste recebimento/resposta. Ainda falta confirmar o telefone oficial com DDI. Uma pessoa deve acompanhar a caixa e os demais contatos. Os dados publicados nas políticas precisam corresponder à empresa e aos canais efetivamente disponíveis.

@@ -1,0 +1,2 @@
+/* Camadas do Panda CSS. Estilos de componente vão nos componentes (css/styled/receitas), não aqui. */
+@layer reset, base, tokens, recipes, utilities;

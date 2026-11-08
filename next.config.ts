@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import { regexHostsDaLoja } from "./src/lib/hosts";
+
+// Loja (www./domínio principal) e ERP (erp.) no mesmo deploy: cabeçalhos por host (src/lib/hosts.ts).
+const hostsDaLoja = [{ type: "host" as const, value: regexHostsDaLoja() }];
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -9,7 +13,7 @@ const nextConfig: NextConfig = {
   },
   // Desenvolvimento: libera abrir pelo IP da rede local (celular na mesma Wi-Fi)
   // e por 127.0.0.1, origem exigida pelo AUTH_ORIGIN do login
-  allowedDevOrigins: ["127.0.0.1", "192.168.*.*", "10.*.*.*"],
+  allowedDevOrigins: ["127.0.0.1", "192.168.*.*", "10.*.*.*", "www.localhost", "loja.localhost"],
   devIndicators: {
     position: "bottom-right",
   },
@@ -20,21 +24,28 @@ const nextConfig: NextConfig = {
     emotion: true,
   },
   async headers() {
+    const comuns = [
+      ...(process.env.NODE_ENV === "production" ? [{ key: "Strict-Transport-Security", value: "max-age=31536000" }] : []),
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
+    ];
     return [
+      { source: "/:path*", headers: comuns },
       {
-        // Sistema interno: bloqueia indexação de qualquer rota ou arquivo
+        // ERP (sistema interno): bloqueia indexação de qualquer rota ou arquivo
         source: "/:path*",
+        missing: hostsDaLoja,
         headers: [
-          ...(process.env.NODE_ENV === "production" ? [{ key: "Strict-Transport-Security", value: "max-age=31536000" }] : []),
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "no-referrer" },
-          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
-          {
-            key: "X-Robots-Tag",
-            value: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-          },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet, noimageindex" },
         ],
+      },
+      {
+        // Loja pública: indexável; referência de origem preservada para atribuição de campanhas
+        source: "/:path*",
+        has: hostsDaLoja,
+        headers: [{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }],
       },
     ];
   },

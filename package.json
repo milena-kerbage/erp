@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "panda codegen",
     "dev": "next dev",
-    "build": "next build",
+    "build": "panda codegen && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "auth:create-user": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/create-auth-user.mjs",
@@ -27,7 +28,8 @@
     "test:postgres": "node --experimental-strip-types tests/postgres.mjs",
     "meta:deletion": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/meta-deletion.mjs",
     "whatsapp:check": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/check-whatsapp.mjs",
-    "whatsapp:maintenance": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/whatsapp-maintenance.mjs"
+    "whatsapp:maintenance": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/whatsapp-maintenance.mjs",
+    "test:loja": "node --experimental-strip-types --test 'tests/loja/**/*.test.mjs'"
   },
   "dependencies": {
     "@dicebear/core": "^10.7.0",
@@ -39,18 +41,26 @@
     "next": "16.4.3",
     "nodemailer": "^10.2.1",
     "pg": "^8.23.1",
+    "qrcode-generator": "^2.0.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",
     "@electric-sql/pglite-socket": "^0.2.12",
+    "@pandacss/dev": "^2.5.0",
+    "@pandacss/preset-base": "^2.5.0",
+    "@pandacss/preset-panda": "^2.5.0",
     "@types/node": "^22.20.5",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "schema-dts": "^2.1.0",
     "typescript": "^5"
   },
   "engines": {

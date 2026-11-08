@@ -1,12 +1,14 @@
-# Ateliê Milena Kerbage — Sistema interno
+# Ateliê Milena Kerbage — Sistema interno e loja
 
-ERP em Next.js (App Router) + TypeScript + Emotion.
+ERP em Next.js (App Router) + TypeScript + Emotion, em `erp.ateliemilenakerbage.com.br`.
+A loja virtual (Panda CSS) roda no mesmo projeto, em `www.ateliemilenakerbage.com.br` e no domínio principal: veja [docs/loja.md](docs/loja.md).
 
 O WhatsApp Cloud API tem backend persistente, caixa de entrada real em `/conversas`, diagnóstico em `/configuracoes/whatsapp` e políticas públicas em `/politicas`. A implantação escolhida é Vercel com PostgreSQL do Supabase; SQLite permanece para desenvolvimento e testes locais. A conta Meta, o número e os projetos remotos ainda precisam ser configurados.
 
 - [Manual técnico e operacional do WhatsApp](docs/whatsapp-meta.md)
 - [Pendências de implantação para o gestor](docs/pendencias-implantacao-whatsapp.md)
 - [Backend do ERP, contratos e implantação PostgreSQL](docs/erp-backend.md)
+- [Loja (e-commerce): domínios, estrutura, tema e pendências](docs/loja.md)
 - [Autenticação, papéis e criação de usuários](docs/autenticacao.md)
 - [Configuração de ambiente sem segredos](.env.example)
 - Migrações de produção, na ordem: `001_auth.sql`, `002_whatsapp.sql`, `003_meta_deletion.sql`, `004_integration_settings.sql`, `005_integration_manager.sql`, `006_erp.sql` e `007_workspace_access.sql`, em `supabase/migrations/`.

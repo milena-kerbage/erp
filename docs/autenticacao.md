@@ -13,7 +13,7 @@ O aplicativo mantém sua própria autenticação no esquema privado `erp_auth`; 
 - Quando `DATABASE_URL` está definido, autenticação, sessões e limitadores usam PostgreSQL compartilhado. Sua ausência é erro de configuração (HTTP 503 `DATABASE_NOT_CONFIGURED`, com a mensagem citando só o nome da variável): o código **não** cai em SQLite sozinho, nem em desenvolvimento nem na Vercel. O SQLite local só abre com a escolha explícita `ALLOW_LOCAL_SQLITE=true` (fora da Vercel), pensada para testes isolados.
 - O banco Supabase, as migrações, as variáveis privadas, o domínio e o HTTPS precisam ser configurados no ambiente real. Testes locais não criam esses recursos externos.
 
-Defina a origem pública exata, por exemplo `AUTH_ORIGIN=https://app.ateliemilenakerbage.com.br`. Requisições de autenticação de outras origens são rejeitadas. Sem uma origem HTTPS configurada, operações de autenticação em produção falham de forma fechada.
+Defina a origem pública exata, por exemplo `AUTH_ORIGIN=https://erp.ateliemilenakerbage.com.br`. Requisições de autenticação de outras origens são rejeitadas. Sem uma origem HTTPS configurada, operações de autenticação em produção falham de forma fechada.
 
 ## Banco de produção: Supabase e Vercel
 
@@ -70,7 +70,7 @@ Somente com `ALLOW_LOCAL_SQLITE=true` e sem `DATABASE_URL` (testes isolados; a s
 Configure no ambiente do servidor, fora do código e sem prefixo `NEXT_PUBLIC_`:
 
 ```text
-AUTH_ORIGIN=https://app.ateliemilenakerbage.com.br
+AUTH_ORIGIN=https://erp.ateliemilenakerbage.com.br
 SMTP_HOST=servidor-smtp-do-provedor
 SMTP_PORT=587
 SMTP_USER=usuario-do-provedor
