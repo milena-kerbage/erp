@@ -33,7 +33,7 @@ Variáveis privadas:
 | `AUTH_ORIGIN` | Origem exata do sistema; HTTPS obrigatório na produção |
 | `AUTH_REQUIRE_LOGIN=true` | Exigir login também no desenvolvimento local |
 | `ERP_ADMIN_EMAILS` | Bootstrap de e-mails reais de administradores antes do primeiro acesso |
-| `INTEGRATION_MANAGER_EMAILS` | Allowlist adicional para gestão da integração Meta |
+| `INTEGRATION_MANAGER_EMAILS` | Opcional: libera a gestão da integração Meta para perfis `manager`; `admin` já tem acesso |
 | `INTEGRATION_ENCRYPTION_KEY` | 32 bytes aleatórios em base64; preservar para decifrar segredos existentes |
 | `ERP_WEBHOOK_ALLOWED_HOSTS` | Hosts HTTPS exatos autorizados para saída de webhooks, separados por vírgula |
 | `SUPABASE_PROJECT_ID` | Identificador público do projeto Supabase; o app recusa `DATABASE_URL` de outro projeto |

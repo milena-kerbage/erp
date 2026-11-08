@@ -154,7 +154,7 @@ As variáveis WhatsApp/legais abaixo também identificam o contrato do servidor 
 | --- | --- |
 | `DATABASE_URL` | Segredo PostgreSQL do projeto Supabase, acessível apenas pelo servidor; usar conexão apropriada ao ambiente Vercel e TLS |
 | `INTEGRATION_ENCRYPTION_KEY` | Chave privada para criptografar/descriptografar credenciais guardadas no banco; rotação requer procedimento técnico |
-| `INTEGRATION_MANAGER_EMAILS` | E-mails de contas internas autorizadas a administrar a integração; controle próximo aos dados e não apenas botão escondido |
+| `INTEGRATION_MANAGER_EMAILS` | Opcional: e-mails com perfil de gestão autorizados a administrar a integração, além dos administradores do ERP; controle próximo aos dados e não apenas botão escondido |
 | `META_OAUTH_ENABLED` | `true` habilita a opção clássica de autorização apenas após configurar app, callback e permissões na Meta; não é necessário para token manual |
 | `META_APP_ID` | App ID no fallback de ambiente; o gestor também pode informá-lo no painel |
 | `DATABASE_SSL_CA` | CA PEM opcional fornecida pelo projeto para validação do certificado; sem ela usa a cadeia confiável do runtime |
@@ -215,7 +215,7 @@ Access token, App Secret, Verify Token e segredo de supressão são cifrados com
 
 Mutações administrativas exigem sessão válida, e-mail na allowlist, Origin e limites de uso. O acesso demonstrativo local só existe nas condições de desenvolvimento/loopback; não deve liberar gestão anônima em produção. A supressão já configurada não pode ser alterada ou removida pelo fluxo comum: há bloqueio no servidor e serialização de alterações, pois a troca perderia reconhecimento dos hashes existentes.
 
-`INTEGRATION_ENCRYPTION_KEY` exige representação base64 canônica de 32 bytes. A chave de bootstrap, `DATABASE_URL`, `INTEGRATION_MANAGER_EMAILS` e `AUTH_ORIGIN` são configurados pelo administrador no ambiente privado. `AUTH_ORIGIN` já é uma dependência da autenticação existente. OAuth é opcional e acrescenta a habilitação técnica `META_OAUTH_ENABLED=true` após a configuração Meta.
+`INTEGRATION_ENCRYPTION_KEY` exige representação base64 canônica de 32 bytes. A chave de bootstrap, `DATABASE_URL` e `AUTH_ORIGIN` são configurados pelo administrador no ambiente privado. `AUTH_ORIGIN` já é uma dependência da autenticação existente. `INTEGRATION_MANAGER_EMAILS` é opcional e só estende a gestão a perfis `manager`. OAuth é opcional e acrescenta a habilitação técnica `META_OAUTH_ENABLED=true` após a configuração Meta.
 
 No desenvolvimento em loopback e fora da Vercel, `POST management/bootstrap` com `GENERATE_LOCAL_ENCRYPTION_KEY` prepara a primeira chave em `.env.local` privado (0600), devolvendo o valor novo somente naquela resposta. Não é provisionamento de produção, não recupera uma chave antiga e não deve ser exposto fora das condições locais. Preserve a chave em cofre e proteja cópias desse arquivo; sem a original, os envelopes cifrados não podem ser recuperados pela aplicação.
 

@@ -109,7 +109,7 @@ Perfil, telefone e função são persistidos. Pessoas com papel `member` ou `man
 
 Chaves do ERP são emitidas somente pela administração. O valor completo aparece uma vez, e somente seu hash e metadados são guardados para autenticação. Escopos `read` e `write` valem nas rotas que aceitam explicitamente `Authorization: Bearer`; o papel da conta emissora continua sendo validado e a chave não autentica `/api/whatsapp` nem os endpoints administrativos que exigem sessão. Os segredos de webhooks são criptografados e também exibidos uma vez. A interface preserva o valor recebido na criação mesmo se a atualização da listagem falhar.
 
-A gestão da integração WhatsApp tem uma autorização separada por `INTEGRATION_MANAGER_EMAILS`, além da sessão, Origin e limites. Conferir o papel do ERP não dispensa essa lista. MFA permanece indisponível; a interface não simula proteção de duas etapas. Conectores de outros provedores e automações sem executor continuam indicados como pendentes.
+A gestão da integração WhatsApp exige sessão, Origin e limites. O papel `admin` do ERP já autoriza a gestão; o papel `manager` precisa também do e-mail em `INTEGRATION_MANAGER_EMAILS`, e `member` nunca administra a integração. MFA permanece indisponível; a interface não simula proteção de duas etapas. Conectores de outros provedores e automações sem executor continuam indicados como pendentes.
 
 ## Verificação
 

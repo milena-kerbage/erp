@@ -150,7 +150,7 @@ export const INTEGRATION_EXTERNAL_LINKS: IntegrationExternalLink[] = [
 
 export const INTEGRATION_ERROR_GUIDE = [
   { code: 'UNAUTHORIZED', status: 401, meaning: 'Sessão encerrada ou ausente.', action: 'Entrar novamente; polling não prolonga a inatividade.' },
-  { code: 'MANAGER_REQUIRED', status: 403, meaning: 'Usuário sem autorização de gestor para esta operação.', action: 'O administrador deve conferir INTEGRATION_MANAGER_EMAILS; não compartilhar a conta de outra pessoa.' },
+  { code: 'MANAGER_REQUIRED', status: 403, meaning: 'Usuário sem autorização de gestor para esta operação.', action: 'Administração do ERP já tem acesso. Perfil de gestão exige o e-mail em INTEGRATION_MANAGER_EMAILS; não compartilhar a conta de outra pessoa.' },
   { code: 'ENCRYPTION_NOT_CONFIGURED', status: 503, meaning: 'Chave privada de criptografia ausente ou inválida.', action: 'O administrador deve restaurar/configurar a chave base64 original de 32 bytes na hospedagem.' },
   { code: 'ENCRYPTION_DECRYPT_FAILED', status: 503, meaning: 'Segredos armazenados não puderam ser decifrados.', action: 'Verificar a chave original e integridade do banco; não substituir por outra chave para tentar recuperar dados.' },
   { code: 'SUPPRESSION_ROTATION_BLOCKED', status: 409, meaning: 'A chave de supressão existente precisa permanecer estável.', action: 'Não remover bloqueios por troca de segredo; rotação exige migração técnica administrada.' },
