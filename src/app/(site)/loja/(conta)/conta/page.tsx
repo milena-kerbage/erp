@@ -5,7 +5,7 @@ import { metadataPagina } from "@/loja/lib/seo/institucional";
 
 export const metadata = metadataPagina({
   titulo: "Minha conta",
-  descricao: "Seus favoritos e os pedidos que você enviou pelo WhatsApp a partir deste aparelho, sem cadastro nem login.",
+  descricao: "Sua conta na loja do Ateliê Milena Kerbage: pedidos, cupom de primeira compra, favoritos e dados.",
   caminho: "/conta",
   indexar: false,
 });

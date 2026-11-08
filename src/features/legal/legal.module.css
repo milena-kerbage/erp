@@ -48,7 +48,6 @@
 .card p { font-size: 14px; line-height: 1.8; color: #647368; }
 .card span { display: block; font-size: 13px; margin-top: 20px; color: #315e40; }
 .home .summary { max-width: 700px; }
-.shell a:focus-visible { outline: 3px solid #1f643c; outline-offset: 4px; border-radius: 2px; }
 :global(html[data-contrast="high"]) .shell { color: #102119; background: #fff; }
 :global(html[data-contrast="high"]) .shell p, :global(html[data-contrast="high"]) .identity dt { color: #263d2f; }
 :global(html[data-contrast="high"]) .tableWrap th, :global(html[data-contrast="high"]) .contents { background: #e1eadb; }

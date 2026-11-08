@@ -8,7 +8,7 @@ export type PropagandaProjeto = {
   titulo: string;
   apoio: string; // frase de apoio abaixo do título
   acao: string; // texto do CTA
-  href: string; // sempre dentro de /projetos
+  href: string; // sempre dentro de /personalizado
   foto?: string; // 16:10; sem foto = placeholder
   alt: string;
 };
@@ -22,23 +22,23 @@ export const CATEGORIAS_PROPAGANDAS_PROJETOS = ["kit-berco", "quarto"] as const;
 export const PROPAGANDAS_PROJETOS: PropagandaProjeto[] = [
   {
     titulo: "O quartinho inteiro, no tema.",
-    apoio: "Conheça os 13 projetos do ateliê: kit berço, cortina, tapete e enfeites pensados juntos.",
-    acao: "Ver os projetos",
-    href: "/projetos",
+    apoio: "Conheça os 13 quartinhos do ateliê: kit berço, cortina, tapete e enfeites pensados juntos.",
+    acao: "Ver os quartinhos",
+    href: "/personalizado",
     alt: "Quarto de bebê completo do Ateliê Milena Kerbage",
   },
   {
     titulo: "Neutro, para menina ou menino.",
     apoio: "Linho cru, sálvia e off-white em quartinhos que acompanham o bebê por muitos anos.",
-    acao: "Ver projetos neutros",
-    href: "/projetos/neutro",
-    alt: "Projeto de quarto de bebê em tons neutros",
+    acao: "Ver quartinhos neutros",
+    href: "/personalizado/neutro",
+    alt: "Quartinho de bebê em tons neutros",
   },
   {
     titulo: "Com o nome do bebê.",
     apoio: "No pacote Completo personalizado, o nome bordado à mão e peças exclusivas.",
-    acao: "Peça seu projeto",
-    href: "/projetos/orcamento",
+    acao: "Peça seu quartinho",
+    href: "/personalizado/orcamento",
     alt: "Bordado do nome do bebê feito no ateliê",
   },
 ];

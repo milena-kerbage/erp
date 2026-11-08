@@ -43,6 +43,11 @@ async function derive(password: string, salt: string): Promise<Buffer> {
 }
 export async function hashPassword(password: string) {
   if (!validPassword(password)) throw new Error('Use de 8 a 128 caracteres, com letras, números e símbolos.');
+  return scryptHash(password);
+}
+/** Hash scrypt (mesmos parâmetros e limite de concorrência) sem a política de senha da equipe: quem chama valida a própria política (ex.: contas de cliente da loja). */
+export async function scryptHash(password: string) {
+  if (typeof password !== 'string' || !password || password.length > 128) throw new Error('Senha inválida.');
   const salt = randomBytes(16).toString('hex');
   return `scrypt$${salt}$${(await derive(password, salt)).toString('hex')}`;
 }

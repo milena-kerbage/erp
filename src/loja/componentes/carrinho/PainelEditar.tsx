@@ -192,7 +192,7 @@ function EditarProjeto({
     <Dialogo
       aberto={aberto}
       aoFechar={aoFechar}
-      titulo="Editar projeto"
+      titulo="Editar quartinho"
       variante="gaveta"
       rodape={
         <button

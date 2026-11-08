@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
-import { ArrowLeft, User, WhatsappLogo } from "@/loja/componentes/icones";
-import { LINKS_UTILITARIOS } from "@/loja/componentes/layout/cabecalho/navegacao";
+import { MenuConta } from "@/loja/componentes/conta/MenuConta";
+import { ArrowLeft, WhatsappLogo } from "@/loja/componentes/icones";
 
 // Lado direito do cabeçalho mínimo da compra: a conta sempre (como a sacola da referência) e, só no
 // pedido (/checkout), "Pedido pelo WhatsApp" e a volta para a sacola. O caminho público (/checkout) chega por
@@ -31,9 +31,7 @@ export function AcoesCompra() {
           </Link>
         </>
       )}
-      <Link href={LINKS_UTILITARIOS.conta.href} aria-label="Minha conta" className={conta}>
-        <User size={22} aria-hidden />
-      </Link>
+      <MenuConta variante="compra" />
     </div>
   );
 }
@@ -60,18 +58,3 @@ const voltar = css({
   _focusVisible: { outline: "none", boxShadow: "anelFoco", borderRadius: "xs" },
 });
 
-// Controle redondo de 40 (§5.6), com o ícone de conta.
-const conta = css({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  w: "10",
-  h: "10",
-  borderRadius: "pilula",
-  color: "escuro",
-  transitionProperty: "background-color",
-  transitionDuration: "normal",
-  transitionTimingFunction: "assinatura",
-  _hover: { bg: "superficieSuave" },
-  _focusVisible: { outline: "none", boxShadow: "anelFoco" },
-});

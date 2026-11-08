@@ -49,7 +49,10 @@ const comLateral = css({
   columnGap: { desktop: "16" },
   rowGap: "16",
   mt: { base: "10", desktop: "14" },
-  alignItems: "start",
+  // No desktop a célula da lateral estica até a altura do conteúdo: é o espaço que a navegação
+  // (sticky em NavSecao) precisa para acompanhar a rolagem. Com "start", a célula tinha só a altura
+  // do menu e o sticky não tinha por onde deslizar.
+  alignItems: { base: "start", desktop: "stretch" },
 });
 
 // Trilha de 14 (como o topo da listagem): "Página inicial / Ajuda / Entregas", o último marcado.

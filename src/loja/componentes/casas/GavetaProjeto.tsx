@@ -6,11 +6,11 @@ import { CaretRight, X } from "@/loja/componentes/icones";
 import { Gaveta } from "@/loja/componentes/layout/cabecalho/Gaveta";
 import type { GrupoFicha } from "@/loja/lib/catalogo/fichas";
 
-// Aba da gaveta do projeto: "Detalhes", "O que vem no projeto" e "Tecidos e cuidados".
+// Aba da gaveta do projeto: "Detalhes", "O que vem no quartinho" e "Tecidos e cuidados".
 export type AbaProjeto = { chave: string; titulo: string; grupos: GrupoFicha[]; nota?: string };
 
 // Gaveta do projeto: a MESMA gaveta de detalhes da página de produto (produto/GavetaDetalhes.tsx), com
-// abas livres (o projeto tem 3: "Detalhes", "O que vem no projeto" e "Tecidos e cuidados") e o prazo
+// abas livres (o projeto tem 3: "Detalhes", "O que vem no quartinho" e "Tecidos e cuidados") e o prazo
 // no rodapé da coluna cinza no lugar do SKU. Mesmas medidas e animação da original:
 // Linhas "Detalhes ›" e "Tecido e cuidados ›" e a gaveta que elas abrem (lululemon-pdp.md §1.7 e §6):
 // <dialog> pela direita com 680 px, dividido em coluna cinza de 240 (nome, abas verticais e SKU) e
@@ -55,7 +55,7 @@ export function GavetaProjeto({ nome, rodape, abas }: { nome: string; rodape: st
         <div className={layout}>
           <div className={lateral}>
             <p className={nomeProduto}>{nome}</p>
-            <div role="tablist" aria-label="Informações do projeto" tabIndex={-1} onKeyDown={navegar} className={abasEstilo}>
+            <div role="tablist" aria-label="Informações do quartinho" tabIndex={-1} onKeyDown={navegar} className={abasEstilo}>
               {abas.map((item) => (
                 <button
                   key={item.chave}

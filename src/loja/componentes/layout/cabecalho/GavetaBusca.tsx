@@ -188,7 +188,7 @@ export function GavetaBusca({ termos }: { termos: string[] }) {
           {digitando && sugestoes && !semResultado && (
             <div className={cx(css({ display: "flex", flexDirection: "column", gap: "6" }), !atual && esmaecido)}>
               <Atalhos titulo="Categorias" itens={sugestoes.categorias} aoNavegar={() => aoNavegar(texto)} />
-              <Atalhos titulo="Projetos" itens={sugestoes.projetos} aoNavegar={() => aoNavegar(texto)} />
+              <Atalhos titulo="Quartinhos" itens={sugestoes.projetos} aoNavegar={() => aoNavegar(texto)} />
 
               {sugestoes.produtos.length > 0 && (
                 <section aria-labelledby={`${id}-pecas`} className={css({ pt: "6" })}>

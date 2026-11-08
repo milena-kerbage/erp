@@ -580,7 +580,7 @@ const divisoria = css({
   h: "[1px]",
   m: "0",
   border: "none",
-  bgImage: "[repeating-linear-gradient(90deg, token(colors.pesponto) 0 6px, transparent 6px 10px)]",
+  bgImage: "[linear-gradient(token(colors.pesponto), token(colors.pesponto))]",
 });
 
 const entregas = css({ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: { base: "3", desktop: "4" }, minW: "0" });

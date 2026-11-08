@@ -1,6 +1,6 @@
 # Loja (e-commerce) do Ateliê Milena Kerbage
 
-Loja de **enxoval e quarto de bebê** (kit berço, paninhos, quarto, maternidade e projetos de quartinho), com peças a pronta entrega e sob encomenda feitas no ateliê em Fortaleza/CE e entrega para todo o Brasil (perfil oficial: [@milenakerbageatelie](https://www.instagram.com/milenakerbageatelie/)).
+Loja de **enxoval e quarto de bebê** (kit berço, paninhos, quarto, maternidade e quartinhos personalizados), com peças a pronta entrega e sob encomenda feitas no ateliê em Fortaleza/CE e entrega para todo o Brasil (perfil oficial: [@milenakerbageatelie](https://www.instagram.com/milenakerbageatelie/)).
 
 A loja e o ERP rodam no **mesmo projeto Next.js e no mesmo deploy da Vercel**, separados pelo domínio:
 
@@ -102,6 +102,42 @@ A PDP renderiza no servidor a primeira página e o resumo (cache por produto de 
 
 Testes: `npm run test:avaliacoes` (SQLite) e `npm run test:avaliacoes:postgres` (PGlite com as migrações 006 e 008); as regras puras ficam em `tests/loja/avaliacoes-regras.test.mjs`.
 
+## Contas de cliente e cupom de primeira compra
+
+Todo pedido é feito **com conta** (e-mail e senha). O cadastro é rápido e acontece no próprio passo do pedido (`/checkout`): nome, WhatsApp, e-mail, senha e o aceite dos Termos e da Privacidade (data e versão gravadas). CPF, endereço, data prevista ou de nascimento e nome do bebê, como conheceu o ateliê e preferências são **opcionais**, em Minha conta › Dados pessoais. O modelo de venda não muda: catálogo com preço "a partir de", pedido fechado pela vendedora no WhatsApp, sem pagamento nem frete no site; o "5% OFF no Pix" segue à parte.
+
+As contas de cliente são **separadas das contas da equipe** do ERP: tabelas próprias (`erp_core.loja_*`, migração `009_loja_clientes.sql`), cookie próprio (`__Host-mk_cliente` em produção, `mk_cliente` em desenvolvimento: httpOnly, Secure em produção, SameSite=Lax, sem `Domain`, então só vale no host exato da loja e nunca chega ao `erp.`) e sessão conferida em outra tabela. O token da equipe não autentica na loja e vice-versa (teste em `tests/contas.test.mjs`).
+
+| Peça | Arquivo |
+|---|---|
+| Regras puras (cadastro, senha, perfil, cupom, situações do pedido) | `src/loja/lib/contas/regras.ts` |
+| Servidor (contas, sessões, redefinição, cupom, pedidos, ERP) | `src/lib/loja/contas.ts` |
+| Avatar ilustrado (DiceBear "Gaze", CC0, gerado no servidor) | `src/lib/loja/avatar.ts` |
+| E-mail de redefinição (preparado, **desligado**) | `src/lib/loja/emailContas.ts` |
+| Cookie, origem, limites, trava de desenvolvimento, erros | `src/loja/lib/contas/servidor.ts` |
+| APIs da loja | `src/app/(site)/loja/api/conta/*` e `src/app/(site)/loja/api/pedidos/route.ts` |
+| Estado no navegador, formulários, menu, Minha conta | `src/loja/componentes/conta/*` e `src/loja/componentes/layout/Dropdown.tsx` |
+| Pedido (passo da conta + envio) | `src/loja/componentes/checkout/PaginaPedido.tsx` |
+| ERP: Clientes › Loja online e Pedidos › Da loja online | `src/features/store/components/*`, `/api/erp/loja/*` |
+
+**APIs (host da loja):** `POST /api/conta/cadastrar` (cria conta, sessão e cupom), `POST /api/conta/entrar`, `POST /api/conta/sair`, `GET /api/conta/eu`, `PATCH /api/conta/perfil` (com `revisao`), `POST /api/conta/senha`, `POST /api/conta/redefinir` (token do link), `POST /api/conta/excluir` (`{senha, confirmacao:"EXCLUIR"}`), `GET /api/conta/pedidos`, `GET /api/conta/pedidos/<número>` e `POST /api/pedidos`. Erros: `{erro:{codigo,mensagem,campos?}}`; respostas `no-store`.
+
+**Segurança:** escrita só da própria origem (Origin igual ao host da loja, https em produção, `Sec-Fetch-Site` cross-site recusado), corpo JSON com teto (4 KiB; 64 KiB no pedido), hash scrypt e comparação em tempo constante do ERP (`scryptHash`/`verifyPassword` de `src/lib/auth/core.ts`), mesma resposta e mesmo custo para e-mail inexistente e senha errada, tokens de 256 bits guardados só como SHA-256, sessão de 30 dias (14 de inatividade, renovação no máximo 1×/hora, até 10 aparelhos), revogação no "Sair", na troca e na redefinição de senha. Limites persistentes (mesmo limitador do login da equipe, chaves `loja-conta:*`, IP só como HMAC): login 5 por e-mail e 30 por conexão a cada 15 min (300 no total); cadastro 10 por conexão por hora (300 no total); redefinição 5 por token e 10 por conexão; troca de senha 5 por conta; pedidos 10 por conta e 30 por conexão por hora. Senha da cliente: 8 a 128 caracteres, letras e números, fora das mais comuns e sem o e-mail.
+
+**Pedido no servidor:** o navegador manda só os itens da sacola (produto, opção, quantidade; projeto/quartinho como na sacola), o cupom escolhido, cidade/CEP, retirada e observações. O servidor recalcula os valores pelo catálogo (`catalogoParaCarrinho` e `linhas.ts`), recusa item indisponível (409) ou sem a opção obrigatória (400), confere o cupom e grava o pedido com número `MK-aammdd-XXXX`, a mensagem do WhatsApp (com número, itens "a partir de", cupom e os dados da cliente) e a situação inicial "Enviado pelo WhatsApp". A loja abre a aba do WhatsApp dentro do clique (para o bloqueador de pop-up deixar) e a leva ao `wa.me` quando o servidor responde; o histórico deste aparelho (`mk_pedidos_enviados`) continua como cache, mas a fonte é o servidor. Situações: Enviado pelo WhatsApp → Pagamento confirmado → Despachado para a transportadora → Entregue (ou Cancelado), escolhidas pela equipe no ERP; Minha conta mostra as 3 etapas de entrega como linha do tempo. Se as contas estiverem fora do ar (503), a tela de pedido oferece mandar a sacola direto pelo WhatsApp, sem registro nem cupom.
+
+**Cupom de primeira compra:** ao criar a conta, a cliente ganha `BEMVINDA-XXXX` (5%, uso único, ligado à conta). Logada, ele entra sozinho na sacola (dá para tirar; fica guardado). É conferido e consumido **só no servidor**, na mesma transação do pedido (bloqueio da linha no PostgreSQL; dois pedidos simultâneos: só um leva). Um cupom por pedido: `ENXOVAL10` entra no lugar do de primeira compra (aviso na sacola) e `BEMVINDO5`, com conta, vira o cupom da própria conta. Divulgação: faixa na sacola (deslogada), cartão no passo da conta do pedido, Minha conta (deslogada: convite; logada: cupom disponível ou usado) e o item "Criar conta (ganhe 5% OFF)" no menu da conta do cabeçalho.
+
+**Esqueci a senha (sem SMTP):** a tela de login orienta a pedir um link pelo WhatsApp. No ERP (Clientes › Loja online › cliente), admin ou gestão clica em "Gerar link de redefinição de senha": o link `https://www.ateliemilenakerbage.com.br/conta/redefinir#<token>` aparece **uma vez** para copiar ou abrir a conversa com a mensagem pronta; vale 2 horas, funciona uma vez, gerar outro invalida o anterior e a troca de senha também. O token fica no fragmento (não vai a servidor, log nem Referer) e a página o tira da barra. Para enviar também por e-mail quando houver SMTP: configure `SMTP_*` e `LOJA_EMAIL_REDEFINICAO=true` (o envio sai depois da resposta, com `after()`).
+
+**LGPD:** só o mínimo no cadastro; os opcionais podem ser apagados (campo vazio). "Excluir minha conta" (Minha conta › Segurança, com senha e confirmação) apaga a conta, as sessões, os links e o cupom e **anonimiza** os pedidos (sem nome, contato, cidade, observações nem mensagem; ficam peças e valores). As políticas (`/politicas/privacidade#conta`, `/politicas/termos#conta` e `/politicas/cookies`) descrevem a conta, os dados, o cupom e o cookie de sessão.
+
+**Desenvolvimento seguro:** com `npm run dev` ligado a um `DATABASE_URL` remoto (que pode ser o de produção), todas as rotas de **escrita** das contas e do pedido respondem 503 `GRAVACAO_DESLIGADA` (a tela avisa). Para gravar de propósito nesse cenário: `CONTAS_GRAVAR_EM_DESENVOLVIMENTO=true`. Para testar o fluxo completo sem tocar no Supabase: `npm run build` e `DATABASE_URL= ALLOW_LOCAL_SQLITE=true ERP_DB_PATH=/tmp/erp.sqlite AUTH_DB_PATH=/tmp/auth.sqlite npx next start -p 3120`, com a loja em `http://www.localhost:3120`.
+
+**Produção:** a migração `009_loja_clientes.sql` precisa ser aplicada no Supabase (`npm run db:migrate -- --confirm=APLICAR-MIGRACOES --allow-existing` e `npm run db:check`, com autorização do responsável). Antes disso, `/api/conta/eu` responde 503 e a tela de pedido cai no envio direto pelo WhatsApp (sem conta nem cupom).
+
+Testes: `npm run test:contas` (SQLite) e `npm run test:contas:postgres` (PGlite com as migrações 001, 006 e 009).
+
 ## Instagram (seção da home)
 
 A última seção da home, antes do rodapé, mostra os **posts reais** do perfil [@milenakerbageatelie](https://www.instagram.com/milenakerbageatelie/) pela API oficial (Instagram API with Instagram Login, para conta profissional). Sem token, ou se a API falhar, a seção mostra só o convite para seguir (o @, a frase e o botão "Seguir no Instagram"): nunca posts falsos. O erro vai para o log do servidor e a página não quebra.
@@ -152,12 +188,34 @@ O script chama `GET https://graph.instagram.com/refresh_access_token?grant_type=
 - **Faixa de marca** ("Cada detalhe, bem cuidado" + "Seguir…"): virou a seção do Instagram.
 - **Guia de medidas** (links no menu, na PDP, no montador e no rodapé, a calculadora `src/loja/lib/calculadora/**` e o teste). As medidas de cada tamanho aparecem ao escolher o tamanho na PDP e no montador.
 - **Cashback / programa de pontos** (`src/loja/lib/fastclub/**`, o card da home, o teste e o campo `pontos` da confirmação da sacola). A loja não tem programa de pontos: o ponto forte é a indicação (`/indique`).
-- **"Entrar" e "Cadastre-se"**: as chaves `entrar` e `cadastro` saíram de `LINKS_UTILITARIOS` (`layout/cabecalho/navegacao.ts`); o ícone de conta e o rodapé usam `conta` ("Minha conta"). Os endereços antigos `/conta/entrar`, `/conta/cadastro` e `/conta/clube` seguem respondendo 308 para `/conta`, para links e favoritos antigos não darem 404.
+- **"Entrar" e "Cadastre-se" antigos** (sem conta real): voltaram como páginas reais com as contas de cliente (`/conta/entrar` e `/conta/cadastro`, veja "Contas de cliente"). `/conta/clube` segue respondendo 308 para `/conta`.
 - "Acompanhe seu pedido" virou **"Pedidos enviados"** (`LINKS_UTILITARIOS.pedido`), que é o que `/conta/pedidos` mostra.
 
 ## Rodapé
 
 Três faixas sobre o fundo escuro, separadas por pesponto: (1) destaques — "Indique o ateliê" com botão para `/indique`, o atendimento (botão do WhatsApp, e-mail, horário e cidade) e "Feito à mão em Fortaleza · Entrega para todo o Brasil" com as formas de pagamento só como informação ("5% OFF no Pix · até 10x no cartão · combinado pelo WhatsApp"); (2) o menu em 6 colunas (Comprar, Ajuda, Minha conta, O ateliê, Políticas e Redes sociais), acordeões no celular; (3) a linha legal com "Voltar ao topo". Não há newsletter (a loja não envia e-mails) nem selos de segurança. O horário de atendimento está em `EMPRESA.horarioAtendimento` (`src/loja/lib/empresa.ts`), marcado com `[CONFIRMAR]`.
+
+## Personalizado (quartinhos)
+
+A área de quartinhos completos se chama **Personalizado** (era "Projetos", e antes a "Loja de Casas" da base original). O código continua em `src/loja/{componentes,lib}/casas` para manter os imports estáveis.
+
+| | |
+|---|---|
+| Listagem | `/personalizado` (filtros por tema, estilo e tecido pelo motor de URLs) |
+| Quartinho do ateliê | `/personalizado/<slug>` (ex.: "Quartinho Jardim de Camomila"), no padrão da página de produto; vai para a sacola como `tipo: "projeto"` (pacote e opcionais) |
+| Seleções e conteúdos | `/personalizado/{menina,menino,neutro,floral,safari,nuvens,classico}`, `/personalizado/como-funciona`, `/personalizado/orcamento` |
+| Montador | `/personalizado/monte-o-seu` (307 para a 1ª etapa) e `/personalizado/monte-o-seu/{tema,berco,quarto,banho-e-maternidade,bordado,resumo}`; gera o item `tipo: "personalizado"` ("Meu quartinho personalizado · <paleta>") |
+
+**Redirecionamentos (308):** toda URL antiga `/projetos/**` vai para `/personalizado/**` com a busca preservada, e `/projetos/selecao` vai para `/carrinho` (`src/loja/lib/seo/legado.ts`, aplicado no proxy da loja, então o ERP não é afetado). O `mk_projetos` da seleção antiga ainda é migrado para a sacola na primeira visita.
+
+**Montador "Monte o seu quartinho"** (`componentes/casas/Montador.tsx`, regras em `lib/casas/modulos.ts` e `lib/casas/etapas.ts`):
+- Uma página por etapa; o estado fica no layout da rota (`monte-o-seu/layout.tsx`), que não remonta entre as etapas (a `TransicaoPagina` trata as etapas como uma página só; a troca de etapa tem animação própria, rolagem ao topo e foco no título).
+- Progresso no topo (visitados clicáveis, atual em destaque, check nos concluídos), "Voltar"/"Continuar" (fixos no rodapé no celular) e validação por etapa: tema e paleta; tamanho do berço quando há peça de berço; pelo menos uma peça ao sair de "Banho e maternidade"; nome do bordado quando ligado. Quem chega por URL a uma etapa adiante com pendência volta para ela.
+- Rascunho em `localStorage` (`mk_montador`: quartinho, bordado e etapas visitadas). `?projeto=<slug>` começa de um quartinho do ateliê; `?editar=<id>` edita o quartinho da sacola (a sacola leva ao resumo).
+- Resumo lateral: prévia ilustrada do quarto nas cores da paleta (peças entram e saem com animação, a recém-incluída ganha um halo e há um leve parallax com o mouse), miniaturas em carrossel contínuo (pausa no hover e no foco; com movimento reduzido, rolagem com snap) que abrem o visualizador em tela cheia da PDP (`produto/Visualizador.tsx`, agora com `desenhar` e `legendas`).
+- "Ver peças parecidas" abre um modal (base `Modal`) com as peças do catálogo da mesma categoria do módulo (`componentes/casas/dadosMontador.ts`); "Usar esta peça no meu quartinho" troca as opções do módulo pela peça (o módulo passa a valer o "a partir de" dela; nome e preço são conferidos de novo contra o catálogo ao abrir o montador).
+
+**Página do quartinho:** a seção de perguntas saiu; o "Passo a passo" virou uma linha do tempo (marcos numerados, ícone, título, texto e prazo; horizontal no desktop, trilho com snap no celular) com a linha preenchida conforme a rolagem (`animation-timeline: view()`; sem suporte ou com movimento reduzido, já aparece preenchida). Os prazos de "Pedido" e "Confirmação" estão marcados com `[CONFIRMAR]` em `lib/casas/catalogo.ts`.
 
 ## Variáveis de ambiente (ver `.env.example`)
 
@@ -165,6 +223,9 @@ Três faixas sobre o fundo escuro, separadas por pesponto: (1) destaques — "In
 |---|---|
 | `LOJA_HOSTS` | Hosts extras que abrem a loja (ex.: prévia da Vercel) |
 | `INDEXNOW_CHAVE` | Opcional. Chave do IndexNow servida em `/<chave>.txt` |
+| `CONTAS_GRAVAR_EM_DESENVOLVIMENTO` | Opcional. `true` libera as escritas das contas e dos pedidos com `npm run dev` ligado a um banco remoto (padrão: recusa com 503) |
+| `LOJA_ORIGEM` | Opcional. Origem da loja nos links de redefinição gerados no ERP (padrão: `https://www.ateliemilenakerbage.com.br`) |
+| `LOJA_EMAIL_REDEFINICAO` | Opcional, desligada. `true` (com `SMTP_*`) também envia por e-mail o link de redefinição gerado no ERP |
 | `AVALIACOES_GRAVAR_EM_DESENVOLVIMENTO` | Opcional. `true` libera gravar avaliações com `npm run dev` ligado a um banco remoto (padrão: simula) |
 | `INSTAGRAM_ACCESS_TOKEN` | Opcional e **secreta** (só servidor). Token de longa duração da conta @milenakerbageatelie para a seção de Instagram da home. Vazia: a seção mostra o convite para seguir |
 | `INSTAGRAM_GRAPH_VERSION` | Opcional. Versão da API do Instagram (padrão `v27.0`) |
@@ -175,14 +236,14 @@ Três faixas sobre o fundo escuro, separadas por pesponto: (1) destaques — "In
 npm run test:loja
 ```
 
-Os testes ficam em `tests/loja/` e cobrem o motor de URLs, o carrinho (com projetos e o quartinho personalizado), o checkout, os pedidos, o rastreamento, a localização, os projetos, o montador "Monte o seu quartinho", a normalização e o fallback do feed do Instagram (`instagram.test.mjs`) e a separação de hosts.
+Os testes ficam em `tests/loja/` e cobrem o motor de URLs, o carrinho (com os quartinhos do ateliê e o quartinho personalizado), o checkout, os pedidos, o rastreamento, a localização, a área Personalizado (`casas.test.mjs`), o montador "Monte o seu quartinho" e as etapas (`montador.test.mjs`), os redirecionamentos das URLs antigas (`legado.test.mjs`), a normalização e o fallback do feed do Instagram (`instagram.test.mjs`) e a separação de hosts.
 
 ## Pendências
 
-- **Conteúdo provisório:** produtos, preços, projetos de quartinho e pedidos são fictícios, e não há fotos. Cada página mostra um placeholder no lugar da foto. As fotos entram em `public/vitrine/produtos/<slug>/` e `public/vitrine/projetos/<slug>/`.
-- **Projetos:** a área `/projetos` é a antiga "Loja de Casas" da base original. O código ainda fica em `src/loja/{componentes,lib}/casas` para manter os imports estáveis. A página do projeto segue a página de produto, e o projeto vai para a MESMA sacola dos produtos (`tipo: "projeto"` no item, com pacote e opcionais). O "Monte o seu quartinho" (`/projetos/monte-o-seu`, regras em `src/loja/lib/casas/modulos.ts`) gera o item `tipo: "personalizado"`. A antiga seleção (`/projetos/selecao`) responde 308 para `/carrinho`, e o `mk_projetos` é migrado para a sacola na primeira visita. O "Monte o seu quartinho" aparece nos destaques do painel "Projetos" do mega menu, nos links secundários das categorias e no rodapé.
+- **Conteúdo provisório:** produtos, preços, quartinhos do ateliê e pedidos são fictícios, e não há fotos. Cada página mostra um placeholder no lugar da foto. As fotos entram em `public/vitrine/produtos/<slug>/` e `public/vitrine/projetos/<slug>/`.
+- **Personalizado:** ver a seção "Personalizado (quartinhos)" acima.
 - **Catálogo:** ligar ao catálogo do ERP (`erp_core.records`, recurso `catalogo`) e criar pedidos e clientes da loja no ERP.
-- **Conta:** não há login. "Minha conta" (`/conta`) mostra os favoritos e os pedidos enviados pelo WhatsApp **neste aparelho** (localStorage `mk_pedidos_enviados`, gravado pelo checkout ao enviar; regras em `src/loja/lib/pedidos/historico.ts`). `/conta/entrar`, `/conta/cadastro` e `/conta/clube` redirecionam (308) para `/conta`.
+- **Contas:** aplicar a migração `009_loja_clientes.sql` em produção (até lá, o pedido cai no envio direto pelo WhatsApp). Integração dos pedidos da loja com o CRM/pedidos do ERP (lead por pedido) e o envio do link de redefinição por e-mail (preparado) ficam para depois. Quem exclui a conta e cria outra com o mesmo e-mail ganha um novo cupom de primeira compra (nada do e-mail antigo é guardado).
 - **WhatsApp no ERP:** o WhatsApp de vendas, (85) 98582-2208, vem do Instagram e já está em `src/loja/lib/empresa.ts`. Falta preencher `LEGAL_WHATSAPP_PHONE` no ERP com o mesmo número.
 - **Instagram:** gerar o token (passo a passo em "Instagram") e combinar quem renova a cada 60 dias. Uma renovação automática (cron da Vercel gravando o token num cofre) fica para depois: hoje a variável é trocada à mão.
 - **Atendimento:** confirmar o horário da vendedora (`EMPRESA.horarioAtendimento`, `[CONFIRMAR]`).

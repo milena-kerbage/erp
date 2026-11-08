@@ -26,10 +26,10 @@ import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 
 type Props = PageProps<"/loja/[...categoria]">;
 
-// /projetos e /projetos/<página> têm rota própria (src/app/(site)/loja/(vitrine)/projetos): a área Projetos fica fora daqui.
+// /personalizado e /personalizado/<página> têm rota própria (src/app/(site)/loja/(vitrine)/personalizado): a área Personalizado fica fora daqui.
 export function generateStaticParams() {
   return caminhosParaPreGerar()
-    .filter((categoria) => categoria[0] !== "projetos")
+    .filter((categoria) => categoria[0] !== "personalizado")
     .map((categoria) => ({ categoria }));
 }
 

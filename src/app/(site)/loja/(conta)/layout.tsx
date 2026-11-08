@@ -4,8 +4,8 @@ import { reservaDoCabecalho } from "@/loja/componentes/layout/cabecalho/estilos"
 import { TransicaoPagina } from "@/loja/componentes/layout/TransicaoPagina";
 import { Rodape } from "@/loja/componentes/layout/rodape/Rodape";
 
-// Grupo (conta): área do cliente com o cabeçalho e o rodapé da loja. [A FAZER] com login:
-// páginas dinâmicas, no-store e protegidas pela API (seguranca.md).
+// Grupo (conta): área da cliente com o cabeçalho e o rodapé da loja. As páginas são cascas estáticas: os dados
+// da conta chegam pelas rotas /api/conta/* (no-store, sessão conferida no servidor).
 export default function LayoutConta({ children }: LayoutProps<"/loja">) {
   return (
     <div className={css({ minH: "dvh", display: "flex", flexDirection: "column" })}>

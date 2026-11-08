@@ -229,7 +229,7 @@ export function AreaProjetos({
               disabled={totalSelecao === 0}
               className={botao({ variante: "escuro", tamanho: "m", largo: true })}
             >
-              {totalSelecao === 0 ? "Nenhum projeto" : `Ver ${totalSelecao} ${totalSelecao === 1 ? "projeto" : "projetos"}`}
+              {totalSelecao === 0 ? "Nenhum quartinho" : `Ver ${totalSelecao} ${totalSelecao === 1 ? "quartinho" : "quartinhos"}`}
             </button>
           </div>
         </div>

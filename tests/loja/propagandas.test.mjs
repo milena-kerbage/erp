@@ -12,7 +12,7 @@ const categoria = (chave) => escolherPropagandas({ tipo: "categoria", categoria:
 // texto porque o menu importa módulos com alias "@/", que o node --test não resolve.
 const navegacao = readFileSync(new URL("../../src/loja/componentes/layout/cabecalho/navegacao.ts", import.meta.url), "utf8");
 const ROTAS = new Set([...navegacao.matchAll(/href: "(\/[^"?]*)"/g)].map(([, href]) => href));
-for (const fixa of ["/busca", "/carrinho", "/pronta-entrega", "/projetos"]) ROTAS.add(fixa);
+for (const fixa of ["/busca", "/carrinho", "/pronta-entrega", "/personalizado"]) ROTAS.add(fixa);
 const CATEGORIAS_DO_MENU = [...ROTAS].filter((href) => !["/busca", "/carrinho", "/pronta-entrega"].includes(href) && !href.startsWith("/conta") && !href.startsWith("/ajuda"));
 
 test("cada categoria principal tem propagandas próprias antes das gerais", () => {
@@ -94,7 +94,7 @@ test("lista extensível: propaganda nova entra sem mudar a escolha", () => {
     titulo: "Projeto.",
     texto: "Teste.",
     acao: "Ver",
-    href: "/projetos",
+    href: "/personalizado",
     onde: ["kit-berco", "quarto"],
   };
   assert.ok(ids(escolherPropagandas({ tipo: "categoria", categoria: "quarto" }, [...PROPAGANDAS, projeto])).includes("projeto-teste"));

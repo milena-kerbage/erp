@@ -23,7 +23,6 @@ export const Root = styled.label`
 
   &:focus-within {
     border-color: ${({ theme }) => theme.palette.sage[400]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary.subtle};
     color: ${({ theme }) => theme.colors.text.secondary};
   }
 

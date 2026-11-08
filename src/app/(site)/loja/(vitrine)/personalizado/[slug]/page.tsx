@@ -16,7 +16,6 @@ import {
   OQueVemNoQuarto,
   OutrosProjetos,
   PaletaDoProjeto,
-  PerguntasProjetos,
   projetosParecidos,
 } from "@/loja/componentes/casas/secoes";
 import { RESPIRO_LATERAL } from "@/loja/componentes/layout/cabecalho/estilos";
@@ -51,13 +50,14 @@ import { fotoPrincipal } from "@/loja/lib/catalogo/fotos";
 import { EMPRESA } from "@/loja/lib/empresa";
 import { schemaListagemProjetos, schemaProjeto, schemaTrilhaProjetos } from "@/loja/lib/seo/projetos";
 
-// /projetos/<slug>: a página de um projeto (no padrão da página de produto, lululemon-pdp.md) ou uma
-// das páginas do menu "Projetos" (navegacao.ts): seleções como /projetos/floral (listagem com filtro
-// fixo) e conteúdos (/projetos/como-funciona, /projetos/orcamento). Os slugs não colidem (testado em
-// tests/loja/casas.test.mjs). Tudo pré-gerado no build. Rotas próprias: /projetos/monte-o-seu (o
-// montador) e /projetos/selecao (308 para a sacola, onde os projetos ficam junto com os produtos).
+// /personalizado/<slug>: a página de um quartinho do ateliê (no padrão da página de produto,
+// lululemon-pdp.md) ou uma das páginas do menu "Personalizado" (navegacao.ts): seleções como
+// /personalizado/floral (listagem com filtro fixo) e conteúdos (/personalizado/como-funciona,
+// /personalizado/orcamento). Os slugs não colidem (testado em tests/loja/casas.test.mjs). Tudo
+// pré-gerado no build. Rota própria: /personalizado/monte-o-seu/<etapa> (o montador). Os endereços
+// antigos /projetos/** respondem 308 para cá (src/loja/lib/seo/legado.ts, no proxy da loja).
 
-type Props = PageProps<"/loja/projetos/[slug]">;
+type Props = PageProps<"/loja/personalizado/[slug]">;
 
 export function generateStaticParams() {
   return [...listarProjetos(), ...listarColecoes()].map(({ slug }) => ({ slug }));
@@ -81,15 +81,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: `${projeto.nome}: quarto de bebê ${resumoProjeto(projeto).toLowerCase().replace(" · ", ", ")}`,
       description: `${projeto.nome}: ${projeto.descricao[0]} A partir de ${formatarPreco(projeto.precoAPartirDe)}, produção em ${prazoDoProjeto(projeto)} e entrega para todo o Brasil.`,
-      alternates: { canonical: `/projetos/${projeto.slug}` },
+      alternates: { canonical: `/personalizado/${projeto.slug}` },
       ...(capa ? { openGraph: { images: [{ url: capa.src, alt: capa.alt }] } } : {}),
       robots,
     };
   }
   return {
-    title: `${dados.colecao.titulo} | Projetos`,
+    title: `${dados.colecao.titulo} | Personalizado`,
     description: dados.colecao.texto,
-    alternates: { canonical: `/projetos/${dados.colecao.slug}` },
+    alternates: { canonical: `/personalizado/${dados.colecao.slug}` },
     robots,
   };
 }
@@ -106,8 +106,8 @@ export default async function PaginaSlugProjetos({ params, searchParams }: Props
 // Página do projeto com a estrutura e as medidas da página de produto: no desktop, grade "1fr 440" com a
 // galeria sticky correndo POR TRÁS do painel; no celular, galeria em 100% com a barra de progresso e
 // o painel subindo por cima. Abaixo da dobra: "Por que você vai amar", gaveta de detalhes, "O que vem no
-// quarto", "Paleta do projeto", "Fale com o ateliê", passo a passo, perguntas, diferenciais e
-// "Outros projetos". O projeto vai para a mesma sacola dos produtos.
+// quarto", "Paleta do quartinho", "Fale com o ateliê", a linha do tempo "Passo a passo", diferenciais
+// e "Outros quartinhos". O quartinho vai para a mesma sacola dos produtos.
 function PaginaProjeto({ projeto }: { projeto: Projeto }) {
   const parecidos = projetosParecidos(projeto, listarProjetos());
   const pecas = pecasDoQuarto(projeto);
@@ -123,8 +123,8 @@ function PaginaProjeto({ projeto }: { projeto: Projeto }) {
     foto: fotoPrincipal(produto),
   }));
   const trilha = [
-    { rotulo: "Projetos", href: "/projetos" },
-    { rotulo: rotuloTema(projeto.tema), href: `/projetos/${projeto.tema}` },
+    { rotulo: "Personalizado", href: "/personalizado" },
+    { rotulo: rotuloTema(projeto.tema), href: `/personalizado/${projeto.tema}` },
   ];
 
   return (
@@ -132,8 +132,8 @@ function PaginaProjeto({ projeto }: { projeto: Projeto }) {
       <JsonLd dados={schemaProjeto(projeto)} />
       <JsonLd
         dados={schemaTrilhaProjetos([
-          { rotulo: "Projetos", href: "/projetos" },
-          { rotulo: projeto.nome, href: `/projetos/${projeto.slug}` },
+          { rotulo: "Personalizado", href: "/personalizado" },
+          { rotulo: projeto.nome, href: `/personalizado/${projeto.slug}` },
         ])}
       />
 
@@ -153,7 +153,7 @@ function PaginaProjeto({ projeto }: { projeto: Projeto }) {
         }}
         sugestoes={sugestoes}
       >
-        <section aria-label="Escolha do projeto" className={acimaDaDobra}>
+        <section aria-label="Escolha do quartinho" className={acimaDaDobra}>
           <div aria-hidden className={reservaGaleria} />
           <Galeria nome={projeto.nome} fotos={fotosDaGaleria(projeto)} temComplementos={false} />
           <aside aria-label="Pacote e pedido" className={painel}>
@@ -172,7 +172,6 @@ function PaginaProjeto({ projeto }: { projeto: Projeto }) {
         <PaletaDoProjeto projeto={projeto} />
         <FaleComAtelie nome={projeto.nome} />
         <EtapasProjetos pdp />
-        <PerguntasProjetos pdp />
         <DiferenciaisProjetos pdp />
         <OutrosProjetos projetos={parecidos} />
         <PilulaProjeto />
@@ -188,7 +187,7 @@ function CabecalhoColecao({ colecao }: { colecao: Colecao }) {
         <ol className={css({ display: "flex", flexWrap: "wrap", gap: "2", fontSize: "xs", color: "escuro" })}>
           {[
             { rotulo: "Página inicial", href: "/" },
-            { rotulo: "Projetos", href: "/projetos" },
+            { rotulo: "Personalizado", href: "/personalizado" },
           ].map((elo, indice) => (
             <li key={elo.href} className={css({ display: "flex", gap: "2" })}>
               {indice > 0 && <span aria-hidden>/</span>}
@@ -209,40 +208,40 @@ function CabecalhoColecao({ colecao }: { colecao: Colecao }) {
 
 function PaginaSelecao({ colecao, searchParams }: { colecao: Extract<Colecao, { tipo: "selecao" }>; searchParams: Props["searchParams"] }) {
   const projetos = filtrarProjetos(listarProjetos(), colecao.filtros);
-  const caminho = `/projetos/${colecao.slug}`;
+  const caminho = `/personalizado/${colecao.slug}`;
   return (
     <>
       <JsonLd dados={schemaListagemProjetos(colecao.titulo, caminho, projetos)} />
       <JsonLd
         dados={schemaTrilhaProjetos([
-          { rotulo: "Projetos", href: "/projetos" },
+          { rotulo: "Personalizado", href: "/personalizado" },
           { rotulo: colecao.titulo, href: caminho },
         ])}
       />
       <CabecalhoListagem
-        trilha={[{ rotulo: "Projetos", href: "/projetos" }]}
+        trilha={[{ rotulo: "Personalizado", href: "/personalizado" }]}
         titulo={colecao.titulo}
         total={projetos.length}
-        unidade={["projeto", "projetos"]}
+        unidade={["quartinho", "quartinhos"]}
         atalhos={ATALHOS_SELECOES.filter((atalho) => atalho.href !== caminho)}
       />
       <Suspense fallback={<EsqueletoGrade />}>
-        <ListagemProjetos projetos={projetos} categoria={`projetos/${colecao.slug}`} searchParams={searchParams} />
+        <ListagemProjetos projetos={projetos} categoria={`personalizado/${colecao.slug}`} searchParams={searchParams} />
       </Suspense>
-      <ContinueExplorando base="Projetos" categorias={categoriasRelacionadas(["projetos"]).filter((elo) => !elo.href.startsWith("/projetos"))} />
+      <ContinueExplorando base="Personalizado" categorias={categoriasRelacionadas(["personalizado"]).filter((elo) => !elo.href.startsWith("/personalizado"))} />
     </>
   );
 }
 
-// Conteúdos do menu: "Como funciona" (etapas + perguntas) e "Peça seu projeto" (convite: escolher um
+// Conteúdos do menu: "Como funciona" (linha do tempo + convite para o montador) e "Peça seu quartinho" (convite: escolher um
 // projeto pronto ou montar o seu; tudo vai para a sacola e o pedido segue pelo WhatsApp).
 function PaginaConteudo({ colecao }: { colecao: Extract<Colecao, { tipo: "conteudo" }> }) {
-  const caminho = `/projetos/${colecao.slug}`;
+  const caminho = `/personalizado/${colecao.slug}`;
   return (
     <>
       <JsonLd
         dados={schemaTrilhaProjetos([
-          { rotulo: "Projetos", href: "/projetos" },
+          { rotulo: "Personalizado", href: "/personalizado" },
           { rotulo: colecao.titulo, href: caminho },
         ])}
       />
@@ -250,27 +249,26 @@ function PaginaConteudo({ colecao }: { colecao: Extract<Colecao, { tipo: "conteu
       {colecao.slug === "como-funciona" ? (
         <>
           <EtapasProjetos />
-          <PerguntasProjetos />
           <ConviteMontador />
         </>
       ) : (
         <>
-          <section aria-label="Como pedir o seu projeto" className={css({ px: RESPIRO_LATERAL, mt: { base: "10", lg: "14" } })}>
+          <section aria-label="Como pedir o seu quartinho" className={css({ px: RESPIRO_LATERAL, mt: { base: "10", lg: "14" } })}>
             <ol className={caminhos}>
               {[
                 {
-                  titulo: "Escolha um projeto do ateliê",
+                  titulo: "Escolha um quartinho do ateliê",
                   texto: `${listarProjetos().length} quartinhos prontos para escolher o pacote e os opcionais.`,
-                  acao: { rotulo: "Ver os projetos", href: "/projetos" },
+                  acao: { rotulo: "Ver os quartinhos", href: "/personalizado" },
                 },
                 {
                   titulo: "Ou monte o seu",
                   texto: "Tema, paleta e peça por peça, do kit berço à bolsa maternidade, com o total na hora.",
-                  acao: { rotulo: "Monte o seu quartinho", href: "/projetos/monte-o-seu" },
+                  acao: { rotulo: "Monte o seu quartinho", href: "/personalizado/monte-o-seu" },
                 },
                 {
                   titulo: "Faça o pedido pela sacola",
-                  texto: "Projetos e peças avulsas ficam na mesma sacola. O pedido segue pelo WhatsApp com uma vendedora.",
+                  texto: "Quartinhos e peças avulsas ficam na mesma sacola. O pedido segue pelo WhatsApp com uma vendedora.",
                   acao: { rotulo: "Ver a sacola", href: "/carrinho" },
                 },
               ].map((passo, indice) => (

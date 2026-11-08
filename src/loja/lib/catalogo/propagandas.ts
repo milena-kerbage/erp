@@ -153,8 +153,8 @@ export const PROPAGANDAS_GERAIS: Propaganda[] = [
     id: "projeto-quartinho",
     titulo: "O quarto inteiro, planejado.",
     texto: "O ateliê desenha o quartinho no tema que você escolher, do berço à cortina.",
-    acao: "Conhecer os projetos",
-    href: "/projetos",
+    acao: "Conhecer os quartinhos",
+    href: "/personalizado",
     onde: [],
   },
 ];

@@ -1,4 +1,4 @@
-// Área Projetos (quarto de bebê completo): catálogo, filtros, pacotes, opcionais e propagandas. O
+// Área Personalizado (quartinhos de bebê completos, antiga "Projetos"): catálogo, filtros, pacotes, opcionais e propagandas. O
 // pedido do projeto vai pela sacola (tests/loja/carrinho.test.mjs) e o montador tem o próprio teste
 // (tests/loja/montador.test.mjs).
 // O arquivo mantém o nome "casas" porque os módulos ainda vivem em src/loja/lib/casas.
@@ -125,16 +125,16 @@ test("valores dos filtros já estão na forma do slug() do motor de URLs", () =>
   }
 });
 
-test("catálogo: 10 a 14 projetos, slugs únicos, dados completos e preços na faixa", () => {
+test("catálogo: 10 a 14 quartinhos do ateliê, slugs únicos, dados completos e preços na faixa", () => {
   const lista = listarProjetos();
   assert.ok(lista.length >= 10 && lista.length <= 14, String(lista.length));
   assert.equal(new Set(lista.map((projeto) => projeto.slug)).size, lista.length);
-  assert.equal(buscarProjeto("nuvem-salvia")?.nome, "Projeto Nuvem Sálvia");
+  assert.equal(buscarProjeto("nuvem-salvia")?.nome, "Quartinho Nuvem Sálvia");
   assert.equal(buscarProjeto("nao-existe"), null);
   assert.ok(projetosEmDestaque().length >= 3);
   for (const projeto of lista) {
     assert.equal(slug(projeto.slug), projeto.slug);
-    assert.ok(projeto.nome.startsWith("Projeto "), projeto.nome);
+    assert.ok(projeto.nome.startsWith("Quartinho "), projeto.nome);
     assert.ok(projeto.precoAPartirDe >= 1900 && projeto.precoAPartirDe <= 7500, projeto.slug);
     assert.ok(projeto.prazoDiasUteis >= 20 && projeto.prazoDiasUteis <= 35, projeto.slug);
     assert.ok(projeto.descricao.length >= 1 && projeto.pecas.length >= 3, projeto.slug);
@@ -154,20 +154,21 @@ test("cada página de seleção do menu tem projetos", () => {
 
 test("coleções batem com o menu e não colidem com projetos", () => {
   const navegacao = readFileSync(new URL("../../src/loja/componentes/layout/cabecalho/navegacao.ts", import.meta.url), "utf8");
-  const doMenu = [...navegacao.matchAll(/href: "\/projetos\/([^"?/]+)"/g)].map(([, caminho]) => caminho);
+  const doMenu = [...navegacao.matchAll(/href: "\/personalizado\/([^"?/]+)"/g)].map(([, caminho]) => caminho);
   assert.ok(doMenu.length >= 9, doMenu.join(","));
-  // Rotas próprias ao lado de /projetos/[slug]: o montador e o redirecionamento da antiga seleção.
+  assert.doesNotMatch(navegacao, /"\/projetos/);
+  // Rota própria ao lado de /personalizado/[slug]: o montador (e "selecao", que é só redirecionamento
+  // do endereço antigo, não pode virar coleção nem quartinho).
   const ROTAS_PROPRIAS = ["monte-o-seu", "selecao"];
-  for (const caminho of doMenu.filter((item) => !ROTAS_PROPRIAS.includes(item))) assert.ok(buscarColecao(caminho), `/projetos/${caminho} sem página`);
+  for (const caminho of doMenu.filter((item) => !ROTAS_PROPRIAS.includes(item))) assert.ok(buscarColecao(caminho), `/personalizado/${caminho} sem página`);
   for (const colecao of listarColecoes()) assert.equal(buscarProjeto(colecao.slug), null, colecao.slug);
   for (const rota of ROTAS_PROPRIAS) {
     assert.equal(buscarColecao(rota), null, rota);
     assert.equal(buscarProjeto(rota), null, rota);
   }
-  const rotas = new URL("../../src/app/(site)/loja/(vitrine)/projetos/", import.meta.url);
-  assert.ok(readFileSync(new URL("monte-o-seu/page.tsx", rotas), "utf8").includes("Montador"));
-  // A antiga seleção de projetos virou a sacola: 308 para /carrinho.
-  assert.match(readFileSync(new URL("selecao/route.ts", rotas), "utf8"), /status: 308, headers: \{ Location: "\/carrinho" \}/);
+  const rotas = new URL("../../src/app/(site)/loja/(vitrine)/personalizado/", import.meta.url);
+  assert.ok(readFileSync(new URL("monte-o-seu/layout.tsx", rotas), "utf8").includes("<Montador"));
+  assert.ok(readFileSync(new URL("monte-o-seu/[etapa]/page.tsx", rotas), "utf8").includes("EtapaDoMontador"));
   assert.deepEqual(buscarColecao("floral")?.filtros, { estilo: ["floral"] });
 });
 
@@ -208,15 +209,15 @@ test("opcionais e preço da escolha (pacote + opcionais), variação do título 
   assert.equal(nomeCurto(jardim), "Jardim de Camomila");
 });
 
-test("propagandas: dados completos, link dentro de /projetos e números batem com o catálogo", async () => {
+test("propagandas: dados completos, link dentro de /personalizado e números batem com o catálogo", async () => {
   const { PROPAGANDAS_PROJETOS, CATEGORIAS_PROPAGANDAS_PROJETOS } = await import("../../src/loja/lib/casas/propagandas.ts");
   assert.ok(PROPAGANDAS_PROJETOS.length >= 2 && PROPAGANDAS_PROJETOS.length <= 3);
   assert.deepEqual([...CATEGORIAS_PROPAGANDAS_PROJETOS], ["kit-berco", "quarto"]);
-  assert.ok(PROPAGANDAS_PROJETOS[0].apoio.includes(`${listarProjetos().length} projetos`));
+  assert.ok(PROPAGANDAS_PROJETOS[0].apoio.includes(`${listarProjetos().length} quartinhos`));
   const navegacao = readFileSync(new URL("../../src/loja/componentes/layout/cabecalho/navegacao.ts", import.meta.url), "utf8");
   for (const propaganda of PROPAGANDAS_PROJETOS) {
     for (const campo of ["titulo", "apoio", "acao", "href", "alt"]) assert.ok(propaganda[campo], `${campo} vazio`);
-    assert.ok(propaganda.href.startsWith("/projetos"), propaganda.href);
+    assert.ok(propaganda.href.startsWith("/personalizado"), propaganda.href);
     assert.ok(navegacao.includes(`href: "${propaganda.href}"`), `${propaganda.href} fora do menu`);
   }
   for (const raiz of CATEGORIAS_PROPAGANDAS_PROJETOS) assert.ok(navegacao.includes(`href: "/${raiz}"`), raiz);

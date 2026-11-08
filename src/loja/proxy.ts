@@ -3,6 +3,7 @@ import { PASTA_PUBLICA_LOJA, PREFIXO_LOJA } from "@/lib/hosts";
 import { CATEGORIAS_EXISTENTES } from "@/loja/lib/catalogo/categorias";
 import { planejarCookies } from "@/loja/lib/rastreamento/nucleo";
 import { REGRAS_SEO } from "@/loja/lib/seo/config";
+import { destinoEntrada, destinoLegado } from "@/loja/lib/seo/legado";
 import { interpretarUrlListagem } from "@/loja/lib/seo/urls";
 
 // Proxy da loja (host www./domínio principal). Chamado pelo src/proxy.ts depois da separação por host.
@@ -78,6 +79,20 @@ export function proxyLoja(request: NextRequest): NextResponse {
     const publica = new URL(request.url);
     publica.pathname = caminho.slice(PREFIXO_LOJA.length) || "/";
     return NextResponse.redirect(publica, 308);
+  }
+
+  // Endereços antigos (ex.: /projetos/** → /personalizado/**): 308 com a busca preservada.
+  const legado = destinoLegado(caminho);
+  if (legado) {
+    const novo = new URL(request.url);
+    novo.pathname = legado;
+    return comCabecalhos(NextResponse.redirect(novo, 308));
+  }
+  const entrada = destinoEntrada(caminho);
+  if (entrada) {
+    const novo = new URL(request.url);
+    novo.pathname = entrada;
+    return comCabecalhos(NextResponse.redirect(novo, 307));
   }
 
   const indexNow = CHAVE_INDEXNOW.exec(caminho);

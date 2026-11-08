@@ -97,3 +97,10 @@ export { Handbag } from "@phosphor-icons/react/dist/ssr/Handbag";
 export { Leaf } from "@phosphor-icons/react/dist/ssr/Leaf";
 export { Moon } from "@phosphor-icons/react/dist/ssr/Moon";
 export { Yarn } from "@phosphor-icons/react/dist/ssr/Yarn";
+export { ArrowUpRight } from "@phosphor-icons/react/dist/ssr/ArrowUpRight";
+// Contas de cliente (menu da conta, segurança e dados pessoais).
+export { IdentificationCard } from "@phosphor-icons/react/dist/ssr/IdentificationCard";
+export { Key } from "@phosphor-icons/react/dist/ssr/Key";
+export { SignOut } from "@phosphor-icons/react/dist/ssr/SignOut";
+export { SignIn } from "@phosphor-icons/react/dist/ssr/SignIn";
+export { UserPlus } from "@phosphor-icons/react/dist/ssr/UserPlus";

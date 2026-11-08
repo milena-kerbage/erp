@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { css } from "styled-system/css";
 
-// "Minha conta neste aparelho": sem login; os dados (favoritos e pedidos enviados) vêm do navegador.
+// Minha conta: a conta da cliente vem do servidor (/api/conta/*, cookie httpOnly da loja); os favoritos, do navegador.
 // Fora do índice: nada aqui é conteúdo público. Cada página monta a trilha e as abas (MolduraConta).
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 

@@ -8,8 +8,9 @@ import { ArrowsClockwise, ChatsCircle, Tag, Truck, WhatsappLogo } from "@/loja/c
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
 import { resolverItem } from "@/loja/lib/carrinho/linhas";
+import { ConviteCupom } from "@/loja/componentes/conta/ConviteCupom";
+import { type ContaDoCupom, cupomDaSacola, useContaDoCupom } from "@/loja/componentes/conta/cupomSacola";
 import {
-  CUPONS,
   calcularTotais,
   DESCONTO_PIX_PERCENTUAL,
   MAX_PARCELAS,
@@ -55,15 +56,17 @@ type Remocao = { item: ItemCarrinho; produto: ProdutoCarrinho };
 // com preço e o pedido segue pelo WhatsApp: frete e prazo de entrega são combinados com o ateliê,
 // então não entram aqui; o prazo de PRODUÇÃO (pronta entrega x sob encomenda x projeto) continua.
 // Produtos, projetos de quarto e o quartinho personalizado ficam na mesma sacola (resolverItem).
-function calcular(itens: ItemCarrinho[], porSlug: Map<string, ProdutoCarrinho>, preferencias: PreferenciasCompra) {
+// Cupom: o escolhido ou, com conta, o de primeira compra aplicado sozinho (cupomDaSacola; o servidor confere).
+function calcular(itens: ItemCarrinho[], porSlug: Map<string, ProdutoCarrinho>, preferencias: PreferenciasCompra, contaCupom: ContaDoCupom) {
   const resolvidos = itens.map((item) => ({ item, produto: resolverItem(item, porSlug) }));
   const linhas = resolvidos.flatMap(({ item, produto }) => (produto ? [{ item, produto }] : []));
   const indisponiveis = resolvidos.flatMap(({ item, produto }) => (produto ? [] : [item]));
   const precos = linhas.map(({ item, produto }) => ({ preco: produto.preco, quantidade: item.quantidade }));
-  const cupom = CUPONS.find((item) => item.codigo === preferencias.cupom);
+  const escolhido = cupomDaSacola(preferencias, contaCupom, calcularTotais(precos).subtotal);
+  const cupom = escolhido.cupom;
   const totais = calcularTotais(precos, cupom);
   const producao = prazoDeProducao(linhas.map(({ produto }) => produto));
-  return { linhas, indisponiveis, cupom, totais, producao };
+  return { linhas, indisponiveis, cupom, totais, producao, boasVindas: escolhido.boasVindas };
 }
 
 const contagem = (quantidade: number) => `${quantidade} ${quantidade === 1 ? "item" : "itens"}`;
@@ -79,6 +82,8 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
   const itens = useItensCarrinho();
   const favoritos = useFavoritos();
   const preferencias = usePreferenciasCompra();
+  const contaCupom = useContaDoCupom();
+  const [avisoCupom, setAvisoCupom] = useState("");
   const porSlug = useMemo(() => new Map(catalogo.map((produto) => [produto.slug, produto])), [catalogo]);
   const [desfazer, setDesfazer] = useState<Desfazer | null>(null);
   const [remocao, setRemocao] = useState<Remocao | null>(null);
@@ -95,7 +100,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
 
   if (itens === null) return <Esqueleto />;
 
-  const conta = calcular(itens, porSlug, preferencias);
+  const conta = calcular(itens, porSlug, preferencias, contaCupom);
   const { linhas, totais, cupom } = conta;
   const vazia = linhas.length === 0;
   const noCarrinho = new Set(linhas.flatMap(({ item, produto }) => (produto.tipo ? [] : [item.slug])));
@@ -120,6 +125,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
       (itens ?? []).map((atual) => (atual === item ? { ...atual, quantidade } : atual)),
       porSlug,
       preferencias,
+      contaCupom,
     );
     avisar(`Quantidade de ${nome}: ${quantidade}. Total a partir de ${reais(depois.totais.totalCartao)}.`);
   }
@@ -252,7 +258,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
                   </span>
                   {cupom ? (
                     <p>
-                      Cupom <strong className={css({ fontWeight: "medium" })}>{cupom.codigo}</strong>{" "}
+                      {conta.boasVindas ? "Seu cupom de primeira compra" : "Cupom"} <strong className={css({ fontWeight: "medium" })}>{cupom.codigo}</strong>{" "}
                       {totais.descontoCupom > 0 ? `aplicado: − ${reais(totais.descontoCupom)}.` : "ainda não vale para este valor."}{" "}
                       <button type="button" aria-haspopup="dialog" onClick={() => setCupomAberto(true)} className={linkAcao}>
                         Trocar ou remover
@@ -267,6 +273,26 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
                     </p>
                   )}
                 </div>
+                {avisoCupom && (
+                  <p role="status" className={css({ fontSize: "sm", lineHeight: "texto", color: "textoSuave" })}>
+                    {avisoCupom}
+                  </p>
+                )}
+                {contaCupom.pronta && !contaCupom.logada && (
+                  <ConviteCupom
+                    variante="faixa"
+                    acao={
+                      <Link href="/conta/cadastro?voltar=/carrinho" className={cx(linkAcao, css({ fontWeight: "medium" }))}>
+                        Criar conta
+                      </Link>
+                    }
+                  >
+                    O cupom é exclusivo da sua conta e entra sozinho na sacola. Já tem conta?{" "}
+                    <Link href="/conta/entrar?voltar=/carrinho" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
+                      Entrar
+                    </Link>
+                  </ConviteCupom>
+                )}
               </div>
             </section>
 
@@ -344,13 +370,19 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
           cupom={cupom}
           subtotal={totais.subtotal}
           desconto={totais.descontoCupom}
+          conta={contaCupom}
           abertoInicial
-          aoMudar={(codigo) => {
-            salvarPreferenciasCompra({ cupom: codigo });
+          aoMudar={(codigo, aviso) => {
+            setAvisoCupom(aviso ?? "");
             if (codigo) {
+              salvarPreferenciasCompra({ cupom: codigo, semCupomAutomatico: undefined });
               setCupomAberto(false);
-              avisar(`Cupom ${codigo} aplicado.`);
-            } else avisar("Cupom removido.");
+              avisar(aviso ?? `Cupom ${codigo} aplicado.`);
+            } else {
+              // Tirar o de primeira compra (aplicado sozinho): ele fica guardado para outro pedido.
+              salvarPreferenciasCompra({ cupom: undefined, ...(conta.boasVindas ? { semCupomAutomatico: true } : {}) });
+              avisar(conta.boasVindas ? "Cupom de primeira compra removido deste pedido. Ele continua guardado na sua conta." : "Cupom removido.");
+            }
           }}
         />
       </Dialogo>
@@ -418,7 +450,7 @@ function ResumoSacola({ conta }: { conta: Conta }) {
               Produção{" "}
               <DicaInfo rotulo="Como funciona o prazo de produção">
                 Peças a pronta entrega saem do ateliê em até {textoPrazo(PRODUCAO_PRONTA)}; as feitas sob encomenda (costura e
-                bordado) levam de {textoPrazo(PRODUCAO_ENCOMENDA)}, e os projetos de quarto, de {textoPrazo(PRODUCAO_PROJETO)}. O
+                bordado) levam de {textoPrazo(PRODUCAO_ENCOMENDA)}, e os quartinhos personalizados, de {textoPrazo(PRODUCAO_PROJETO)}. O
                 pedido sai inteiro, então vale o prazo da peça mais demorada. O prazo de entrega é combinado pelo WhatsApp.
               </DicaInfo>
             </>
@@ -467,11 +499,11 @@ function ResumoSacola({ conta }: { conta: Conta }) {
       </ul>
       <p className={css({ mt: "4", fontSize: "xs", lineHeight: "texto", color: "textoSuave" })}>
         Montando o quarto inteiro?{" "}
-        <Link href="/projetos" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
-          Conheça os Projetos
+        <Link href="/personalizado" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
+          Conheça os quartinhos
         </Link>{" "}
         ou{" "}
-        <Link href="/projetos/monte-o-seu" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
+        <Link href="/personalizado/monte-o-seu" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
           monte o seu quartinho
         </Link>
         .

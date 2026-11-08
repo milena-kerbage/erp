@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
+import { useCliente } from "./estadoConta";
 
-// "Minha conta neste aparelho": não há login. As abas mostram o que a loja guarda neste navegador.
+// Abas de Minha conta. Dados pessoais e Segurança só aparecem com a cliente logada.
 const ABAS = [
   { rotulo: "Visão geral", href: "/conta" },
-  { rotulo: "Pedidos enviados", href: "/conta/pedidos" },
+  { rotulo: "Pedidos", href: "/conta/pedidos" },
   { rotulo: "Favoritos", href: "/conta/favoritos" },
+  { rotulo: "Dados pessoais", href: "/conta/dados", logada: true },
+  { rotulo: "Segurança", href: "/conta/seguranca", logada: true },
 ];
 
 // Abas horizontais (rolam no celular), a atual sublinhada. O caminho público chega por reescrita do
@@ -17,6 +20,8 @@ const ABAS = [
 export function NavConta() {
   const caminho = usePathname();
   const [atual, setAtual] = useState<string | null>(null);
+  const cliente = useCliente();
+  const abas = ABAS.filter((aba) => !aba.logada || cliente);
 
   useEffect(() => {
     const publico = caminho.replace(/^\/loja(?=\/)/, "");
@@ -30,7 +35,7 @@ export function NavConta() {
   return (
     <nav aria-label="Minha conta" className={css({ borderBottomWidth: "1px", borderColor: "borda" })}>
       <ul className={css({ display: "flex", gap: { base: "5", md: "8" }, overflowX: "auto", scrollbarWidth: "none" })}>
-        {ABAS.map((aba) => (
+        {abas.map((aba) => (
           <li key={aba.href} className={css({ flexShrink: "0" })}>
             <Link href={aba.href} aria-current={atual === aba.href ? "page" : undefined} className={estiloAba}>
               {aba.rotulo}

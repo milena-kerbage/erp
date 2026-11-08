@@ -76,8 +76,8 @@ function destaquesDe(chave: string, rotulo: string): LinkMenu[] {
 }
 
 const SECUNDARIOS: LinkMenu[] = [
-  { rotulo: "Monte o seu quartinho", href: "/projetos/monte-o-seu" },
-  { rotulo: "Projetos de quartinho", href: "/projetos" },
+  { rotulo: "Monte o seu quartinho", href: "/personalizado/monte-o-seu" },
+  { rotulo: "Quartinhos personalizados", href: "/personalizado" },
 ];
 
 // Mídia de cada categoria: cards 5:6 das subcategorias principais (os primeiros que couberem no
@@ -180,24 +180,24 @@ export function montarMenu(): ItemMenu[] {
       painel: {
         tipo: "colunas",
         destaques: [
-          { rotulo: "Todos os projetos", href: "/projetos" },
-          { rotulo: "Monte o seu quartinho", href: "/projetos/monte-o-seu" },
-          { rotulo: "Como funciona", href: "/projetos/como-funciona" },
-          { rotulo: "Peça seu projeto", href: "/projetos/orcamento" },
+          { rotulo: "Todos os quartinhos", href: "/personalizado" },
+          { rotulo: "Monte o seu quartinho", href: "/personalizado/monte-o-seu" },
+          { rotulo: "Como funciona", href: "/personalizado/como-funciona" },
+          { rotulo: "Peça seu quartinho", href: "/personalizado/orcamento" },
           EDICAO,
         ],
         secundarios: [{ rotulo: "Fale com o ateliê", href: LINKS_UTILITARIOS.franquia.href, externo: true }],
         colunas: projetos.colunas.slice(0, 2).map(({ titulo, href, links }) => ({ titulo, href, links })),
         cards: [
-          card("Para menina", "/projetos/menina", "rose", "flor", "projetos/menina"),
-          card("Para menino", "/projetos/menino", "azul", "nuvem", "projetos/menino"),
-          card("Neutros", "/projetos/neutro", "linho", "folha", "projetos/neutro"),
-          card("Monte o seu", "/projetos/monte-o-seu", "salvia", "berco", "projetos/monte-o-seu"),
+          card("Para menina", "/personalizado/menina", "rose", "flor", "projetos/menina"),
+          card("Para menino", "/personalizado/menino", "azul", "nuvem", "projetos/menino"),
+          card("Neutros", "/personalizado/neutro", "linho", "folha", "projetos/neutro"),
+          card("Monte o seu", "/personalizado/monte-o-seu", "salvia", "berco", "projetos/monte-o-seu"),
         ],
         promo: {
           titulo: "O quartinho inteiro, planejado pelo ateliê",
           descricao: "Kit berço, cortinas, tapete e enfeites no mesmo tema, com bordado do nome.",
-          href: "/projetos",
+          href: "/personalizado",
           tom: "salvia",
           icone: "berco",
           src: foto("projetos/editorial"),

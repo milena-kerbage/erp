@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s | Ateliê Milena Kerbage",
   },
   description:
-    "Kit berço, enxoval, quarto de bebê e maternidade feitos no Ateliê Milena Kerbage, em Fortaleza. Peças a pronta entrega e projetos personalizados, com entrega para todo o Brasil.",
+    "Kit berço, enxoval, quarto de bebê e maternidade feitos no Ateliê Milena Kerbage, em Fortaleza. Peças a pronta entrega e quartinhos personalizados, com entrega para todo o Brasil.",
   openGraph: { siteName: "Ateliê Milena Kerbage", locale: "pt_BR", type: "website" },
   twitter: { card: "summary_large_image" },
   robots: { index: true, follow: true, "max-image-preview": "large" },

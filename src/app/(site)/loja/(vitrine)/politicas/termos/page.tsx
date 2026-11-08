@@ -17,7 +17,7 @@ export const metadata = metadataPagina({
 });
 
 // Termos da LOJA (o modelo de negócio real: catálogo com preço e pedido fechado pelo WhatsApp com
-// uma vendedora; sem pagamento, login nem frete calculado no site). [CONFIRMAR] com o jurídico.
+// uma vendedora; sem pagamento nem frete calculado no site; o pedido é feito com conta de cliente). [CONFIRMAR] com o jurídico.
 export default function Termos() {
   return (
     <PaginaInstitucional
@@ -45,9 +45,21 @@ export default function Termos() {
           confirmam essas condições na conversa.</strong> Enviar a mensagem não gera cobrança nem obrigação de compra.
         </p>
         <p>
-          Não é preciso criar conta. Os dados que o site guarda no seu navegador estão descritos na{" "}
-          <Link href="/politicas/cookies">Política de cookies</Link>.
+          Para fazer o pedido pelo site é preciso ter uma conta (veja <a href="#conta">Conta de cliente</a>). Os dados que o site guarda no
+          seu navegador estão descritos na <Link href="/politicas/cookies">Política de cookies</Link>.
         </p>
+
+        <h2 id="conta">Conta de cliente</h2>
+        <ul>
+          <li>A conta é pessoal: use dados verdadeiros e guarde a sua senha. Avise o ateliê se suspeitar de uso indevido.</li>
+          <li>
+            Esqueceu a senha? Fale com o ateliê pelo WhatsApp: a vendedora envia um link de redefinição, válido por 2 horas e de uso único.
+          </li>
+          <li>
+            Você pode excluir a conta quando quiser, em Minha conta › Segurança. Os pedidos já feitos continuam no ateliê sem os seus dados
+            pessoais (veja a <Link href="/politicas/privacidade#conta">Política de privacidade</Link>).
+          </li>
+        </ul>
 
         <h2 id="precos">Preços, cupons e disponibilidade</h2>
         <ul>
@@ -55,7 +67,12 @@ export default function Termos() {
             Os preços aparecem como “a partir de” porque o valor final depende das opções da peça (tamanho, bordado, tecido) e do frete.
           </li>
           <li>O valor que vale é o confirmado pela vendedora antes do pagamento.</li>
-          <li>Cupons têm regras próprias e são conferidos na conversa. Um cupom não se soma a outro, salvo aviso.</li>
+          <li>Cupons têm regras próprias e são conferidos pelo site e na conversa. Um cupom por pedido: os cupons não se somam.</li>
+          <li>
+            Cupom de primeira compra: ao criar a conta, você ganha 5% OFF na primeira compra, exclusivo da sua conta e de uso único, sobre
+            os valores “a partir de” das peças (sem o frete). Ele não se soma a outros cupons e é independente do desconto no Pix, que é
+            combinado à parte com a vendedora.
+          </li>
           <li>As peças na sacola não ficam reservadas até o pedido ser confirmado.</li>
           <li>Se houver erro evidente de preço ou de descrição, a vendedora avisa antes de fechar o pedido.</li>
         </ul>

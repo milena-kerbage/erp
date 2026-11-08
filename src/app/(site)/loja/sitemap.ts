@@ -13,10 +13,10 @@ import { PAGINAS_INSTITUCIONAIS } from "@/loja/lib/seo/institucional";
 // Nunca priority/changefreq (ignorados por Google e Bing). Regras em publicacao.md §3.
 export default function sitemap(): MetadataRoute.Sitemap {
   const categorias = caminhosParaPreGerar()
-    .filter((partes) => partes[0] !== "projetos")
+    .filter((partes) => partes[0] !== "personalizado")
     .map((partes) => `/${partes.join("/")}`)
     .sort();
-  return ["", "/pronta-entrega", ROTA_EDICAO, "/projetos", ...categorias, ...PAGINAS_INSTITUCIONAIS].map((caminho) => ({
+  return ["", "/pronta-entrega", ROTA_EDICAO, "/personalizado", ...categorias, ...PAGINAS_INSTITUCIONAIS].map((caminho) => ({
     url: `${ORIGEM}${caminho}`,
   }));
 }

@@ -30,5 +30,10 @@ export const ERP_ROUTE_CATALOG = [
  {path:'/api/erp/avaliacoes',methods:'GET',roles:'Admin e gestão',bearer:false,purpose:'Moderação das avaliações da loja: ?status=pendente|aprovada|recusada|todas&produto=slug&limit&offset; inclui contagem por situação.'},
  {path:'/api/erp/avaliacoes/{id}',methods:'PATCH, DELETE',roles:'Admin e gestão',bearer:false,purpose:'Moderação {revisao,status?,motivo?,resposta?} (recusa exige motivo interno); exclusão definitiva com ?revisao=N, fotos incluídas.'},
  {path:'/api/erp/avaliacoes/foto/{id}',methods:'GET',roles:'Admin e gestão',bearer:false,purpose:'Foto WebP da avaliação em qualquer situação: ?tamanho=mini|grande.'},
+ {path:'/api/erp/loja/clientes',methods:'GET',roles:'Admin e gestão',bearer:false,purpose:'Clientes com conta na loja: ?busca=nome|e-mail|WhatsApp&limit&offset; inclui pedidos e cupom de primeira compra.'},
+ {path:'/api/erp/loja/clientes/{id}',methods:'GET',roles:'Admin e gestão',bearer:false,purpose:'Detalhe da cliente: dados, pedidos, cupom e o último link de redefinição.'},
+ {path:'/api/erp/loja/clientes/{id}/redefinicao',methods:'POST',roles:'Admin e gestão',bearer:false,purpose:'Gera o link de redefinição de senha (2 horas, uso único), exibido uma vez para enviar pelo WhatsApp.'},
+ {path:'/api/erp/loja/pedidos',methods:'GET',roles:'Admin e gestão',bearer:false,purpose:'Pedidos feitos no site: ?status=todos|enviado_whatsapp|pagamento_confirmado|despachado|entregue|cancelado&busca&limit&offset.'},
+ {path:'/api/erp/loja/pedidos/{numero}',methods:'PATCH',roles:'Admin e gestão',bearer:false,purpose:'Situação do pedido da loja: {revisao,status}.'},
  {path:'/api/erp/documentation',methods:'GET',roles:'Equipe',bearer:false,purpose:'Manual técnico Markdown; document=operation baixa o guia operacional.'},
 ] as const;

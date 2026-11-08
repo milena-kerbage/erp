@@ -194,7 +194,8 @@ export function tirarDosFavoritos(slug: string) {
 
 // Escolhas que o carrinho passa para o checkout (sem dado pessoal): forma de entrega, modalidade
 // do frete e cupom. Dados do comprador e do cartão nunca vão para o storage.
-export type PreferenciasCompra = { entrega: "endereco" | "retirada"; frete: "normal" | "expressa"; cupom?: string };
+// `semCupomAutomatico`: a cliente logada tirou o cupom de primeira compra que a sacola aplica sozinha (fica guardado).
+export type PreferenciasCompra = { entrega: "endereco" | "retirada"; frete: "normal" | "expressa"; cupom?: string; semCupomAutomatico?: boolean };
 
 const PREFERENCIAS = "mk_compra";
 const PADRAO: PreferenciasCompra = { entrega: "endereco", frete: "normal" };
@@ -206,6 +207,7 @@ function preferenciasValidas(bruto: string | null): PreferenciasCompra {
       entrega: valor?.entrega === "retirada" ? "retirada" : "endereco",
       frete: valor?.frete === "expressa" ? "expressa" : "normal",
       cupom: typeof valor?.cupom === "string" && valor.cupom.length <= 30 ? valor.cupom : undefined,
+      ...(valor?.semCupomAutomatico === true ? { semCupomAutomatico: true } : {}),
     };
   } catch {
     return PADRAO;
@@ -232,5 +234,5 @@ export function salvarPreferenciasCompra(parcial: Partial<PreferenciasCompra>) {
 // Depois do pedido confirmado: carrinho e cupom zerados.
 export function esvaziarCarrinho() {
   gravar(CARRINHO, []);
-  salvarPreferenciasCompra({ cupom: undefined });
+  salvarPreferenciasCompra({ cupom: undefined, semCupomAutomatico: undefined });
 }

@@ -107,9 +107,11 @@ const styles = (theme: Theme) => css`
     color: ${theme.colors.text.primary};
   }
 
+  /* Sem contorno de foco no sistema (decisão do ateliê). Quem precisa liga em
+     Configurações > Acessibilidade > foco sempre visível (data-focus-always, abaixo). */
+  :focus,
   :focus-visible {
-    outline: 2px solid ${theme.colors.primary.main};
-    outline-offset: 2px;
+    outline: none;
   }
 
   /* ---------- Acessibilidade (Configurações > Acessibilidade) ---------- */

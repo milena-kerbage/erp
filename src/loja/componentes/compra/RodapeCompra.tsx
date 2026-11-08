@@ -104,7 +104,7 @@ const menu = css({
   px: { base: "0", md: "5", desktop: "10" },
   // Celular: pesponto em cima (as divisórias dos acordeões também são de pesponto, ColunaRodape).
   bgImage: {
-    base: "[repeating-linear-gradient(90deg, token(colors.pespontoSobreEscuro) 0 6px, transparent 6px 10px)]",
+    base: "[linear-gradient(token(colors.pespontoSobreEscuro), token(colors.pespontoSobreEscuro))]",
     md: "none",
   },
   bgSize: "[100% 1px]",

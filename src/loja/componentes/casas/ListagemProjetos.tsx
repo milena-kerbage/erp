@@ -46,13 +46,13 @@ export async function ListagemProjetos({
 
   const vazio = (
     <div className={css({ px: RESPIRO_LATERAL, py: "24", textAlign: "center" })}>
-      <p className={css({ fontSize: "2xl", color: "escuro" })}>Nenhum projeto com esses filtros.</p>
+      <p className={css({ fontSize: "2xl", color: "escuro" })}>Nenhum quartinho com esses filtros.</p>
       <p className={css({ mt: "2", color: "textoSuave" })}>Tire algum filtro ou conte para o ateliê o quartinho que você imagina.</p>
       <div className={css({ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "5", mt: "6" })}>
         <Link href={`/${categoria}`} scroll={false} className={linkSublinhado}>
           Limpar filtros
         </Link>
-        <Link href="/projetos/monte-o-seu" className={linkSublinhado}>
+        <Link href="/personalizado/monte-o-seu" className={linkSublinhado}>
           Monte o seu quartinho
         </Link>
       </div>

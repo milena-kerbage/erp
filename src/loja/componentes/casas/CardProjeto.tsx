@@ -32,7 +32,7 @@ export function CardProjeto({
   tom?: number;
 }) {
   const Titulo = nivelTitulo;
-  const href = `/projetos/${projeto.slug}`;
+  const href = `/personalizado/${projeto.slug}`;
   return (
     <article className={cx("group", css({ h: "full", bg: "fundo" }))}>
       <div className={css({ position: "relative" })}>
@@ -71,7 +71,7 @@ export function CardProjeto({
 // com a composição de módulos nos tons claros do ateliê no lugar da foto e o menor "a partir de".
 export function CardMonteOSeu({ nivelTitulo = "h2" }: { nivelTitulo?: "h2" | "h3" }) {
   const Titulo = nivelTitulo;
-  const href = "/projetos/monte-o-seu";
+  const href = "/personalizado/monte-o-seu";
   const menor = Math.min(...MODULOS.map((modulo) => modulo.preco));
   const amostra = MODULOS.filter((modulo) => ["kit-berco", "cortina", "tapete", "almofadas"].includes(modulo.id));
   return (

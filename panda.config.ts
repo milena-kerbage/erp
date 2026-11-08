@@ -81,6 +81,27 @@ export default defineConfig({
         sairPagina: { from: { opacity: "1" }, to: { opacity: "0" } },
         entrarPagina: { from: { opacity: "0", transform: "translateY(8px)" }, to: { opacity: "1", transform: "none" } },
         aparecerPagina: { from: { opacity: "0" }, to: { opacity: "1" } },
+        // Montador "Monte o seu quartinho": a etapa nova entra do lado em que se anda (avançar pela
+        // direita, voltar pela esquerda); as peças da prévia entram e saem com escala, a recém-incluída
+        // ganha um halo sálvia.
+        entrarEtapa: { from: { opacity: "0", translate: "24px 0" }, to: { opacity: "1", translate: "0 0" } },
+        voltarEtapa: { from: { opacity: "0", translate: "-24px 0" }, to: { opacity: "1", translate: "0 0" } },
+        entrarPeca: { from: { opacity: "0", scale: "0.8" }, to: { opacity: "1", scale: "1" } },
+        sairPeca: { from: { opacity: "1", scale: "1" }, to: { opacity: "0", scale: "0.86" } },
+        realcePeca: {
+          "0%": { filter: "drop-shadow(0 0 0 transparent)" },
+          "35%": { filter: "drop-shadow(0 0 2.4cqw rgba(97, 109, 84, 0.7))" },
+          "100%": { filter: "drop-shadow(0 0 0 transparent)" },
+        },
+        // Linha do tempo "Passo a passo": a sálvia preenche a linha e os marcos acendem
+        // conforme a seção atravessa a tela (animation-timeline: view()).
+        preencherLinha: { from: { transform: "scaleX(0)" }, to: { transform: "scaleX(1)" } },
+        preencherLinhaVertical: { from: { transform: "scaleY(0)" }, to: { transform: "scaleY(1)" } },
+        acenderMarco: {
+          // Cores fixas (keyframes não passam pelos tokens): superficie/textoSuave/pesponto → marca.
+          from: { backgroundColor: "#FFFFFF", color: "#5F6459", borderColor: "#E3E5DC" },
+          to: { backgroundColor: "#616D54", color: "#FFFFFF", borderColor: "#616D54" },
+        },
       },
       tokens: {
         // Escala de títulos da referência (lululemon-referencia.md §5.7) que não existe no preset.
@@ -124,7 +145,7 @@ export default defineConfig({
           campo: { value: "8px" },
           bloco: { value: "16px" }, // blocos grandes, como o cartão do rodapé
           pilula: { value: "1000px" }, // botões, controles, campo de busca e amostras de cor
-          midia: { value: "12px" }, // fotos dos cards dos carrosséis e posts do Instagram (cantos suaves)
+          midia: { value: "0px" }, // fotos dos cards: cantos retos, como as grades
         },
         sizes: {
           conteudo: { value: "1420px" }, // --container-max
@@ -158,6 +179,9 @@ export default defineConfig({
           gavetaSacola: { value: "560px" }, // gaveta "Adicionado à sacola" e "Editar" no desktop
           dialogoSacola: { value: "480px" }, // diálogo "Remover da sacola" no desktop
           cabecalhoCompra: { value: "56px" }, // cabeçalho mínimo da sacola e do checkout
+          // Contas de cliente: menu da conta no cabeçalho e coluna dos formulários (entrar, cadastro, dados).
+          menuConta: { value: "272px" },
+          formularioConta: { value: "520px" },
         },
         zIndex: {
           cabecalho: { value: "300" },
@@ -166,6 +190,7 @@ export default defineConfig({
           pilulaCompra: { value: "20" }, // pílula fixa da página de produto
           barraSacola: { value: "20" }, // barra fixa "Finalizar compra" da sacola no celular
           avisoSacola: { value: "30" }, // aviso "Desfazer" acima da barra fixa
+          dropdown: { value: "350" }, // menus suspensos (Dropdown.tsx), acima do cabeçalho
         },
         durations: {
           rapida: { value: "120ms" },
@@ -230,12 +255,19 @@ export default defineConfig({
           entrarPagina: { value: "entrarPagina 360ms cubic-bezier(0.5, 0, 0, 1) 100ms both" },
           sairPaginaReduzida: { value: "sairPagina 100ms linear both" },
           aparecerPagina: { value: "aparecerPagina 150ms linear both" },
+          // Montador (etapas, prévia do quarto e carrossel do resumo).
+          entrarEtapa: { value: "entrarEtapa 380ms cubic-bezier(0.2, 0, 0, 1) both" },
+          voltarEtapa: { value: "voltarEtapa 380ms cubic-bezier(0.2, 0, 0, 1) both" },
+          entrarPeca: { value: "entrarPeca 480ms cubic-bezier(0.34, 1.4, 0.64, 1) both" },
+          sairPeca: { value: "sairPeca 260ms cubic-bezier(0.4, 0, 1, 1) both" },
+          realcePeca: { value: "realcePeca 1400ms cubic-bezier(0.2, 0, 0, 1) 200ms both" },
         },
         shadows: {
           suave: { value: "0 1px 3px rgba(29, 31, 27, 0.08), 0 1px 2px rgba(29, 31, 27, 0.04)" },
           media: { value: "0 12px 32px rgba(29, 31, 27, 0.12)" },
-          // Anel de foco triplo da referência (§1.7), nas cores da marca.
-          anelFoco: { value: "0 0 0 2px #FFFFFF, 0 0 0 3px #616D54, 0 0 0 5px #C9D1BD" },
+          // Sem anel de foco visível na loja (decisão do ateliê): o token segue existindo para os
+          // componentes que o usam, mas não desenha nada.
+          anelFoco: { value: "none" },
         },
       },
       semanticTokens: {
@@ -280,7 +312,8 @@ export default defineConfig({
           linhaSobreBanner: { value: "rgba(255, 255, 255, 0.22)" },
           // Cabeçalho em pílula e home. A pílula é sálvia-linho translúcida (sage 100 a 82%, com desfoque),
           // e não o cinza neutro de vidro: o texto escuro mantém contraste > 9:1 mesmo sobre o hero escuro.
-          vidroCabecalho: { value: "rgba(230, 234, 223, 0.82)" },
+          vidroCabecalho: { value: "rgba(246, 247, 242, 0.9)" }, // header: linho quase opaco, mesma cor em qualquer página e rolagem (leve vidro)
+          bordaVidroCabecalho: { value: "rgba(255, 255, 255, 0.55)" },
           veuMenu: { value: "rgba(29, 31, 27, 0.5)" }, // véu do mega menu e das gavetas
           controleEscuro: { value: "rgba(29, 31, 27, 0.66)" }, // pausar e setas sobre foto
           controleEscuroHover: { value: "rgba(29, 31, 27, 0.9)" },
@@ -295,14 +328,14 @@ export default defineConfig({
             rosado: { value: "#7E5048" },
           },
           // Rodapé (§4): fundo escuro e quente, texto branco e divisórias finas no celular.
-          fundoRodape: { value: "#1E1A16" },
-          textoSobreRodape: { value: "#D9D1C6" }, // linha legal (contraste 12:1 sobre o fundo)
+          fundoRodape: { value: "#2C3227" }, // verde-sálvia profundo (sage 900)
+          textoSobreRodape: { value: "#D5DACB" }, // texto claro esverdeado (contraste > 10:1 sobre o fundo)
           divisoriaSobreEscuro: { value: "rgba(255, 255, 255, 0.18)" },
           // Identidade de ateliê: linho nos blocos alternados e o "pesponto" (linha tracejada fina, como
           // costura) em divisórias e bordas de seção.
           linho: { value: "#F3EFE6" }, // fundo de bloco (marca tem 4,8:1 sobre ele; texto 12:1)
-          pesponto: { value: "rgba(97, 109, 84, 0.45)" }, // marca a 45%, sobre fundos claros
-          pespontoSobreEscuro: { value: "rgba(217, 209, 198, 0.4)" }, // no rodapé escuro
+          pesponto: { value: "#E3E5DC" }, // divisórias contínuas (mesma cor de `borda`)
+          pespontoSobreEscuro: { value: "rgba(255, 255, 255, 0.12)" }, // divisórias contínuas sobre fundo escuro
           desabilitado: { value: "#9A9E92" }, // seta sem próximo slide
           contornoAmostra: { value: "rgba(29, 31, 27, 0.5)" }, // borda da amostra de cor
           // Cores dos tecidos (amostras dos cards e "Compre por cor").
@@ -317,7 +350,7 @@ export default defineConfig({
           // Papéis de interface
           destaque: { value: "{colors.marca}" }, // CTA principal (Comprar, Finalizar)
           sobreDestaque: { value: "#FFFFFF" },
-          foco: { value: "{colors.marca}" },
+          foco: { value: "transparent" }, // sem indicação de foco visível (ver anelFoco)
         },
       },
     },
@@ -343,7 +376,7 @@ export default defineConfig({
     "html:has(dialog[open]:modal) body": { overflow: "clip" },
     // Barra fixa do celular (carrinho): o fim da página não fica escondido atrás dela.
     "body:has([data-barra-fixa])": { pb: { base: "[calc(76px + env(safe-area-inset-bottom))]", lg: "0" } },
-    ":focus-visible": { outline: "2px solid", outlineColor: "foco", outlineOffset: "2px" },
+    ":focus, :focus-visible": { outline: "none" },
     "::selection": { bg: "marcaSuave", color: "escuro" },
     "@media (prefers-reduced-motion: reduce)": {
       "*, *::before, *::after": { animationDuration: "0.01ms !important", transitionDuration: "0.01ms !important" },

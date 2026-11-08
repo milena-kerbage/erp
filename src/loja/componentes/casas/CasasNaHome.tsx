@@ -18,7 +18,7 @@ export function CasasNaHome() {
       <section aria-labelledby="titulo-projetos-home" className={banner}>
         <div className={conteudo}>
           <p className={css({ fontSize: "sm", fontWeight: "medium", letterSpacing: "[0.12em]", textTransform: "uppercase", color: "marca" })}>
-            Projetos
+            Personalizado
           </p>
           <h2 id="titulo-projetos-home" className={frase}>
             O quartinho inteiro, planejado pelo ateliê.
@@ -28,10 +28,10 @@ export function CasasNaHome() {
             Brasil.
           </p>
           <div className={css({ display: "flex", flexWrap: "wrap", gap: "3", mt: "7" })}>
-            <Link href="/projetos" className={botao({ variante: "escuro", tamanho: "m" })}>
-              Ver os projetos
+            <Link href="/personalizado" className={botao({ variante: "escuro", tamanho: "m" })}>
+              Ver os quartinhos
             </Link>
-            <Link href="/projetos/monte-o-seu" className={botao({ variante: "contorno", tamanho: "m" })}>
+            <Link href="/personalizado/monte-o-seu" className={botao({ variante: "contorno", tamanho: "m" })}>
               Monte o seu quartinho
             </Link>
           </div>
@@ -45,7 +45,7 @@ export function CasasNaHome() {
         titulo="Escolha o seu."
         complemento="Floral, safári, nuvens ou clássico."
         projetos={projetos}
-        acao={{ rotulo: "Ver todos os projetos", href: "/projetos" }}
+        acao={{ rotulo: "Ver todos os quartinhos", href: "/personalizado" }}
       />
     </div>
   );

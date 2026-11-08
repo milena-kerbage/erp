@@ -16,8 +16,17 @@ import { type ReactNode, useEffect, useRef, useState, ViewTransition } from "rea
 // Acessibilidade: a rolagem volta ao topo pelo próprio App Router; o foco vai para o título (h1) da
 // página nova ou, sem título, para o conteúdo (depois que a gaveta aberta, se houver, fechar).
 // Usado só nos layouts da loja (src/app/(site)/loja/**): o ERP não passa por aqui.
+// Exceção: as etapas do "Monte o seu quartinho" (/personalizado/monte-o-seu/<etapa>) são uma página
+// só para a transição. Trocar a `key` remontaria o layout do montador (e o estado do quartinho); a
+// troca de etapa tem a animação e o foco próprios (componentes/casas/Montador.tsx).
+const GRUPOS_DE_PAGINA = [/^(?:\/loja)?\/personalizado\/monte-o-seu(?:\/|$)/];
+
+export function chaveDaTransicao(caminho: string): string {
+  return GRUPOS_DE_PAGINA.find((grupo) => grupo.test(caminho))?.source ?? caminho;
+}
+
 export function TransicaoPagina({ children }: { children: ReactNode }) {
-  const caminho = usePathname();
+  const caminho = chaveDaTransicao(usePathname());
   const [caminhoInicial] = useState(caminho);
   const conteudo = useRef<HTMLDivElement>(null);
   const anterior = useRef(caminho);

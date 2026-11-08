@@ -30,7 +30,7 @@ export default async function Pedido({ params }: PageProps<"/loja/conta/pedidos/
   return (
     <MolduraConta
       trilha={[
-        { rotulo: "Pedidos enviados", href: "/conta/pedidos" },
+        { rotulo: "Pedidos", href: "/conta/pedidos" },
         { rotulo: numero, href: `/conta/pedidos/${numero}` },
       ]}
     >

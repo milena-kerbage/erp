@@ -111,15 +111,15 @@ export function abasDoProjeto(projeto: Projeto): AbaProjeto[] {
       chave: "detalhes",
       titulo: "Detalhes",
       grupos: [
-        { titulo: "Sobre o projeto", itens: projeto.descricao.map((paragrafo, indice) => [`Item ${indice + 1}`, paragrafo]) },
+        { titulo: "Sobre o quartinho", itens: projeto.descricao.map((paragrafo, indice) => [`Item ${indice + 1}`, paragrafo]) },
         {
-          titulo: "Ficha do projeto",
+          titulo: "Ficha do quartinho",
           itens: [
             ["Tema", rotuloTema(projeto.tema)],
             ["Estilo", rotuloEstilo(projeto.estilo)],
             ["Tecido principal", rotuloTecido(projeto.tecido)],
             ["Paleta", projeto.paleta.map((cor) => cor.nome).join(", ")],
-            ["Prazo de produção", `${prazoDoProjeto(projeto)} (projetos do ateliê: ${PRAZO_PRODUCAO})`],
+            ["Prazo de produção", `${prazoDoProjeto(projeto)} (quartinhos do ateliê: ${PRAZO_PRODUCAO})`],
             ["Entrega", `${ENTREGA}, com frete a combinar pelo WhatsApp`],
           ],
         },
@@ -132,7 +132,7 @@ export function abasDoProjeto(projeto: Projeto): AbaProjeto[] {
     },
     {
       chave: "pecas",
-      titulo: "O que vem no projeto",
+      titulo: "O que vem no quartinho",
       grupos: [
         { titulo: "No pacote Completo", itens: projeto.pecas.map((peca, indice) => [`Item ${indice + 1}`, peca]) },
         ...(opcionais.length > 0

@@ -10,7 +10,7 @@ O guia de operação da interface está em [erp-operacao.md](erp-operacao.md), e
 
 ## 1. Preparação e banco
 
-Aplicar, em ordem, as oito migrações de `supabase/migrations` (todas idempotentes: `IF NOT EXISTS`, sem `DROP`/`DELETE`; a aplicação no projeto real exige autorização do responsável):
+Aplicar, em ordem, as nove migrações de `supabase/migrations` (todas idempotentes: `IF NOT EXISTS`, sem `DROP`/`DELETE`; a aplicação no projeto real exige autorização do responsável):
 
 | Migração | Conteúdo |
 | --- | --- |
@@ -22,6 +22,7 @@ Aplicar, em ordem, as oito migrações de `supabase/migrations` (todas idempoten
 | `006_erp.sql` | CRM, notas/anexos, funis, preferências, registros e auditoria |
 | `007_workspace_access.sql` | Papéis, convites, chaves, fotos, webhooks e notificações |
 | `008_loja_avaliacoes.sql` | Avaliações de produto da loja e suas fotos (em `erp_core`), moderadas pelo ERP |
+| `009_loja_clientes.sql` | Contas de cliente da loja (separadas da equipe), sessões, links de redefinição, cupom de primeira compra e pedidos feitos no site (5 tabelas em `erp_core`) |
 
 Os esquemas privados são `erp_auth`, `erp_whatsapp`, `erp_meta` e `erp_core`. As tabelas têm RLS habilitada; `PUBLIC`, `anon` e `authenticated` não recebem acesso público. Os esquemas devem permanecer fora da Data API pública do Supabase. O servidor utiliza uma conexão privilegiada autorizada aos esquemas. O papel da conexão e seus privilégios precisam ser conferidos no projeto real.
 
@@ -111,6 +112,11 @@ Desativar uma pessoa preserva cadastro e histórico, mas revoga sessões e chave
 | `/api/erp/avaliacoes` | GET | Moderação das avaliações da loja (admin e gestão): `status`, `produto`, paginação e contagem por situação |
 | `/api/erp/avaliacoes/{id}` | PATCH, DELETE | Aprovar, recusar (motivo interno), voltar para pendente, responder como o ateliê; exclusão definitiva com as fotos |
 | `/api/erp/avaliacoes/foto/{id}` | GET | Foto WebP da avaliação em qualquer situação (`tamanho=mini|grande`) |
+| `/api/erp/loja/clientes` | GET | Clientes com conta na loja (admin e gestão): `busca`, paginação, pedidos, cupom e avatar |
+| `/api/erp/loja/clientes/{id}` | GET | Detalhe: dados básicos e opcionais, pedidos, cupom e último link de redefinição |
+| `/api/erp/loja/clientes/{id}/redefinicao` | POST | Link de redefinição de senha (2 h, uso único), exibido uma vez para envio manual pelo WhatsApp |
+| `/api/erp/loja/pedidos` | GET | Pedidos feitos no site: `status`, `busca`, paginação e contagem por situação |
+| `/api/erp/loja/pedidos/{numero}` | PATCH | Situação `{revisao,status}`: enviado_whatsapp, pagamento_confirmado, despachado, entregue, cancelado |
 | `/api/erp/documentation` | GET | Manual técnico; `document=operation` para operação |
 | `/api/auth/accept-invitation` | POST | Ativar conta com token/senha |
 
@@ -168,6 +174,10 @@ Uploads usam multipart com `file`, limite de 3 MiB por arquivo. Anexo de ficha a
 Download de anexo exige sessão, verifica a ficha e responde como attachment/octet-stream/nosniff. Fotos da equipe ativa são privadas ao sistema. Arquivar ficha restringe o download até restauração. Remoção de arquivo elimina o binário; backups do provedor precisam procedimento próprio. Para volumes maiores, avaliar migração protegida para object storage e sua autorização; a versão atual não finge esse serviço.
 
 Notificações são derivadas da auditoria de operações efetivamente gravadas. Leitura e arquivo pertencem a cada pessoa, com estado persistido; dados financeiros são filtrados pelo papel. São consultadas no carregamento, nas mudanças do ERP e ao abrir o painel. Não são push/email de fundo. Preferências de automações sem executor externo disponível permanecem identificadas na interface.
+
+### Contas e pedidos da loja
+
+As contas de cliente da loja ficam em `erp_core.loja_clientes`, `loja_sessoes`, `loja_redefinicoes`, `loja_cupons` e `loja_pedidos` (migração 009), código em `src/lib/loja/contas.ts`. São independentes de `erp_auth.users` (outra tabela, outro cookie, sem chave estrangeira). A equipe consulta em Clientes › Loja online e Pedidos › Da loja online (admin e gestão, só com sessão), gera o link de redefinição de senha (auditado como `reset_link_created`) e muda a situação do pedido (revisão otimista, auditado como `updated`). Cadastros e pedidos entram na auditoria com o ator `loja` e aparecem nas notificações de admin e gestão. Detalhes da loja em [loja.md](loja.md#contas-de-cliente-e-cupom-de-primeira-compra).
 
 ### Avaliações da loja
 

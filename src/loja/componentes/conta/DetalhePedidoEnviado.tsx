@@ -2,26 +2,48 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { botaoEscuro, linkAcao, tituloBloco, tituloPagina } from "@/loja/componentes/carrinho/estilos";
 import { Dialogo } from "@/loja/componentes/carrinho/Dialogo";
 import { ArrowLeft } from "@/loja/componentes/icones";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import { buscarNoHistorico, dataDoEnvio, quantidadeDePecas } from "@/loja/lib/pedidos/historico";
+import type { StatusPedido } from "@/loja/lib/contas/regras";
 import { BotaoReenviar, contagemPecas, EsqueletoConta, type FotosPorSlug, reais } from "./comum";
+import { chamarConta, type PedidoLoja, useCliente } from "./estadoConta";
 import { apagarPedidoEnviado, usePedidosEnviados } from "./historico";
+import { LinhaDoTempo } from "./LinhaDoTempo";
+import { type PedidoDaConta, paraPedidoEnviado } from "./pedidosConta";
 
 // Detalhe de um pedido enviado deste aparelho: as peças com as opções e os valores "a partir de", a
 // entrega escolhida e a mensagem exata que foi para o WhatsApp, com o reenvio e a remoção do aparelho.
 export function DetalhePedidoEnviado({ numero, fotos }: { numero: string; fotos: FotosPorSlug }) {
-  const pedidos = usePedidosEnviados();
+  const locais = usePedidosEnviados();
+  const cliente = useCliente();
   const roteador = useRouter();
   const [confirmar, setConfirmar] = useState(false);
+  // Logada: o pedido vem do servidor (com a situação). Sem conta ou fora do ar: o histórico deste aparelho.
+  const [servidor, setServidor] = useState<PedidoDaConta | null | undefined>(undefined);
+  useEffect(() => {
+    if (cliente === undefined) return;
+    if (cliente === null) {
+      setServidor(null);
+      return;
+    }
+    let ativo = true;
+    chamarConta<{ pedido: PedidoLoja }>(`conta/pedidos/${encodeURIComponent(numero)}`)
+      .then((dados) => ativo && setServidor(paraPedidoEnviado(dados.pedido)))
+      .catch(() => ativo && setServidor(null));
+    return () => {
+      ativo = false;
+    };
+  }, [cliente, numero]);
+  const pedidos = servidor === undefined ? null : locais;
 
   const voltar = (
     <Link href="/conta/pedidos" className={cx(linkAcao, css({ display: "inline-flex", alignItems: "center", gap: "1.5", mt: "6" }))}>
-      <ArrowLeft size={16} aria-hidden /> Pedidos enviados
+      <ArrowLeft size={16} aria-hidden /> Pedidos
     </Link>
   );
 
@@ -33,14 +55,14 @@ export function DetalhePedidoEnviado({ numero, fotos }: { numero: string; fotos:
     );
   }
 
-  const pedido = buscarNoHistorico(pedidos, numero);
+  const pedido: PedidoDaConta | undefined = servidor ?? buscarNoHistorico(pedidos, numero);
   if (!pedido) {
     return (
       <div className={css({ maxW: "leitura" })}>
         {voltar}
-        <h1 className={cx(tituloPagina, css({ mt: "6" }))}>Pedido não encontrado neste aparelho</h1>
+        <h1 className={cx(tituloPagina, css({ mt: "6" }))}>Pedido não encontrado</h1>
         <p className={css({ mt: "4", fontSize: "md", lineHeight: "relaxed", color: "texto" })}>
-          O pedido {numero} não está salvo neste navegador. Ele pode ter sido enviado de outro aparelho ou apagado. Para saber como está um
+          O pedido {numero} não está na sua conta nem salvo neste navegador. {cliente ? "" : "Entre na sua conta para ver os pedidos de qualquer aparelho. "} Para saber como está um
           pedido, fale com a vendedora pela conversa do WhatsApp.
         </p>
       </div>
@@ -51,17 +73,20 @@ export function DetalhePedidoEnviado({ numero, fotos }: { numero: string; fotos:
     <div>
       {voltar}
       <header className={css({ mt: "6" })}>
-        <p className={css({ fontSize: "sm", color: "textoSuave" })}>{pedido.numero}</p>
+        <p className={css({ fontSize: "sm", color: "textoSuave" })}>{pedido.numero}{pedido.statusRotulo ? ` · ${pedido.statusRotulo}` : ""}</p>
         <h1 className={cx(tituloPagina, css({ mt: "1" }))}>Pedido enviado em {dataDoEnvio(pedido.enviadoEm)}</h1>
         <p className={css({ mt: "3", maxW: "leitura", fontSize: "md", lineHeight: "relaxed", color: "textoSuave" })}>
           Este é o resumo do que você mandou ao ateliê. Valores, frete e prazo finais são os confirmados pela vendedora na conversa.
         </p>
         <div className={css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4", mt: "6" })}>
           <BotaoReenviar pedido={pedido} />
-          <button type="button" onClick={() => setConfirmar(true)} className={linkAcao}>
-            Remover deste aparelho
-          </button>
+          {!servidor && (
+            <button type="button" onClick={() => setConfirmar(true)} className={linkAcao}>
+              Remover deste aparelho
+            </button>
+          )}
         </div>
+        {pedido.status && <LinhaDoTempo status={pedido.status as StatusPedido} />}
       </header>
 
       <div className={grade}>

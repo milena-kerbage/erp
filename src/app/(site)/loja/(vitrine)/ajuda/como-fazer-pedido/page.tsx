@@ -57,7 +57,7 @@ export default function ComoFazerPedido() {
           e do envio é feito pela conversa com a vendedora.
         </p>
         <p>
-          Prefere montar o quarto inteiro? Os <Link href="/projetos/como-funciona">Projetos de quartinho</Link> têm um caminho próprio,
+          Prefere montar o quarto inteiro? Os <Link href="/personalizado/como-funciona">Quartinhos personalizados</Link> têm um caminho próprio,
           com orçamento pelo WhatsApp.
         </p>
       </div>

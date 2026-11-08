@@ -32,7 +32,9 @@
     "instagram:renovar-token": "node --env-file-if-exists=.env.local scripts/instagram-renovar-token.mjs",
     "test:loja": "node --experimental-strip-types --test 'tests/loja/**/*.test.mjs'",
     "test:avaliacoes": "node --experimental-strip-types --test tests/avaliacoes.test.mjs",
-    "test:avaliacoes:postgres": "AVALIACOES_TEST_POSTGRES=1 node --experimental-strip-types --test tests/avaliacoes.test.mjs"
+    "test:avaliacoes:postgres": "AVALIACOES_TEST_POSTGRES=1 node --experimental-strip-types --test tests/avaliacoes.test.mjs",
+    "test:contas": "node --experimental-strip-types --test tests/contas.test.mjs",
+    "test:contas:postgres": "CONTAS_TEST_POSTGRES=1 node --experimental-strip-types --test tests/contas.test.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^10.7.0",

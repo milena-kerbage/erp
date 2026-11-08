@@ -147,7 +147,7 @@ test("linhas da sacola: projeto e quartinho com preço da escolha, atributos e p
   const porSlug = new Map([["kit-a", { slug: "kit-a", sku: "MK-1", nome: "Kit A", preco: "1490.00", prontaEntrega: true, unidade: "peça", complementos: [], semelhantes: [] }]]);
   const projeto = resolverItem({ tipo: "projeto", slug: "jardim-de-camomila", quantidade: 1, pacote: "Completo", opcionais: ["paninhos"] }, porSlug);
   assert.equal(projeto.preco, "5390.00"); // 3.900 + 1.200 (Completo) + 290 (paninhos)
-  assert.equal(projeto.href, "/projetos/jardim-de-camomila");
+  assert.equal(projeto.href, "/personalizado/jardim-de-camomila");
   assert.deepEqual(projeto.atributos, ["Pacote: Completo", "Opcionais: Paninhos", "Paleta: Linho cru, Amarelo-manteiga, Verde-sálvia"]);
   assert.deepEqual(projeto.producao, { min: 20, max: 35 });
   assert.equal(projeto.paleta.length, 3);
@@ -166,8 +166,8 @@ test("linhas da sacola: projeto e quartinho com preço da escolha, atributos e p
   };
   const personalizado = resolverItem({ tipo: "personalizado", slug: "quartinho-x", quantidade: 1, quartinho }, porSlug);
   assert.equal(personalizado.preco, "2070.00"); // 1.290 + 690 + 90 (bordado)
-  assert.equal(personalizado.nome, "Quartinho personalizado Céu de Algodão");
-  assert.match(personalizado.href, /^\/projetos\/monte-o-seu\?editar=quartinho-x$/);
+  assert.equal(personalizado.nome, "Meu quartinho personalizado · Céu de Algodão");
+  assert.match(personalizado.href, /^\/personalizado\/monte-o-seu\/resumo\?editar=quartinho-x$/);
   const atributos = atributosDoItem(personalizado, {});
   assert.ok(atributos.includes("Tamanho do berço: Berço padrão · 60 × 130 cm"));
   assert.ok(atributos.includes("Bordado do nome: Theo"));
@@ -211,9 +211,9 @@ test("mensagem do pedido com produto, projeto e quartinho: pacote, opcionais e m
     descontoPixPercentual: 5,
   });
   assert.match(texto, /1\) Kit A \(cód\. MK-1001\)\n {3}Quantidade: 1\n {3}Cor: Rosê/);
-  assert.match(texto, /2\) Projeto Jardim de Camomila\n {3}Quantidade: 1\n {3}Pacote: Completo\n {3}Opcionais: Kit mini cama\n/);
+  assert.match(texto, /2\) Quartinho Jardim de Camomila\n {3}Quantidade: 1\n {3}Pacote: Completo\n {3}Opcionais: Kit mini cama\n/);
   assert.match(texto, / {3}O que vem:\n {3}- Pacote Completo \(.*\): a partir de R\$ 5\.100,00\n {3}- Kit mini cama \(.*\): a partir de R\$ 790,00\n {3}A partir de R\$ 5\.890,00/);
-  assert.match(texto, /3\) Quartinho personalizado Nuvem Sálvia \[montado no site\]\n {3}Quantidade: 2\n {3}Tema: Neutro/);
+  assert.match(texto, /3\) Meu quartinho personalizado · Nuvem Sálvia \[montado no site\]\n {3}Quantidade: 2\n {3}Tema: Neutro/);
   assert.match(texto, / {3}Tamanho do berço: Berço americano · 70 × 130 cm/);
   assert.match(texto, / {3}Peças escolhidas:\n {3}- Kit berço \(7 peças · Tricoline\): a partir de R\$ 990,00\n {3}- Tapete \(Redondo 1,40 m\): a partir de R\$ 700,00/);
   assert.match(texto, /A partir de R\$ 1\.690,00 cada \(R\$ 3\.380,00\)/);

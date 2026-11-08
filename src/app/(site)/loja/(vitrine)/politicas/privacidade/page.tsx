@@ -11,14 +11,14 @@ const CAMINHO = "/politicas/privacidade";
 export const metadata = metadataPagina({
   titulo: "Política de privacidade",
   descricao:
-    "Como a loja online do Ateliê Milena Kerbage trata dados pessoais: pedido pelo WhatsApp, dados salvos no seu aparelho, cookies, compartilhamento e seus direitos pela LGPD.",
+    "Como a loja online do Ateliê Milena Kerbage trata dados pessoais: conta de cliente, pedido pelo WhatsApp, dados salvos no seu aparelho, cookies, compartilhamento e seus direitos pela LGPD.",
   caminho: CAMINHO,
   indexar: true,
 });
 
-// Privacidade da LOJA, escrita a partir do que o código faz hoje: sem login nem cadastro; pedido
-// montado no navegador e enviado pela cliente no WhatsApp (lib/checkout/pedido.ts); sacola, favoritos
-// e pedidos enviados no localStorage; CEP consultado pelo servidor no ViaCEP e coordenadas no
+// Privacidade da LOJA, escrita a partir do que o código faz hoje: conta de cliente (e-mail e senha,
+// src/lib/loja/contas.ts) obrigatória no pedido, registrado no servidor e enviado pela cliente no WhatsApp;
+// sacola, favoritos e cópia dos pedidos enviados no localStorage; CEP consultado pelo servidor no ViaCEP e coordenadas no
 // OpenStreetMap (lib/localizacao/servicos.ts); cookies de atribuição e, com consentimento, de
 // análise e de anúncios (lib/rastreamento/nucleo.ts). Base de linguagem: a política do ERP.
 // [CONFIRMAR] com o jurídico: hipóteses legais, prazos de guarda de pedidos e conversas, região da
@@ -39,9 +39,10 @@ export default function Privacidade() {
 
         <h2 id="resumo">Em poucas palavras</h2>
         <ul>
-          <li>A loja não tem cadastro nem login e não cobra nada no site.</li>
-          <li>Os dados do pedido (nome, WhatsApp e o que você escrever) vão na mensagem que você mesma envia ao WhatsApp do ateliê.</li>
-          <li>Sacola, favoritos e pedidos enviados ficam salvos só no seu navegador, e você pode apagar quando quiser.</li>
+          <li>Para fazer pedidos, você cria uma conta com o mínimo: nome, WhatsApp, e-mail e senha. Os demais dados são opcionais.</li>
+          <li>O pedido fica registrado na sua conta e segue na mensagem que você mesma envia ao WhatsApp do ateliê. O site não cobra nada.</li>
+          <li>Você pode corrigir os seus dados e excluir a conta quando quiser, em <Link href="/conta/seguranca">Minha conta</Link>.</li>
+          <li>Sacola e favoritos ficam salvos só no seu navegador, e você pode apagar quando quiser.</li>
           <li>Cookies de análise e de anúncios só com a sua autorização.</li>
         </ul>
 
@@ -58,9 +59,10 @@ export default function Privacidade() {
         <h2 id="dados">Quais dados usamos</h2>
         <h3>Quando você faz um pedido</h3>
         <p>
-          Para montar a mensagem do pedido, o site pede nome e WhatsApp e, se você quiser, cidade/UF ou CEP, a preferência por retirar no
-          ateliê e observações (como o nome para o bordado e a data prevista do parto). A mensagem abre no seu WhatsApp e só chega ao ateliê
-          se você enviar. O site não envia esses dados para nenhum servidor.
+          O pedido é feito com a sua conta (veja <a href="#conta">Conta de cliente</a>). Registramos no nosso servidor as peças, os valores
+          “a partir de”, o cupom usado e, se você quiser, cidade/UF ou CEP, a preferência por retirar no ateliê e observações (como o nome
+          para o bordado e a data prevista do parto), junto com o seu nome, WhatsApp e e-mail. A mensagem do pedido abre no seu WhatsApp e só
+          chega à conversa com o ateliê se você enviar.
         </p>
         <h3>Na conversa com a vendedora</h3>
         <p>
@@ -70,9 +72,9 @@ export default function Privacidade() {
         </p>
         <h3>Salvos no seu aparelho</h3>
         <p>
-          A sacola, os favoritos, as preferências de compra e o resumo dos pedidos que você enviou (incluindo a mensagem, com nome e WhatsApp)
-          ficam no armazenamento local do seu navegador, para você ver em <Link href="/conta">Minha conta</Link> e reenviar se precisar.
-          Esses dados não saem do aparelho. Veja a lista completa na <Link href="/politicas/cookies">Política de cookies</Link>.
+          A sacola, os favoritos, as preferências de compra e uma cópia do resumo dos pedidos enviados deste aparelho (incluindo a mensagem,
+          com nome e WhatsApp) ficam no armazenamento local do seu navegador, para você rever em <Link href="/conta">Minha conta</Link>.
+          Essa cópia não sai do aparelho. A sessão da conta usa um cookie técnico, necessário para manter você conectada. Veja a lista completa na <Link href="/politicas/cookies">Política de cookies</Link>.
         </p>
         <h3>Localização para o frete</h3>
         <p>
@@ -86,6 +88,25 @@ export default function Privacidade() {
           trouxe você até aqui) e a página de entrada. Identificadores de visitante e de sessão para estatísticas, e os cookies de anúncios
           da Meta, só são gravados se você autorizar. A hospedagem do site registra dados técnicos das requisições, como endereço IP e
           navegador, para segurança e funcionamento.
+        </p>
+
+        <h2 id="conta">Conta de cliente</h2>
+        <p>
+          No cadastro pedimos só nome, WhatsApp, e-mail e senha, e registramos a data e a versão dos Termos de uso e desta política que você
+          aceitou. A senha é guardada de forma irreversível (hash), nunca em texto. Em Minha conta você pode, se quiser, completar CPF,
+          endereço, data prevista ou de nascimento e nome do bebê, como conheceu o ateliê e preferências: esses dados são opcionais e servem
+          para agilizar o atendimento, a entrega e a nota fiscal.
+        </p>
+        <p>
+          Ao criar a conta, você ganha um cupom de 5% OFF na primeira compra, ligado à sua conta e de uso único: registramos quando e em
+          qual pedido ele foi usado. A equipe do ateliê vê os seus dados e pedidos no sistema interno para atender você. Se você esquecer a
+          senha, a vendedora gera um link de redefinição (válido por 2 horas, de uso único) e envia pelo WhatsApp; o ateliê não envia
+          e-mails pela loja.
+        </p>
+        <p>
+          Você pode excluir a conta a qualquer momento em <Link href="/conta/seguranca">Minha conta › Segurança</Link>. A exclusão
+          apaga a conta, os dados pessoais, as sessões e o cupom; os pedidos ficam no ateliê sem nome, contato, cidade, observações nem a
+          mensagem, só com as peças e os valores, para controle e obrigações legais.
         </p>
 
         {/* Seção referenciada pelo formulário de avaliação (/politicas/privacidade#avaliacoes): manter o id. */}
@@ -160,7 +181,8 @@ export default function Privacidade() {
         <h2 id="guarda">Por quanto tempo guardamos</h2>
         <p>
           Os dados salvos no seu navegador ficam lá até você apagar, em <Link href="/conta">Minha conta</Link> ou limpando os dados do site
-          no navegador. Os cookies têm os prazos descritos na <Link href="/politicas/cookies">Política de cookies</Link>. Os dados de pedidos
+          no navegador. Os dados da conta ficam guardados enquanto a conta existir; ao excluí-la, eles são apagados e os pedidos,
+          anonimizados. Os cookies têm os prazos descritos na <Link href="/politicas/cookies">Política de cookies</Link>. Os dados de pedidos
           e da conversa ficam guardados pelo tempo necessário para o atendimento, a garantia das peças e as obrigações fiscais e legais.
         </p>
 

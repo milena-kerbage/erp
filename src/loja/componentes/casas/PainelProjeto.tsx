@@ -229,7 +229,7 @@ export function PainelProjeto() {
       {dados.opcionais.length > 0 && (
         <fieldset className={css({ minW: "0" })}>
           <legend className={cx(linhaRotulo, css({ float: "left", w: "full" }))}>
-            <span className={rotulo}>Complete o projeto</span>
+            <span className={rotulo}>Complete o quartinho</span>
             <span className={css({ fontSize: "sm", color: "textoSuave" })}>opcional</span>
           </legend>
           <ul className={css({ clear: "both", display: "grid", gap: "3", pt: "3" })}>
@@ -257,7 +257,7 @@ export function PainelProjeto() {
       <ul aria-label="Produção e entrega" className={cartoes}>
         <li className={cartaoInfo}>
           <span className={css({ fontWeight: "medium", color: "escuro" })}>Produção sob encomenda</span>
-          <span className={css({ color: "textoSuave" })}>Projetos: 20 a 35 dias úteis</span>
+          <span className={css({ color: "textoSuave" })}>Quartinhos: 20 a 35 dias úteis</span>
           <span className={css({ color: "sucesso" })}>Este: {dados.prazo}</span>
         </li>
         <li className={cartaoInfo}>
@@ -292,8 +292,8 @@ export function PainelProjeto() {
             <CaretRight size={12} aria-hidden />
             <span className={css({ srOnly: true })}> (abre em nova aba)</span>
           </a>
-          <Link href={`/projetos/monte-o-seu?projeto=${dados.slug}`} className={linkSeta}>
-            Quer trocar peças? Monte o seu a partir deste projeto
+          <Link href={`/personalizado/monte-o-seu?projeto=${dados.slug}`} className={linkSeta}>
+            Quer trocar peças? Monte o seu a partir deste quartinho
             <CaretRight size={12} aria-hidden />
           </Link>
         </div>

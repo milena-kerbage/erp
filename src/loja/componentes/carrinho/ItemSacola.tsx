@@ -14,7 +14,7 @@ import { reais } from "./Resumo";
 // Situação da peça (a linha "Free 30-day returns" da referência): prazo de produção e trocas. Projeto
 // e quartinho personalizado têm o próprio prazo (20 a 35 dias úteis) e são feitos sob medida.
 export function situacaoDe(produto: ProdutoCarrinho, item?: Pick<ItemCarrinho, "personalizacao">): string {
-  if (produto.producao) return `Projeto sob encomenda · produção de ${textoPrazo(produto.producao)}`;
+  if (produto.producao) return `Quartinho sob encomenda · produção de ${textoPrazo(produto.producao)}`;
   const prazo = produto.prontaEntrega
     ? `Pronta entrega · sai em até ${textoPrazo(PRODUCAO_PRONTA)}`
     : `Sob encomenda · produção de ${textoPrazo(PRODUCAO_ENCOMENDA)}`;

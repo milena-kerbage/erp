@@ -60,7 +60,7 @@ function montarIndice(): Indice {
     .filter((categoria) => categoria.rotulo);
   const projetos = listarProjetos().map((projeto) => ({
     rotulo: projeto.nome,
-    href: `/projetos/${projeto.slug}`,
+    href: `/personalizado/${projeto.slug}`,
     texto: `${projeto.nome} ${projeto.tema} ${projeto.estilo} ${projeto.tecido}`,
   }));
   return { termos, produtos, categorias, projetos };

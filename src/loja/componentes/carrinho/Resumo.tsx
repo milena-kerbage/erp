@@ -5,7 +5,9 @@ import { css, cx } from "styled-system/css";
 import { botao } from "styled-system/recipes";
 import { CaretDown, CheckCircle, Tag } from "@/loja/componentes/icones";
 import { useTopoFixo } from "@/loja/componentes/produto/LateralFixa";
-import { CUPONS, type Cupom, decimal, validarCupom } from "@/loja/lib/carrinho/totais";
+import type { ContaDoCupom } from "@/loja/componentes/conta/cupomSacola";
+import { CUPONS, type Cupom, decimal } from "@/loja/lib/carrinho/totais";
+import { CUPOM_GENERICO_PRIMEIRA, cupomDeBoasVindas, escolherCupom } from "@/loja/lib/contas/regras";
 import { formatarPreco } from "@/loja/lib/formatacao/moeda";
 
 export const reais = (valorCentavos: number) => formatarPreco(decimal(valorCentavos));
@@ -33,18 +35,22 @@ export function Valor({ rotulo, valor, destaque }: { rotulo: string; valor: stri
 
 // Cupom embutido no resumo: fechado, é uma linha; aberto, lista os cupons da loja para escolher
 // com um toque (os que ainda não valem mostram quanto falta) e aceita outro código.
+// Com conta, o cupom de primeira compra da cliente (BEMVINDA-XXXX) aparece em primeiro; um cupom por
+// pedido (escolherCupom, a mesma regra do servidor): os cupons não se somam.
 // [CONFIRMAR] com o comercial quais cupons podem aparecer na lista (só os públicos).
 export function SeletorCupom({
   cupom,
   subtotal,
   desconto,
   aoMudar,
+  conta = { pronta: false, logada: false, cupom: null },
   abertoInicial = false,
 }: {
   cupom?: Cupom;
   subtotal: number;
   desconto: number;
-  aoMudar: (codigo?: string) => void;
+  aoMudar: (codigo?: string, aviso?: string) => void;
+  conta?: ContaDoCupom;
   abertoInicial?: boolean; // já abre com a lista (diálogo de cupom da sacola)
 }) {
   const [aberto, setAberto] = useState(abertoInicial);
@@ -52,15 +58,19 @@ export function SeletorCupom({
   const [erro, setErro] = useState("");
 
   function aplicar(valor: string) {
-    const resultado = validarCupom(valor, subtotal);
-    if (resultado.tipo === "invalido") return setErro("Cupom não encontrado. Confira o código.");
+    const resultado = escolherCupom(valor, subtotal, conta);
+    if (resultado.tipo === "invalido") return setErro(resultado.mensagem);
     if (resultado.tipo === "minimo")
       return setErro(`Faltam ${reais(resultado.cupom.minimoCentavos - subtotal)} em produtos para usar ${resultado.cupom.codigo}.`);
     setErro("");
     setCodigo("");
     setAberto(false);
-    aoMudar(resultado.cupom.codigo);
+    aoMudar(resultado.cupom.codigo, resultado.aviso);
   }
+  const opcoes = [
+    ...(conta.logada && conta.cupom && !conta.cupom.usado ? [cupomDeBoasVindas(conta.cupom.codigo)] : []),
+    ...CUPONS.filter((item) => !(conta.logada && item.codigo === CUPOM_GENERICO_PRIMEIRA)),
+  ];
 
   if (cupom) {
     const valendo = desconto > 0;
@@ -100,7 +110,7 @@ export function SeletorCupom({
       {aberto && (
         <div id="painel-cupom" className={css({ display: "grid", gap: "3", px: "4", pb: "4" })}>
           <ul className={css({ display: "grid", gap: "2" })}>
-            {CUPONS.map((item) => {
+            {opcoes.map((item) => {
               const falta = item.minimoCentavos - subtotal;
               return (
                 <li key={item.codigo}>
@@ -152,7 +162,7 @@ export function SeletorCupom({
             </p>
           )}
           <p className={css({ display: "flex", alignItems: "center", gap: "1.5", fontSize: "xs", color: "textoSuave" })}>
-            <CheckCircle size={14} aria-hidden /> Um cupom por pedido. Vale-troca entra no pagamento.
+            <CheckCircle size={14} aria-hidden /> Um cupom por pedido: os cupons não se somam.
           </p>
         </div>
       )}

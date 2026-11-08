@@ -10,7 +10,7 @@ import { ORIGEM } from "./config";
 // Product (seo.md §4).
 
 export function schemaProjeto(projeto: Projeto): WithContext<Product> {
-  const url = `${ORIGEM}/projetos/${projeto.slug}`;
+  const url = `${ORIGEM}/personalizado/${projeto.slug}`;
   const precos = PACOTES.map((pacote) => precoDoPacote(projeto, pacote.nome));
   const fotos = fotosDoProjeto(projeto).map((foto) => `${ORIGEM}${foto.src}`);
   return {
@@ -68,7 +68,7 @@ export function schemaListagemProjetos(titulo: string, caminho: string, projetos
         "@type": "ListItem",
         position: indice + 1,
         name: projeto.nome,
-        url: `${ORIGEM}/projetos/${projeto.slug}`,
+        url: `${ORIGEM}/personalizado/${projeto.slug}`,
       })),
     },
   };

@@ -1,4 +1,4 @@
-// "Monte o seu quartinho" (/projetos/monte-o-seu): módulos, preços "a partir de", validação das
+// "Monte o seu quartinho" (/personalizado/monte-o-seu/<etapa>): módulos, preços "a partir de", validação das
 // escolhas obrigatórias, rascunho/sacola (normalização e identificador) e o ponto de partida a partir
 // de um projeto do ateliê.
 import assert from "node:assert/strict";
@@ -29,8 +29,24 @@ import {
   quartinhoVazio,
   TAMANHOS_BERCO,
   temPecasDeBerco,
+  pecaValida,
+  precoDoEscolhido,
+  usarPeca,
   validarQuartinho,
 } from "../../src/loja/lib/casas/modulos.ts";
+import {
+  BASE_MONTADOR,
+  ETAPAS_MONTADOR,
+  errosDaEtapa,
+  etapaAlcancavel,
+  etapaAnterior,
+  etapaDoGrupo,
+  hrefEtapa,
+  IDS_ETAPAS,
+  normalizarVisitadas,
+  primeiraPendenteAntes,
+  proximaEtapa,
+} from "../../src/loja/lib/casas/etapas.ts";
 import { slug } from "../../src/loja/lib/seo/urls.ts";
 
 const catalogo = readFileSync(new URL("../../src/loja/lib/catalogo/exemplos.ts", import.meta.url), "utf8");
@@ -164,7 +180,7 @@ test("partir de um projeto: tema, paleta e as peças do pacote Completo + opcion
   );
   assert.equal(quartinho.tamanhoBerco, TAMANHOS_BERCO[0]); // o que a cliente já escolheu continua
   assert.deepEqual(validarQuartinho(quartinho), {});
-  assert.equal(nomeDoQuartinho(quartinho), "Quartinho personalizado Jardim de Camomila");
+  assert.equal(nomeDoQuartinho(quartinho), "Meu quartinho personalizado · Jardim de Camomila");
   assert.deepEqual(atributosDoQuartinho(quartinho).slice(0, 2), ["Tema: Menina", "Paleta: Jardim de Camomila (Linho cru, Amarelo-manteiga, Verde-sálvia)"]);
 });
 
@@ -204,4 +220,95 @@ test("o montador salva o rascunho e oferece Adicionar no meu enxoval e o pedido 
   assert.match(montador, /% OFF no Pix/);
   assert.match(montador, /A combinar pelo WhatsApp/);
   assert.doesNotMatch(montador, /cashback|seleção de projetos/i);
+  // Etapas em páginas próprias, progresso, Voltar/Continuar, modal de peças parecidas e o carrossel
+  // de miniaturas com o visualizador em tela cheia.
+  assert.match(montador, /useSelectedLayoutSegment/);
+  assert.match(montador, /aria-current=\{ehAtual \? "step"/);
+  assert.match(montador, /Voltar/);
+  assert.match(montador, /Continuar/);
+  assert.match(montador, /Ver peças parecidas/);
+  assert.match(montador, /<MiniaturasMontador/);
+  const miniaturas = readFileSync(new URL("../../src/loja/componentes/casas/MiniaturasMontador.tsx", import.meta.url), "utf8");
+  assert.match(miniaturas, /<Visualizador/);
+  // Carrossel manual (sem animação contínua nem itens repetidos), com snap e sem barra visível.
+  assert.match(miniaturas, /overflowX: "auto"/);
+  assert.match(miniaturas, /scrollSnapType: "x"/);
+  assert.doesNotMatch(miniaturas, /rolarFaixa|animationIterationCount|\[\.\.\.volta, \.\.\.volta\]/);
+  const modal = readFileSync(new URL("../../src/loja/componentes/casas/ModalParecidas.tsx", import.meta.url), "utf8");
+  assert.match(modal, /<Modal /);
+  assert.match(modal, /Usar esta peça no meu quartinho/);
+  assert.match(modal, /Ver produto/);
+});
+
+test("etapas: ordem, endereços, grupos de peças e navegação", () => {
+  assert.deepEqual(IDS_ETAPAS, ["tema", "berco", "quarto", "banho-e-maternidade", "bordado", "resumo"]);
+  assert.equal(BASE_MONTADOR, "/personalizado/monte-o-seu");
+  assert.equal(hrefEtapa("berco"), "/personalizado/monte-o-seu/berco");
+  assert.equal(hrefEtapa("resumo", "quartinho-a b"), "/personalizado/monte-o-seu/resumo?editar=quartinho-a%20b");
+  assert.equal(proximaEtapa("tema"), "berco");
+  assert.equal(proximaEtapa("resumo"), undefined);
+  assert.equal(etapaAnterior("tema"), undefined);
+  assert.equal(etapaAnterior("bordado"), "banho-e-maternidade");
+  // Todo grupo de peças aparece em exatamente uma etapa.
+  for (const grupo of GRUPOS_MODULOS) {
+    assert.equal(ETAPAS_MONTADOR.filter((etapa) => etapa.grupos.includes(grupo.id)).length, 1, grupo.id);
+  }
+  assert.equal(etapaDoGrupo("maternidade"), "banho-e-maternidade");
+  assert.deepEqual(normalizarVisitadas(["resumo", "x", "tema", "tema"]), ["tema", "resumo"]);
+  assert.deepEqual(normalizarVisitadas("lixo"), []);
+});
+
+test("validação por etapa: não segue sem o obrigatório", () => {
+  const vazio = quartinhoVazio();
+  assert.ok(errosDaEtapa("tema", vazio).paleta);
+  assert.deepEqual(errosDaEtapa("quarto", vazio), {});
+  assert.ok(errosDaEtapa("banho-e-maternidade", vazio).modulos);
+
+  const comTema = { ...vazio, tema: "menina", paleta: "jardim-de-camomila" };
+  assert.deepEqual(errosDaEtapa("tema", comTema), {});
+  // Peça de berço sem o tamanho: o berço não deixa seguir; com o tamanho, segue.
+  const comKit = alternarModulo(comTema, "kit-berco");
+  assert.ok(errosDaEtapa("berco", comKit).tamanhoBerco);
+  assert.deepEqual(errosDaEtapa("berco", { ...comKit, tamanhoBerco: TAMANHOS_BERCO[1] }), {});
+  // Bordado ligado sem nome.
+  assert.ok(errosDaEtapa("bordado", comKit, { comBordado: true }).bordado);
+  assert.deepEqual(errosDaEtapa("bordado", comKit, { comBordado: false }), {});
+  // No resumo, todas as pendências.
+  assert.deepEqual(Object.keys(errosDaEtapa("resumo", comKit, { comBordado: true })).sort(), ["bordado", "tamanhoBerco"]);
+
+  // Chegar por URL a uma etapa adiante com pendência antes: volta para a 1ª pendente.
+  assert.equal(primeiraPendenteAntes("quarto", vazio), "tema");
+  assert.equal(primeiraPendenteAntes("quarto", comKit), "berco");
+  assert.equal(primeiraPendenteAntes("quarto", { ...comKit, tamanhoBerco: TAMANHOS_BERCO[0] }), undefined);
+  assert.equal(primeiraPendenteAntes("tema", vazio), undefined);
+  // Progresso: só os visitados sem pendência antes são clicáveis.
+  const pronto = { ...comKit, tamanhoBerco: TAMANHOS_BERCO[0] };
+  assert.equal(etapaAlcancavel("quarto", pronto, ["tema", "berco", "quarto"]), true);
+  assert.equal(etapaAlcancavel("quarto", pronto, ["tema", "berco"]), false);
+  assert.equal(etapaAlcancavel("quarto", comKit, ["tema", "berco", "quarto"]), false);
+});
+
+test("peça do catálogo no lugar das opções do módulo (Ver peças parecidas)", () => {
+  const base = alternarModulo({ ...quartinhoVazio(), tema: "neutro", paleta: "nuvem-salvia" }, "cortina");
+  const peca = { slug: "cortina-de-linho-e-voal", nome: "Cortina de linho e voal", preco: 749.9 };
+  const comPeca = usarPeca(base, "cortina", peca);
+  assert.deepEqual(comPeca.modulos[0].peca, peca);
+  assert.equal(precoDoEscolhido(comPeca.modulos[0]), 749.9);
+  assert.equal(precoDoQuartinho(comPeca), 749.9);
+  assert.deepEqual(linhasDoQuartinho(comPeca), [{ nome: "Cortina", detalhe: "Peça do catálogo: Cortina de linho e voal", preco: 749.9 }]);
+  assert.notEqual(idQuartinho(comPeca), idQuartinho(base));
+  // Usar a peça num módulo de fora já o inclui; voltar às opções tira a peça.
+  assert.ok(usarPeca(quartinhoVazio(), "tapete", { slug: "tapete-x", nome: "Tapete X", preco: 300 }).modulos.some((item) => item.id === "tapete"));
+  assert.equal(usarPeca(comPeca, "cortina", undefined).modulos[0].peca, undefined);
+  // Escolher uma opção do ateliê também tira a peça.
+  assert.equal(escolherOpcao(comPeca, "cortina", "forro", "Com blecaute").modulos[0].peca, undefined);
+  // Do navegador: só peça com slug, nome e preço válidos; o resto é descartado na normalização.
+  assert.equal(pecaValida({ slug: "Nao Vale", nome: "x", preco: 10 }), undefined);
+  assert.equal(pecaValida({ slug: "ok", nome: "", preco: 10 }), undefined);
+  assert.equal(pecaValida({ slug: "ok", nome: "Ok", preco: -1 }), undefined);
+  assert.deepEqual(pecaValida({ slug: "ok", nome: "  Ok  ", preco: 10.456 }), { slug: "ok", nome: "Ok", preco: 10.46 });
+  assert.equal(usarPeca(base, "cortina", { slug: "", nome: "x", preco: 1 }), base);
+  const normal = normalizarQuartinho({ ...comPeca, modulos: [{ id: "cortina", opcoes: {}, peca: { slug: "x y", nome: "z", preco: 1 } }] });
+  assert.equal(normal.modulos[0].peca, undefined);
+  assert.deepEqual(normalizarQuartinho(comPeca).modulos[0].peca, peca);
 });

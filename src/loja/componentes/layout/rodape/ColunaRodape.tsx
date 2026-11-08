@@ -35,7 +35,7 @@ export function ColunaRodape({ titulo, abertoInicial = false, children }: { titu
 const coluna = css({
   minW: "0",
   bgImage: {
-    base: "[repeating-linear-gradient(90deg, token(colors.pespontoSobreEscuro) 0 6px, transparent 6px 10px)]",
+    base: "[linear-gradient(token(colors.pespontoSobreEscuro), token(colors.pespontoSobreEscuro))]",
     md: "none",
   },
   bgSize: "[100% 1px]",

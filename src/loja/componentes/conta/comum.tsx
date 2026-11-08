@@ -57,7 +57,8 @@ export function Miniaturas({ pedido, fotos }: { pedido: PedidoEnviado; fotos: Fo
 }
 
 // Card da lista: data, número, miniaturas, total "a partir de" e as ações.
-export function CardPedido({ pedido, fotos, titulo: Titulo = "h2" }: { pedido: PedidoEnviado; fotos: FotosPorSlug; titulo?: "h2" | "h3" }) {
+// `statusRotulo`: situação do pedido no ateliê (pedidos da conta, vindos do servidor).
+export function CardPedido({ pedido, fotos, titulo: Titulo = "h2" }: { pedido: PedidoEnviado & { statusRotulo?: string }; fotos: FotosPorSlug; titulo?: "h2" | "h3" }) {
   const href = `/conta/pedidos/${pedido.numero}`;
   return (
     <article aria-labelledby={`pedido-${pedido.numero}`} className={card}>
@@ -65,7 +66,10 @@ export function CardPedido({ pedido, fotos, titulo: Titulo = "h2" }: { pedido: P
         <Titulo id={`pedido-${pedido.numero}`} className={css({ fontSize: "lg", fontWeight: "medium", color: "escuro" })}>
           Enviado em {dataDoEnvio(pedido.enviadoEm)}
         </Titulo>
-        <p className={css({ fontSize: "sm", color: "textoSuave" })}>{pedido.numero}</p>
+        <p className={css({ fontSize: "sm", color: "textoSuave" })}>
+          {pedido.numero}
+          {pedido.statusRotulo && <span className={selo}>{pedido.statusRotulo}</span>}
+        </p>
       </div>
       <div className={css({ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "4", mt: "4" })}>
         <Miniaturas pedido={pedido} fotos={fotos} />
@@ -103,6 +107,18 @@ const card = css({
   borderColor: "borda",
   borderRadius: "cartao",
   bg: "superficie",
+});
+
+const selo = css({
+  display: "inline-flex",
+  ml: "2",
+  px: "2",
+  py: "0.5",
+  borderRadius: "pilula",
+  bg: "marcaSuave",
+  fontSize: "xs",
+  fontWeight: "medium",
+  color: "marcaContraste",
 });
 
 const maisItens = css({

@@ -18,26 +18,26 @@ import { schemaListagemProjetos, schemaTrilhaProjetos } from "@/loja/lib/seo/pro
 // grade e no convite logo abaixo dela.
 
 export const metadata: Metadata = {
-  title: "Projetos: quarto de bebê completo",
-  description: `Projetos de quarto de bebê completos do Ateliê Milena Kerbage: kit berço, cortina, tapete, almofadas e enfeite de porta no mesmo tema. Produção em ${PRAZO_PRODUCAO} e entrega para todo o Brasil.`,
-  alternates: { canonical: "/projetos" },
+  title: "Personalizado: quartinho de bebê completo",
+  description: `Quartinhos de bebê completos do Ateliê Milena Kerbage: kit berço, cortina, tapete, almofadas e enfeite de porta no mesmo tema. Produção em ${PRAZO_PRODUCAO} e entrega para todo o Brasil.`,
+  alternates: { canonical: "/personalizado" },
   // Fora do índice como o resto do catálogo de exemplo (preços fictícios), até o catálogo real entrar.
   robots: { index: false, follow: true },
 };
 
-export default function PaginaProjetos({ searchParams }: PageProps<"/loja/projetos">) {
+export default function PaginaProjetos({ searchParams }: PageProps<"/loja/personalizado">) {
   const projetos = listarProjetos();
   return (
     <>
-      <JsonLd dados={schemaListagemProjetos("Projetos", "/projetos", projetos)} />
-      <JsonLd dados={schemaTrilhaProjetos([{ rotulo: "Projetos", href: "/projetos" }])} />
-      <CabecalhoListagem trilha={[]} titulo="Projetos" total={projetos.length} unidade={["projeto", "projetos"]} atalhos={ATALHOS_PROJETOS} />
+      <JsonLd dados={schemaListagemProjetos("Personalizado", "/personalizado", projetos)} />
+      <JsonLd dados={schemaTrilhaProjetos([{ rotulo: "Personalizado", href: "/personalizado" }])} />
+      <CabecalhoListagem trilha={[]} titulo="Personalizado" total={projetos.length} unidade={["quartinho", "quartinhos"]} atalhos={ATALHOS_PROJETOS} />
       <Suspense fallback={<EsqueletoGrade />}>
-        <ListagemProjetos projetos={projetos} categoria="projetos" searchParams={searchParams} />
+        <ListagemProjetos projetos={projetos} categoria="personalizado" searchParams={searchParams} />
       </Suspense>
       <ConviteMontador />
       <DiferenciaisProjetos />
-      <ContinueExplorando base="Projetos" categorias={categoriasRelacionadas(["projetos"]).filter((elo) => !elo.href.startsWith("/projetos"))} />
+      <ContinueExplorando base="Personalizado" categorias={categoriasRelacionadas(["personalizado"]).filter((elo) => !elo.href.startsWith("/personalizado"))} />
     </>
   );
 }

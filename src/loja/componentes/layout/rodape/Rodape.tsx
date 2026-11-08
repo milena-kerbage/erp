@@ -1,62 +1,38 @@
+import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { css, cx } from "styled-system/css";
-import { ArrowUp, CreditCard, EnvelopeSimple, InstagramLogo, LinktreeLogo, Needle, PixLogo, WhatsappLogo } from "@/loja/componentes/icones";
+import { css } from "styled-system/css";
+import { ArrowRight, ArrowUp, ArrowUpRight, WhatsappLogo } from "@/loja/componentes/icones";
 import { LINKS_UTILITARIOS } from "@/loja/componentes/layout/cabecalho/navegacao";
-import { pespontoTopoEscuro } from "@/loja/estilos/pesponto";
-import { DESCONTO_PIX_PERCENTUAL, MAX_PARCELAS } from "@/loja/lib/carrinho/totais";
+import { DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
 import { EMPRESA, REDES_SOCIAIS } from "@/loja/lib/empresa";
-import { ColunaRodape } from "./ColunaRodape";
 import { VoltarAoTopo } from "./VoltarAoTopo";
 
-type LinkRodape = { rotulo: string; href: string; externo?: boolean };
+type LinkRodape = { rotulo: string; href: string };
 
 const WHATSAPP = `https://wa.me/${EMPRESA.whatsapp.numero}?text=${encodeURIComponent("Oi! Vim pela loja do ateliê.")}`;
 
-// Só páginas que existem (o teste de links do rodapé abre cada uma).
-const COLUNAS: Array<{ titulo: string; links: LinkRodape[] }> = [
-  {
-    titulo: "Comprar",
-    links: [
-      LINKS_UTILITARIOS.loja,
-      LINKS_UTILITARIOS.edicao,
-      { rotulo: "Projetos de quartinho", href: "/projetos" },
-      { rotulo: "Monte o seu quartinho", href: "/projetos/monte-o-seu" },
-    ],
-  },
-  {
-    titulo: "Ajuda",
-    links: [
-      { rotulo: "Central de ajuda", href: "/ajuda" },
-      { rotulo: "Como fazer o pedido", href: "/ajuda/como-fazer-pedido" },
-      { rotulo: "Entregas", href: "/ajuda/entregas" },
-      { rotulo: "Trocas e devoluções", href: "/ajuda/trocas-e-devolucoes" },
-      { rotulo: "Bordado personalizado", href: "/ajuda/bordado-personalizado" },
-      { rotulo: "Tecidos e cuidados", href: "/ajuda/tecidos-e-cuidados" },
-      { rotulo: "Perguntas frequentes", href: "/ajuda/perguntas-frequentes" },
-    ],
-  },
-  {
-    titulo: "Minha conta",
-    links: [LINKS_UTILITARIOS.conta, LINKS_UTILITARIOS.pedido, { rotulo: "Favoritos", href: "/conta/favoritos" }],
-  },
-  {
-    titulo: "O ateliê",
-    links: [{ rotulo: "Nossa história", href: "/sobre" }, LINKS_UTILITARIOS.indique],
-  },
-  {
-    titulo: "Políticas",
-    links: [
-      { rotulo: "Todas as políticas", href: "/politicas" },
-      { rotulo: "Privacidade", href: "/politicas/privacidade" },
-      { rotulo: "Termos de uso", href: "/politicas/termos" },
-      { rotulo: "Cookies", href: "/politicas/cookies" },
-      { rotulo: "Política de trocas", href: "/politicas/trocas" },
-    ],
-  },
+// Atalhos em duas colunas (só páginas que existem).
+const ATALHOS: LinkRodape[] = [
+  { rotulo: "Kit berço", href: "/kit-berco" },
+  { rotulo: "Personalizado", href: "/personalizado" },
+  { rotulo: "Enxoval", href: "/enxoval" },
+  { rotulo: "Pronta entrega", href: LINKS_UTILITARIOS.loja.href },
+  { rotulo: "Quarto de bebê", href: "/quarto" },
+  { rotulo: "Ajuda", href: "/ajuda" },
+  { rotulo: "Maternidade", href: "/maternidade" },
+  { rotulo: "Minha conta", href: LINKS_UTILITARIOS.conta.href },
+  { rotulo: "Nossa história", href: "/sobre" },
+  { rotulo: LINKS_UTILITARIOS.indique.rotulo, href: LINKS_UTILITARIOS.indique.href },
+];
+
+const REDES = [
+  { rotulo: "Instagram", href: REDES_SOCIAIS.instagram },
+  { rotulo: "Linktree", href: REDES_SOCIAIS.linktree },
+  { rotulo: "WhatsApp", href: WHATSAPP },
 ];
 
 const LEGAIS: LinkRodape[] = [
+  { rotulo: "Cookies", href: "/politicas/cookies" },
   { rotulo: "Privacidade", href: "/politicas/privacidade" },
   { rotulo: "Termos", href: "/politicas/termos" },
 ];
@@ -66,280 +42,316 @@ async function anoAtual(): Promise<number> {
   return new Date().getFullYear();
 }
 
-// Rodapé da loja, em três faixas sobre o fundo escuro e quente, separadas por pesponto (a linha
-// tracejada de costura):
-// 1. Destaques: "Indique o ateliê" (o ponto forte do ateliê), o atendimento (WhatsApp com botão,
-//    e-mail, horário e cidade) e "Feito à mão em Fortaleza", com as formas de pagamento só como
-//    informação (o pagamento é combinado com a vendedora; não há checkout de pagamento no site).
-// 2. Menu: 6 colunas de 210 px com vão de 20 no desktop, 3 no tablet e acordeões de 64 px no celular
-//    (ColunaRodape). As redes sociais ficam abertas no celular.
-// 3. Linha legal: razão social, CNPJ e endereço (Decreto 7.962/2013), Privacidade, Termos e "Voltar ao topo".
-// Sem newsletter (não há envio de e-mails da loja) e sem selos de segurança.
-// Server Component: só os acordeões e o "Voltar ao topo" rodam no navegador.
+// Rodapé minimalista: um cartão verde-sálvia profundo com cantos grandes no topo. No centro, o símbolo
+// num medalhão sobreposto à borda, a assinatura da
+// marca, a frase em Scarlett (sem acento) e os dois convites principais. Embaixo, contato e redes à
+// esquerda, atalhos em duas colunas à direita e, na base, os informativos e a linha legal (razão
+// social, CNPJ e endereço: Decreto 7.962/2013). Server Component; só o "Voltar ao topo" roda no navegador.
 export async function Rodape() {
   return (
     <footer className={rodape}>
-      <div className={destaques}>
-        <section aria-labelledby="rodape-indique" className={blocoDestaque}>
-          <h2 id="rodape-indique" className={tituloDestaque}>
-            {LINKS_UTILITARIOS.indique.rotulo}
-          </h2>
-          <p className={textoDestaque}>
-            A indicação de quem já recebeu uma peça é o que faz o ateliê crescer. Mande o link para quem está montando o enxoval.
-          </p>
-          <Link href={LINKS_UTILITARIOS.indique.href} className={botaoClaro}>
-            Indicar o ateliê
+      <div className={cartao}>
+        <span aria-hidden className={medalhao}>
+          <Image src="/vitrine/marca/simbolo-green.svg" alt="" width={64} height={72} className={simbolo} />
+        </span>
+
+        <div className={centro}>
+          <Link href="/" aria-label={`${EMPRESA.nomeFantasia}, página inicial`} className={linkMarca}>
+            <Image src="/vitrine/marca/assinatura-white.svg" alt="" width={360} height={73} className={assinatura} />
           </Link>
-        </section>
+          <p className={frase}>Cada detalhe, bem cuidado</p>
+          <div className={convites}>
+            <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" className={botaoClaro}>
+              <WhatsappLogo size={18} aria-hidden />
+              Fale com o ateliê
+              <span className={setaCirculo}>
+                <ArrowRight size={14} aria-hidden />
+              </span>
+              <span className={css({ srOnly: true })}> (abre o WhatsApp em nova aba)</span>
+            </a>
+            <Link href="/personalizado/monte-o-seu" className={botaoEscuro}>
+              Monte o seu quartinho
+              <span className={setaCirculoClaro}>
+                <ArrowRight size={14} aria-hidden />
+              </span>
+            </Link>
+          </div>
+        </div>
 
-        <section aria-labelledby="rodape-atendimento" className={blocoDestaque}>
-          <h2 id="rodape-atendimento" className={tituloDestaque}>
-            Atendimento
-          </h2>
-          <p className={textoDestaque}>
-            Uma vendedora do ateliê atende pelo WhatsApp: tira dúvidas, fecha o pedido e combina a entrega.
-          </p>
-          <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" className={botaoClaro}>
-            <WhatsappLogo size={18} aria-hidden /> {EMPRESA.whatsapp.exibicao}
-            <span className={css({ srOnly: true })}> no WhatsApp (abre em nova aba)</span>
-          </a>
-          <ul className={cx(lista, css({ mt: "5" }))}>
-            <li>
-              {/* Quebra depois do "@" quando a coluna estreita não comporta o endereço inteiro. */}
-              <LinkRodape rotulo={EMPRESA.emailAtendimento} href={`mailto:${EMPRESA.emailAtendimento}`} icone={<EnvelopeSimple size={18} aria-hidden />}>
-                {EMPRESA.emailAtendimento.split("@")[0]}@<wbr />
-                {EMPRESA.emailAtendimento.split("@")[1]}
-              </LinkRodape>
-            </li>
-            <li className={informacao}>{EMPRESA.horarioAtendimento}</li>
-          </ul>
-        </section>
+        <div className={grade}>
+          <section aria-labelledby="rodape-contato" className={css({ gridArea: "contato" })}>
+            <h2 id="rodape-contato" className={tituloColuna}>
+              Contato
+            </h2>
+            <address className={textoContato}>
+              {EMPRESA.endereco}
+              <br />
+              <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" className={linkSimples}>
+                {EMPRESA.whatsapp.exibicao}
+              </a>
+              <br />
+              <a href={`mailto:${EMPRESA.emailAtendimento}`} className={linkSublinhado}>
+                {EMPRESA.emailAtendimento}
+              </a>
+            </address>
+          </section>
 
-        <section aria-labelledby="rodape-feito-a-mao" className={blocoDestaque}>
-          <h2 id="rodape-feito-a-mao" className={tituloDestaque}>
-            <Needle size={20} aria-hidden className={css({ flexShrink: "0" })} />
-            Feito à mão em {EMPRESA.cidade}
-          </h2>
-          <p className={textoDestaque}>
-            Ateliê em {EMPRESA.cidade}/{EMPRESA.uf} · {EMPRESA.entrega}.
-          </p>
-          <p className={cx(informacao, css({ display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: "2", rowGap: "1", mt: "4" }))}>
-            <PixLogo size={16} aria-hidden /> {DESCONTO_PIX_PERCENTUAL}% OFF no Pix
-            <span aria-hidden>·</span>
-            <CreditCard size={16} aria-hidden /> até {MAX_PARCELAS}x no cartão
-            <span aria-hidden>·</span>
-            <span>combinado pelo WhatsApp</span>
-          </p>
-        </section>
-      </div>
-
-      <nav aria-label="Rodapé" className={menu}>
-        {COLUNAS.map((coluna) => (
-          <ColunaRodape key={coluna.titulo} titulo={coluna.titulo}>
-            <ul className={lista}>
-              {coluna.links.map((link) => (
-                <li key={link.href}>
-                  <LinkRodape {...link} />
+          <nav aria-label="Redes sociais" className={css({ gridArea: "redes" })}>
+            <ul className={listaRedes}>
+              {REDES.map((rede) => (
+                <li key={rede.rotulo}>
+                  <a href={rede.href} target="_blank" rel="noopener noreferrer" className={linkRede}>
+                    {rede.rotulo}
+                    <ArrowUpRight size={14} aria-hidden className={css({ color: "marcaSuave" })} />
+                    <span className={css({ srOnly: true })}> (abre em nova aba)</span>
+                  </a>
                 </li>
               ))}
             </ul>
-          </ColunaRodape>
-        ))}
+          </nav>
 
-        {/* No celular, o grupo de redes fica aberto. */}
-        <ColunaRodape titulo="Redes sociais" abertoInicial>
-          <ul className={lista}>
-            <li>
-              <LinkRodape rotulo="Instagram" href={REDES_SOCIAIS.instagram} externo icone={<InstagramLogo size={20} aria-hidden />} />
-            </li>
-            <li>
-              <LinkRodape rotulo="Linktree" href={REDES_SOCIAIS.linktree} externo icone={<LinktreeLogo size={20} aria-hidden />} />
-            </li>
-          </ul>
-        </ColunaRodape>
-      </nav>
-
-      <div className={cx(linhaLegal, pespontoTopoEscuro)}>
-        <div>
-          <p className={css({ fontSize: "sm", lineHeight: "texto" })}>
-            © {await anoAtual()} {EMPRESA.razaoSocial} · <span className={css({ whiteSpace: "nowrap" })}>CNPJ {EMPRESA.cnpj}</span>
-          </p>
-          <p className={css({ mt: "1", fontSize: "xs", lineHeight: "texto", color: "textoSobreRodape" })}>{EMPRESA.endereco}</p>
+          <nav aria-labelledby="rodape-atalhos" className={css({ gridArea: "atalhos" })}>
+            <h2 id="rodape-atalhos" className={tituloColuna}>
+              Navegue
+            </h2>
+            <ul className={listaAtalhos}>
+              {ATALHOS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={linkSimples}>
+                    {link.rotulo}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
-        <div className={css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4", flexShrink: "0" })}>
-          <ul className={css({ display: "flex", gap: "4" })}>
-            {LEGAIS.map((link) => (
-              <li key={link.href}>
-                <LinkRodape {...link} />
-              </li>
-            ))}
-          </ul>
-          <VoltarAoTopo className={botaoTopo}>
-            <ArrowUp size={16} aria-hidden /> Voltar ao topo
-          </VoltarAoTopo>
+
+        <div className={base}>
+          <div className={informativos}>
+            <span className={selo}>{DESCONTO_PIX_PERCENTUAL}% OFF no Pix</span>
+            <span className={textoBase}>Feito à mão em {EMPRESA.cidade}/{EMPRESA.uf} · Entrega para todo o Brasil</span>
+            <span className={textoBase}>
+              {EMPRESA.razaoSocial} · CNPJ {EMPRESA.cnpj}
+            </span>
+          </div>
+          <div className={pilulaLegal}>
+            <ul className={css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4" })}>
+              {LEGAIS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={linkLegal}>
+                    {link.rotulo}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <span className={css({ color: "escuro" })}>
+              © {await anoAtual()} {EMPRESA.nomeFantasia}
+            </span>
+            <VoltarAoTopo className={botaoTopo}>
+              <ArrowUp size={14} aria-hidden />
+              <span className={css({ srOnly: true })}>Voltar ao topo</span>
+            </VoltarAoTopo>
+          </div>
         </div>
       </div>
     </footer>
   );
 }
 
-function LinkRodape({ rotulo, href, externo, icone, children }: LinkRodape & { icone?: ReactNode; children?: ReactNode }) {
-  const conteudo = (
-    <>
-      {icone}
-      <span className={rotuloLink}>{children ?? rotulo}</span>
-    </>
-  );
-  if (externo || href.startsWith("mailto:")) {
-    return (
-      <a href={href} className={link} {...(externo ? { target: "_blank", rel: "noopener noreferrer", "aria-label": `${rotulo} (abre em nova aba)` } : {})}>
-        {conteudo}
-      </a>
-    );
-  }
-  return (
-    <Link href={href} className={link}>
-      {conteudo}
-    </Link>
-  );
-}
+// Respiro acima do cartão para o símbolo sobreposto à borda.
+const rodape = css({ mt: { base: "20", desktop: "28" }, px: { base: "0", md: "3" } });
 
-const rodape = css({ mt: "auto", bg: "fundoRodape", color: "superficie" });
-
-// Faixa de destaques: 3 blocos lado a lado a partir de 992 (empilhados antes), com pesponto embaixo.
-// Laterais 12 / 20 / 40, como o menu.
-const destaques = css({
-  display: "grid",
-  gridTemplateColumns: { base: "[minmax(0, 1fr)]", md: "[repeat(2, minmax(0, 1fr))]", desktop: "[repeat(3, minmax(0, 1fr))]" },
-  columnGap: { md: "8", desktop: "10" },
-  rowGap: { base: "10", md: "12" },
-  mx: { base: "3", md: "5", desktop: "10" },
-  pt: { base: "12", desktop: "16" },
-  pb: { base: "12", desktop: "14" },
+const cartao = css({
+  position: "relative",
+  isolation: "isolate",
+  bg: "fundoRodape",
+  color: "textoSobreRodape",
+  borderTopRadius: { base: "[28px]", md: "[48px]" },
+  px: { base: "5", md: "10", desktop: "16" },
+  pt: { base: "20", desktop: "28" },
+  pb: { base: "6", desktop: "8" },
 });
 
-const blocoDestaque = css({ display: "flex", flexDirection: "column", alignItems: "flex-start", minW: "0", maxW: "[420px]" });
-
-const tituloDestaque = css({
+// Medalhão do símbolo, sobreposto à borda do cartão: círculo linho com contorno duplo fino (anel claro
+// na cor da página e um fio sálvia por fora), para a marca não ficar "solta".
+const medalhao = css({
+  position: "absolute",
+  top: "0",
+  left: "[50%]",
+  transform: "translate(-50%, -50%)",
   display: "flex",
   alignItems: "center",
-  gap: "2",
-  fontSize: { base: "xl", desktop: "2xl" },
-  fontWeight: "normal",
-  lineHeight: "subtitulo",
-  color: "superficie",
+  justifyContent: "center",
+  w: { base: "[96px]", desktop: "[124px]" },
+  h: { base: "[96px]", desktop: "[124px]" },
+  borderRadius: "full",
+  bg: "fundo",
+  borderWidth: "1px",
+  borderColor: "[rgba(97, 109, 84, 0.35)]",
+  boxShadow: "[0 0 0 8px token(colors.fundo), 0 0 0 9px rgba(97, 109, 84, 0.22), 0 12px 32px rgba(29, 31, 27, 0.12)]",
 });
 
-const textoDestaque = css({ mt: "3", fontSize: "sm", lineHeight: "texto", color: "textoSobreRodape" });
+const simbolo = css({ w: { base: "[46px]", desktop: "[60px]" }, h: "auto" });
 
-const informacao = css({ fontSize: "sm", lineHeight: "texto", color: "textoSobreRodape" });
+const centro = css({ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" });
 
-// Botão claro em pílula (44 de altura), o único botão "cheio" do rodapé.
-const botaoClaro = css({
+const linkMarca = css({ display: "inline-flex", borderRadius: "md", _focusVisible: { outline: "none", boxShadow: "anelFoco" } });
+
+const assinatura = css({ w: { base: "[240px]", desktop: "[360px]" }, h: "auto" });
+
+const frase = css({ mt: "3", fontFamily: "marca", fontSize: { base: "xl", desktop: "2xl" }, color: "fundo" });
+
+const convites = css({
+  display: "flex",
+  flexWrap: "wrap",
+  justifyContent: "center",
+  gap: "3",
+  mt: { base: "8", desktop: "10" },
+});
+
+const baseBotao = {
   display: "inline-flex",
   alignItems: "center",
   gap: "2",
   minH: "11",
-  mt: "5",
-  px: "5",
+  pl: "5",
+  pr: "1.5",
   borderRadius: "pilula",
-  bg: "superficie",
-  color: "escuro",
   fontSize: "sm",
   fontWeight: "medium",
-  lineHeight: "none",
   whiteSpace: "nowrap",
-  transitionProperty: "background-color",
+  transitionProperty: "background-color, transform",
   transitionDuration: "normal",
   transitionTimingFunction: "assinatura",
-  _hover: { bg: "marcaSuave" },
-  _focusVisible: { outline: "[2px solid]", outlineColor: "superficie", outlineOffset: "[2px]" },
+  _hover: { transform: "translateY(-1px)" },
+  _focusVisible: { outline: "none", boxShadow: "anelFoco" },
+  "& svg": { flexShrink: "0" },
+} as const;
+
+const botaoClaro = css({ ...baseBotao, bg: "marcaSuave", color: "escuro", _hover: { ...baseBotao._hover, bg: "fundo" } });
+const botaoEscuro = css({
+  ...baseBotao,
+  bg: "transparent",
+  color: "fundo",
+  borderWidth: "1px",
+  borderColor: "[rgba(255, 255, 255, 0.28)]",
+  _hover: { ...baseBotao._hover, bg: "[rgba(255, 255, 255, 0.08)]" },
 });
 
-// Laterais 12 / 20 / 40. Desktop: 6 × 210 + 5 × 20 = 1360 em 1440; abaixo disso as colunas
-// encolhem por igual (minmax) em vez de vazar. Pesponto em cima (fim da faixa de destaques).
-const menu = cx(
-  css({
-    display: "grid",
-    gridTemplateColumns: {
-      base: "[minmax(0, 1fr)]",
-      md: "[repeat(3, minmax(0, 1fr))]",
-      desktop: "[repeat(6, minmax(0, token(sizes.colunaRodape)))]",
-    },
-    columnGap: "5",
-    rowGap: { base: "0", md: "10" },
-    // Celular: margem (e não padding) de 12, para as divisórias dos acordeões pararem na margem.
-    mx: { base: "3", md: "5", desktop: "10" },
-    pt: { base: "0", md: "10" },
-  }),
-  pespontoTopoEscuro,
-);
+const setaCirculo = css({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  w: "8",
+  h: "8",
+  ml: "1",
+  borderRadius: "full",
+  bg: "escuro",
+  color: "fundo",
+});
+const setaCirculoClaro = css({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  w: "8",
+  h: "8",
+  ml: "1",
+  borderRadius: "full",
+  bg: "marcaSuave",
+  color: "escuro",
+});
 
-const lista = css({ display: "grid", gap: "2", justifyItems: "start" });
+// Celular: tudo empilhado. Desktop: contato | redes | (vão) | atalhos.
+const grade = css({
+  display: "grid",
+  gridTemplateColumns: { base: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))", desktop: "[minmax(0, 3fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 4fr)]" },
+  gridTemplateAreas: {
+    base: '"contato" "redes" "atalhos"',
+    md: '"contato redes" "atalhos atalhos"',
+    desktop: '"contato redes . atalhos"',
+  },
+  gap: { base: "8", desktop: "6" },
+  alignItems: "end",
+  mt: { base: "14", desktop: "16" },
+});
 
-const link = css({
+const tituloColuna = css({ mb: "3", fontSize: { base: "xl", desktop: "2xl" }, fontWeight: "medium", color: "fundo", letterSpacing: "[-0.02em]" });
+
+const textoContato = css({ fontStyle: "normal", fontSize: "sm", lineHeight: "relaxed" });
+
+const linkSimples = css({
+  fontSize: "sm",
+  lineHeight: "relaxed",
+  color: "textoSobreRodape",
+  transitionProperty: "color",
+  transitionDuration: "normal",
+  _hover: { color: "fundo" },
+  _focusVisible: { outline: "none", boxShadow: "anelFoco", borderRadius: "xs" },
+});
+const linkSublinhado = css({ textDecoration: "underline", textUnderlineOffset: "3px", _hover: { color: "fundo" } });
+
+const listaRedes = css({ display: "grid", gap: "2" });
+const linkRede = css({
   display: "inline-flex",
   alignItems: "center",
   gap: "2",
-  maxW: "full",
   fontSize: "sm",
-  fontWeight: "normal",
-  lineHeight: "texto",
-  color: "superficie",
-  overflowWrap: "break-word",
-  borderRadius: "xs",
-  _focusVisible: { outline: "[2px solid]", outlineColor: "superficie", outlineOffset: "[2px]" },
+  color: "textoSobreRodape",
+  _hover: { color: "fundo" },
+  _focusVisible: { outline: "none", boxShadow: "anelFoco", borderRadius: "xs" },
 });
 
-// Sublinhado: ::after de 1 px na base do texto; só a opacidade anima (300 ms, como no cabeçalho).
-const rotuloLink = css({
-  position: "relative",
-  minW: "0",
-  _after: {
-    content: '""',
-    position: "absolute",
-    left: "0",
-    right: "0",
-    bottom: "0",
-    h: "[1px]",
-    bg: "currentColor",
-    opacity: "0",
-    transitionProperty: "opacity",
-    transitionDuration: "sublinhado",
-    transitionTimingFunction: "assinatura",
-  },
-  "a:hover > &": { _after: { opacity: "1" } },
-  "a:focus-visible > &": { _after: { opacity: "1" } },
-});
+const listaAtalhos = css({ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "8", rowGap: "1" });
 
-const linhaLegal = css({
+const base = css({
   display: "flex",
-  flexDirection: { base: "column", md: "row" },
+  flexDirection: { base: "column", desktop: "row" },
+  alignItems: { base: "flex-start", desktop: "flex-end" },
   justifyContent: "space-between",
-  alignItems: { base: "flex-start", md: "center" },
-  gap: { base: "4", md: "6" },
-  mt: { base: "0", md: "16" },
-  mx: { base: "3", md: "5", desktop: "10" },
-  pt: { base: "8", md: "10" },
-  // Celular: 40 + a altura da doca flutuante de atalhos (24 + 43), para ela não cobrir "Termos".
-  pb: { base: "[calc(112px + env(safe-area-inset-bottom))]", md: "12" },
+  gap: "5",
+  mt: { base: "12", desktop: "14" },
 });
+
+const informativos = css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: { base: "2", desktop: "4" } });
+
+const selo = css({
+  display: "inline-flex",
+  alignItems: "center",
+  px: "2.5",
+  py: "0.5",
+  borderRadius: "pilula",
+  bg: "marcaSuave",
+  color: "escuro",
+  fontSize: "xs",
+  fontWeight: "medium",
+});
+
+const textoBase = css({ fontSize: "xs", color: "textoSobreRodape" });
+
+const pilulaLegal = css({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "4",
+  px: "4",
+  py: "2",
+  borderRadius: "md",
+  bg: "fundo",
+  fontSize: "xs",
+  color: "escuro",
+});
+
+const linkLegal = css({ color: "escuro", _hover: { textDecoration: "underline", textUnderlineOffset: "3px" }, _focusVisible: { outline: "none", boxShadow: "anelFoco", borderRadius: "xs" } });
 
 const botaoTopo = css({
   display: "inline-flex",
   alignItems: "center",
-  gap: "2",
-  minH: "10",
-  px: "4",
-  borderRadius: "pilula",
-  borderWidth: "1px",
-  borderColor: "divisoriaSobreEscuro",
-  fontSize: "sm",
-  lineHeight: "none",
-  color: "superficie",
+  justifyContent: "center",
+  w: "7",
+  h: "7",
+  borderRadius: "full",
+  bg: "escuro",
+  color: "fundo",
   cursor: "pointer",
-  transitionProperty: "border-color",
-  transitionDuration: "normal",
-  _hover: { borderColor: "superficie" },
-  _focusVisible: { outline: "[2px solid]", outlineColor: "superficie", outlineOffset: "[2px]" },
+  _focusVisible: { outline: "none", boxShadow: "anelFoco" },
 });

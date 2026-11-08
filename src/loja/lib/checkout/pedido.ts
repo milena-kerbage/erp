@@ -10,6 +10,7 @@ export type ClientePedido = {
   local: string; // cidade/UF ou CEP (opcional): ajuda a vendedora a cotar o frete
   retirar: boolean; // prefere retirar no ateliê, em Fortaleza
   observacoes: string; // nome para o bordado, data prevista do parto etc. (opcional)
+  email?: string; // e-mail da conta da cliente (pedido feito com conta)
 };
 
 export type LinhaPedido = {
@@ -56,11 +57,14 @@ export function montarMensagemPedido({
   cliente,
   cupom,
   descontoPixPercentual,
+  numero,
 }: {
   linhas: LinhaPedido[];
   cliente: ClientePedido;
-  cupom?: { codigo: string; descontoCentavos: number };
+  // `rotulo`: como o cupom aparece na mensagem (ex.: "Cupom de primeira compra BEMVINDA-7Q3F (5% OFF)").
+  cupom?: { codigo: string; descontoCentavos: number; rotulo?: string };
   descontoPixPercentual: number;
+  numero?: string; // número do pedido registrado no servidor (pedido feito com conta)
 }): string {
   const subtotal = linhas.reduce((soma, linha) => soma + linha.precoCentavos * linha.quantidade, 0);
   const desconto = cupom?.descontoCentavos ?? 0;
@@ -86,22 +90,25 @@ export function montarMensagemPedido({
   });
   const valores = [
     `Subtotal a partir de ${reaisTexto(subtotal)}`,
-    ...(cupom && desconto > 0 ? [`Cupom ${cupom.codigo}: -${reaisTexto(desconto)}`] : []),
+    ...(cupom && desconto > 0 ? [`${cupom.rotulo ?? `Cupom ${cupom.codigo}`}: -${reaisTexto(desconto)}`] : []),
     `Total estimado a partir de ${reaisTexto(subtotal - desconto)}, sem o frete`,
     `Vi que no Pix tem ${descontoPixPercentual}% OFF.`,
     ...(linhas.some((linha) => linha.tipo)
-      ? [`Os projetos de quarto são feitos sob encomenda (produção de ${PRAZO_PROJETOS}): podemos conferir as medidas do berço e da janela?`]
+      ? [`Os quartinhos personalizados são feitos sob encomenda (produção de ${PRAZO_PROJETOS}): podemos conferir as medidas do berço e da janela?`]
       : []),
   ];
   const dados = [
     `Nome: ${cliente.nome.trim()}`,
     `WhatsApp: ${cliente.whatsapp.trim()}`,
+    ...(cliente.email?.trim() ? [`E-mail: ${cliente.email.trim()}`] : []),
     ...(cliente.local.trim() ? [`Cidade/UF ou CEP: ${cliente.local.trim()}`] : []),
     cliente.retirar ? "Prefiro retirar no ateliê, em Fortaleza." : "Quero receber em casa: podemos combinar o frete e o prazo?",
     ...(cliente.observacoes.trim() ? [`Observações: ${cliente.observacoes.trim()}`] : []),
   ];
   return [
-    "Olá, Ateliê Milena Kerbage! Quero fazer este pedido que montei no site:",
+    numero
+      ? `Olá, Ateliê Milena Kerbage! Quero fazer o pedido ${numero}, que montei no site:`
+      : "Olá, Ateliê Milena Kerbage! Quero fazer este pedido que montei no site:",
     itens.join("\n\n"),
     valores.join("\n"),
     `Meus dados:\n${dados.join("\n")}`,

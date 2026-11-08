@@ -46,7 +46,7 @@ export default function Entregas() {
             pedido confirmado.
           </li>
           <li>
-            <strong>Projetos de quartinho:</strong> o quarto completo leva de {PRAZO_PROJETOS}, conforme o orçamento.
+            <strong>Quartinhos personalizados:</strong> o quarto completo leva de {PRAZO_PROJETOS}, conforme o orçamento.
           </li>
         </ul>
         <p>

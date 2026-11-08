@@ -3,10 +3,10 @@ import { InstagramLogo, Play, Stack } from "@/loja/componentes/icones";
 import type { PostInstagram } from "@/loja/lib/instagram/feed";
 import { postsDoInstagram } from "@/loja/lib/instagram/servidor";
 import { INSTAGRAM } from "./conteudo";
-import { botaoPrimario, margens, rubrica, textoGrande } from "./estilos";
+import { botaoPrimario, margens, textoGrande } from "./estilos";
 
 // Seção do Instagram, a última da home (no lugar da antiga faixa de marca): bloco em linho com a
-// rubrica, o @ do perfil, a assinatura em Scarlett (sem acento) e o botão "Seguir no Instagram"; abaixo,
+// o @ do perfil, a assinatura em Scarlett (sem acento) e o botão "Seguir no Instagram"; abaixo,
 // a grade com os posts reais (6 colunas no desktop, 4 no tablet e 3 no celular, cada uma com até 2
 // linhas). Cada post abre o permalink numa nova aba; no hover (ou foco) aparece um trecho da legenda e
 // o vídeo/carrossel tem um ícone discreto no canto.
@@ -19,7 +19,6 @@ export async function SecaoInstagram() {
     <section aria-labelledby="titulo-instagram" className={cx(secao, margens)}>
       <div className={cabecalho}>
         <div>
-          <p className={rubrica}>No Instagram</p>
           <h2 id="titulo-instagram" className={arroba}>
             {INSTAGRAM.arroba}
           </h2>

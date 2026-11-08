@@ -53,7 +53,7 @@ export default function Indique() {
             As peças a <Link href="/pronta-entrega">pronta entrega</Link>, para quem precisa de algo logo.
           </li>
           <li>
-            Os <Link href="/projetos">projetos de quartinho</Link>, para quem quer o quarto inteiro no mesmo tema.
+            Os <Link href="/personalizado">quartinhos personalizados</Link>, para quem quer o quarto inteiro no mesmo tema.
           </li>
           <li>
             Uma peça específica: na página do produto, copie o endereço do navegador e mande junto.

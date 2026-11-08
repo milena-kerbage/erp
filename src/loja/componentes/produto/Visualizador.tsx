@@ -1,6 +1,6 @@
 "use client";
 
-import { type MouseEvent, type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type MouseEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { ArrowLeft, ArrowRight, Minus, Plus, X } from "@/loja/componentes/icones";
 import { useDialogoAnimado } from "@/loja/componentes/layout/cabecalho/Gaveta";
@@ -15,14 +15,23 @@ import { FotoSlide } from "./FotoSlide";
 // setas do teclado navegam. No celular: uma foto por vez na largura toda, sem miniaturas.
 // Abre e fecha com fade de 250 ms (lululemon-animacoes-edicao.md §1) pela base comum dos diálogos
 // (useDialogoAnimado): a página atrás fica travada, o fechamento espera o fade e o foco volta à foto.
+// Também serve ao montador ("Monte o seu quartinho"), com as peças escolhidas: `desenhar` troca a foto
+// de cada quadro (e da miniatura) por outra composição, e `legendas` dá o nome de cada quadro (rótulos
+// e a legenda no canto inferior esquerdo). As medidas e as interações são as mesmas.
 export function Visualizador({
   fotos,
   inicial,
   aoFechar,
+  rotulo = "Fotos em tela cheia",
+  desenhar,
+  legendas,
 }: {
   fotos: FotoGaleria[];
   inicial: number | null; // índice a abrir; null = fechado
   aoFechar: (indice: number) => void;
+  rotulo?: string;
+  desenhar?: (indice: number, contexto: "tela" | "miniatura") => ReactNode;
+  legendas?: string[];
 }) {
   const trilho = useRef<HTMLUListElement>(null);
   const lupa = useRef<HTMLDivElement>(null);
@@ -100,7 +109,7 @@ export function Visualizador({
   return (
     <dialog
       ref={dialogo}
-      aria-label="Fotos em tela cheia"
+      aria-label={rotulo}
       {...propsDialogo}
       onKeyDown={(evento) => {
         if (evento.key === "ArrowRight") irPara(Math.min(total - 1, atual + 1));
@@ -113,7 +122,11 @@ export function Visualizador({
           <li key={`${foto.tom}-${indice}`} className={item}>
             <button
               type="button"
-              aria-label={ampliada === indice ? `Reduzir a foto ${indice + 1}` : `Ampliar a foto ${indice + 1} de ${total}`}
+              aria-label={
+                ampliada === indice
+                  ? `Reduzir ${legendas?.[indice] ?? `a foto ${indice + 1}`}`
+                  : `Ampliar ${legendas?.[indice] ? `${legendas[indice]}, ${indice + 1} de ${total}` : `a foto ${indice + 1} de ${total}`}`
+              }
               aria-pressed={ampliada === indice}
               onClick={(evento) => alternarZoom(evento, indice)}
               onPointerMove={(evento) => mover(evento, indice)}
@@ -121,7 +134,7 @@ export function Visualizador({
               className={botaoFoto}
             >
               <span className={cx(camadaZoom, ampliada === indice && ampliadaEstilo)} style={{ transformOrigin: origem }}>
-                <FotoSlide foto={foto} sizes="(min-width: 768px) 84vh, 100vw" className={css({ w: "full", h: "full" })} />
+                {desenhar ? desenhar(indice, "tela") : <FotoSlide foto={foto} sizes="(min-width: 768px) 84vh, 100vw" className={css({ w: "full", h: "full" })} />}
               </span>
             </button>
           </li>
@@ -137,12 +150,12 @@ export function Visualizador({
           <li key={`mini-${foto.tom}-${indice}`}>
             <button
               type="button"
-              aria-label={`Ir para a foto ${indice + 1}`}
+              aria-label={`Ir para ${legendas?.[indice] ?? `a foto ${indice + 1}`}`}
               aria-current={indice === atual || undefined}
               onClick={() => irPara(indice)}
               className={miniatura}
             >
-              <FotoSlide foto={foto} sizes="68px" className={css({ w: "full", h: "full" })} />
+              {desenhar ? desenhar(indice, "miniatura") : <FotoSlide foto={foto} sizes="68px" className={css({ w: "full", h: "full" })} />}
             </button>
           </li>
         ))}
@@ -151,6 +164,8 @@ export function Visualizador({
       <p aria-live="polite" className={contador}>
         {atual + 1} / {total}
       </p>
+
+      {legendas?.[atual] && <p className={legenda}>{legendas[atual]}</p>}
 
       <button type="button" data-autofoco aria-label="Fechar fotos" onClick={fechar} className={botaoFechar}>
         <X size={16} aria-hidden />
@@ -292,6 +307,18 @@ const contador = css({
   display: { md: "none" },
   fontSize: "sm",
   color: "escuro",
+});
+
+// Nome do quadro atual (montador): no canto inferior esquerdo, na altura das setas.
+const legenda = css({
+  position: "absolute",
+  left: { base: "4", md: "[calc(32px + 68px + 24px)]" },
+  right: "[96px]",
+  bottom: { base: "5", md: "9" },
+  fontSize: "sm",
+  lineHeight: "texto",
+  color: "escuro",
+  truncate: true,
 });
 
 const botaoFechar = css({

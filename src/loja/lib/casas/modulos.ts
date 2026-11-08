@@ -1,4 +1,5 @@
-// "Monte o seu quartinho" (/projetos/monte-o-seu): o projeto personalizado, montado peça por peça.
+// "Monte o seu quartinho" (/personalizado/monte-o-seu/<etapa>): o quartinho personalizado, montado
+// peça por peça (as etapas ficam em ./etapas.ts).
 // Configuração dos módulos (preço "a partir de" por módulo e por opção, ligado ao produto do
 // catálogo quando existe) e as regras do montador: preço, validação, rascunho e o item da sacola.
 // PROVISÓRIO: preços FICTÍCIOS, como os do catálogo (AVISO_PRECOS). O valor final é confirmado pela
@@ -400,7 +401,11 @@ export function paletasDoTema(tema: Tema | undefined): Paleta[] {
 }
 
 // O quartinho montado: é o que vai para o rascunho (localStorage) e para a sacola (item personalizado).
-export type ModuloEscolhido = { id: string; opcoes: Record<string, string> };
+// Peça do catálogo escolhida no lugar das opções do ateliê ("Ver peças parecidas" → "Usar esta peça
+// no meu quartinho"): o módulo passa a valer o "a partir de" da peça. O nome e o preço vêm do catálogo
+// enviado pelo servidor e são conferidos de novo pelo montador ao carregar o rascunho.
+export type PecaCatalogo = { slug: string; nome: string; preco: number };
+export type ModuloEscolhido = { id: string; opcoes: Record<string, string>; peca?: PecaCatalogo };
 export type Quartinho = {
   tema?: Tema;
   paleta?: string; // id da paleta (slug do projeto de onde ela vem)
@@ -450,9 +455,39 @@ export function escolherOpcao(quartinho: Quartinho, id: string, variacao: string
   if (!modulo || !modulo.variacoes.some((item) => item.id === variacao && item.opcoes.some((opcao) => opcao.rotulo === rotulo))) return quartinho;
   const atual = quartinho.modulos.find((item) => item.id === id);
   const opcoes = opcoesCompletas(modulo, { ...(atual?.opcoes ?? {}), [variacao]: rotulo });
-  // Escolher uma opção num módulo de fora já o inclui.
+  // Escolher uma opção num módulo de fora já o inclui; num módulo com peça do catálogo, volta às
+  // opções do ateliê (a peça sai).
   const modulos = atual ? quartinho.modulos.map((item) => (item.id === id ? { id, opcoes } : item)) : ordenar([...quartinho.modulos, { id, opcoes }]);
   return { ...quartinho, modulos };
+}
+
+// "Usar esta peça no meu quartinho": troca as opções do módulo pela peça do catálogo (incluindo o
+// módulo, se estava de fora). Sem peça (undefined), volta às opções do ateliê.
+export function usarPeca(quartinho: Quartinho, id: string, peca: PecaCatalogo | undefined): Quartinho {
+  const modulo = buscarModulo(id);
+  if (!modulo) return quartinho;
+  const limpa = peca ? pecaValida(peca) : undefined;
+  if (peca && !limpa) return quartinho;
+  const atual = quartinho.modulos.find((item) => item.id === id);
+  const novo: ModuloEscolhido = { id, opcoes: opcoesCompletas(modulo, atual?.opcoes), ...(limpa ? { peca: limpa } : {}) };
+  const modulos = atual ? quartinho.modulos.map((item) => (item.id === id ? novo : item)) : ordenar([...quartinho.modulos, novo]);
+  return { ...quartinho, modulos };
+}
+
+// Peça do catálogo vinda do navegador: slug no formato do catálogo, nome curto e preço positivo.
+export function pecaValida(bruta: unknown): PecaCatalogo | undefined {
+  const valor = (bruta && typeof bruta === "object" ? bruta : {}) as Record<string, unknown>;
+  const slug = typeof valor.slug === "string" && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(valor.slug) && valor.slug.length <= 120 ? valor.slug : undefined;
+  const nome = typeof valor.nome === "string" ? valor.nome.replace(/\s+/g, " ").trim().slice(0, 120) : "";
+  const preco = typeof valor.preco === "number" && Number.isFinite(valor.preco) && valor.preco > 0 && valor.preco <= 100000 ? Math.round(valor.preco * 100) / 100 : 0;
+  return slug && nome && preco ? { slug, nome, preco } : undefined;
+}
+
+// Preço "a partir de" do módulo escolhido: a peça do catálogo, quando houver, ou as opções do ateliê.
+export function precoDoEscolhido(item: ModuloEscolhido): number {
+  if (item.peca) return item.peca.preco;
+  const modulo = buscarModulo(item.id);
+  return modulo ? precoDoModulo(modulo, item.opcoes) : 0;
 }
 
 function ordenar(modulos: ModuloEscolhido[]): ModuloEscolhido[] {
@@ -476,10 +511,7 @@ export function bordadoLimpo(nome: string | undefined): string {
 
 // Total "a partir de" (reais): módulos com as opções escolhidas + bordado do nome.
 export function precoDoQuartinho(quartinho: Quartinho): number {
-  const modulos = quartinho.modulos.reduce((soma, item) => {
-    const modulo = buscarModulo(item.id);
-    return modulo ? soma + precoDoModulo(modulo, item.opcoes) : soma;
-  }, 0);
+  const modulos = quartinho.modulos.reduce((soma, item) => (buscarModulo(item.id) ? soma + precoDoEscolhido(item) : soma), 0);
   return modulos + (bordadoLimpo(quartinho.bordado) ? PRECO_BORDADO : 0);
 }
 
@@ -510,7 +542,8 @@ export function quartinhoDoProjeto(projeto: Projeto, atual: Quartinho = quartinh
   const modulos = ordenar(
     ids.flatMap((id) => {
       const modulo = buscarModulo(id);
-      return modulo ? [{ id, opcoes: opcoesCompletas(modulo, atual.modulos.find((item) => item.id === id)?.opcoes) }] : [];
+      const anterior = atual.modulos.find((item) => item.id === id);
+      return modulo ? [{ id, opcoes: opcoesCompletas(modulo, anterior?.opcoes), ...(anterior?.peca ? { peca: anterior.peca } : {}) }] : [];
     }),
   );
   return { ...atual, tema: projeto.tema, paleta: projeto.slug, base: projeto.slug, modulos };
@@ -530,7 +563,8 @@ export function normalizarQuartinho(bruto: unknown): Quartinho {
     if (!modulo || vistos.has(modulo.id)) return [];
     vistos.add(modulo.id);
     const opcoes = escolhido.opcoes && typeof escolhido.opcoes === "object" ? (escolhido.opcoes as Record<string, string>) : {};
-    return [{ id: modulo.id, opcoes: opcoesCompletas(modulo, opcoes) }];
+    const peca = escolhido.peca === undefined ? undefined : pecaValida(escolhido.peca);
+    return [{ id: modulo.id, opcoes: opcoesCompletas(modulo, opcoes), ...(peca ? { peca } : {}) }];
   });
   const bordado = bordadoLimpo(typeof valor.bordado === "string" ? valor.bordado : "");
   return {
@@ -552,7 +586,9 @@ export function idQuartinho(quartinho: Quartinho): string {
     limpo.paleta ?? "",
     limpo.tamanhoBerco ?? "",
     limpo.bordado ?? "",
-    limpo.modulos.map((item) => [item.id, Object.entries(item.opcoes).sort(([a], [b]) => a.localeCompare(b))]),
+    limpo.modulos.map((item) =>
+      item.peca ? [item.id, item.peca.slug, item.peca.preco] : [item.id, Object.entries(item.opcoes).sort(([a], [b]) => a.localeCompare(b))],
+    ),
   ]);
   let hash = 2166136261;
   for (const letra of texto) {
@@ -588,14 +624,20 @@ export type LinhaModulo = { nome: string; detalhe: string; preco: number };
 export function linhasDoQuartinho(quartinho: Quartinho): LinhaModulo[] {
   const linhas = quartinho.modulos.flatMap((item) => {
     const modulo = buscarModulo(item.id);
-    return modulo ? [{ nome: modulo.nome, detalhe: resumoOpcoes(modulo, item.opcoes), preco: precoDoModulo(modulo, item.opcoes) }] : [];
+    if (!modulo) return [];
+    const detalhe = item.peca ? `Peça do catálogo: ${item.peca.nome}` : resumoOpcoes(modulo, item.opcoes);
+    return [{ nome: modulo.nome, detalhe, preco: precoDoEscolhido(item) }];
   });
   const bordado = bordadoLimpo(quartinho.bordado);
   return bordado ? [...linhas, { nome: "Bordado do nome", detalhe: bordado, preco: PRECO_BORDADO }] : linhas;
 }
 
-// "Quartinho Jardim de Camomila": nome do item na sacola (sem paleta, "Quartinho personalizado").
+// "Meu quartinho personalizado · Jardim de Camomila": nome do item montado do zero na sacola (sem
+// paleta, só "Meu quartinho personalizado"). Os quartinhos prontos do ateliê se chamam
+// "Quartinho <nome>" (catalogo.ts).
+export const NOME_PERSONALIZADO = "Meu quartinho personalizado";
+
 export function nomeDoQuartinho(quartinho: Quartinho): string {
   const paleta = buscarPaleta(quartinho.paleta);
-  return paleta ? `Quartinho personalizado ${paleta.nome}` : "Quartinho personalizado";
+  return paleta ? `${NOME_PERSONALIZADO} · ${paleta.nome}` : NOME_PERSONALIZADO;
 }

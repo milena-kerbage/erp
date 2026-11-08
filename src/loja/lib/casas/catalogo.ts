@@ -47,7 +47,7 @@ export const OPCIONAIS = [
     id: "paninhos",
     nome: "Enxoval de paninhos (boca, ombro e fraldas de pano)",
     curto: "Paninhos",
-    apoio: "Fraldas de boca, de ombro e de pano com o acabamento do projeto.",
+    apoio: "Fraldas de boca, de ombro e de pano com o acabamento do quartinho.",
     preco: 290,
     produto: "fraldas-de-boca-bordadas-kit-com-3",
   },
@@ -67,7 +67,7 @@ export function buscarOpcional(id: string): Opcional | undefined {
 const PROJETOS: Projeto[] = [
   {
     slug: "jardim-de-camomila",
-    nome: "Projeto Jardim de Camomila",
+    nome: "Quartinho Jardim de Camomila",
     tema: "menina",
     estilo: "floral",
     tecido: "linho",
@@ -95,7 +95,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "nuvem-salvia",
-    nome: "Projeto Nuvem Sálvia",
+    nome: "Quartinho Nuvem Sálvia",
     tema: "neutro",
     estilo: "nuvens",
     tecido: "tricoline",
@@ -103,7 +103,7 @@ const PROJETOS: Projeto[] = [
     prazoDiasUteis: 25,
     chamada: "Nuvens macias em verde-sálvia",
     descricao: [
-      "Nuvens em matelassê, tons de sálvia e off-white: um projeto neutro e sereno, que acompanha o bebê por muitos anos.",
+      "Nuvens em matelassê, tons de sálvia e off-white: um quartinho neutro e sereno, que acompanha o bebê por muitos anos.",
       "Funciona com berço americano ou mini cama montessoriana, e as almofadas de nuvem viram companhia na hora da soneca.",
     ],
     paleta: [
@@ -123,7 +123,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "safari-areia",
-    nome: "Projeto Safári Areia",
+    nome: "Quartinho Safári Areia",
     tema: "neutro",
     estilo: "safari",
     tecido: "linho",
@@ -151,7 +151,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "bosque-de-lavanda",
-    nome: "Projeto Bosque de Lavanda",
+    nome: "Quartinho Bosque de Lavanda",
     tema: "menina",
     estilo: "floral",
     tecido: "percal",
@@ -159,7 +159,7 @@ const PROJETOS: Projeto[] = [
     prazoDiasUteis: 32,
     descricao: [
       "Raminhos de lavanda bordados em percal 200 fios, com babados suaves e laços de cetim lilás.",
-      "Um projeto romântico, pensado para quarto com papel de parede claro e luz difusa.",
+      "Um quartinho romântico, pensado para quarto com papel de parede claro e luz difusa.",
     ],
     paleta: [
       { nome: "Lilás", hex: "#C8B6D8" },
@@ -178,7 +178,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "ceu-de-algodao",
-    nome: "Projeto Céu de Algodão",
+    nome: "Quartinho Céu de Algodão",
     tema: "menino",
     estilo: "nuvens",
     tecido: "percal",
@@ -186,7 +186,7 @@ const PROJETOS: Projeto[] = [
     prazoDiasUteis: 22,
     descricao: [
       "Azul-céu, branco e estrelinhas: um quartinho leve, com nuvens aplicadas e lua bordada no edredom.",
-      "Um dos projetos com produção mais rápida, ótimo para quem já está perto da data.",
+      "Um dos quartinhos com produção mais rápida, ótimo para quem já está perto da data.",
     ],
     paleta: [
       { nome: "Azul-céu", hex: "#BBD3E3" },
@@ -205,14 +205,14 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "leaozinho-terracota",
-    nome: "Projeto Leãozinho Terracota",
+    nome: "Quartinho Leãozinho Terracota",
     tema: "menino",
     estilo: "safari",
     tecido: "tricoline",
     precoAPartirDe: 2700,
     prazoDiasUteis: 25,
     descricao: [
-      "Um leãozinho de juba franjada é a estrela deste projeto em terracota, mostarda e cru.",
+      "Um leãozinho de juba franjada é a estrela deste quartinho em terracota, mostarda e cru.",
       "Cores quentes e acolhedoras, com estampas pequenas que não cansam com o tempo.",
     ],
     paleta: [
@@ -232,7 +232,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "heranca-azul",
-    nome: "Projeto Herança Azul",
+    nome: "Quartinho Herança Azul",
     tema: "menino",
     estilo: "classico",
     tecido: "percal",
@@ -260,14 +260,14 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "rosa-antigo",
-    nome: "Projeto Rosa Antigo",
+    nome: "Quartinho Rosa Antigo",
     tema: "menina",
     estilo: "classico",
     tecido: "linho",
     precoAPartirDe: 6800,
     prazoDiasUteis: 35,
     descricao: [
-      "Linho rosa antigo, rendas e babados largos: um projeto clássico, cheio de delicadeza.",
+      "Linho rosa antigo, rendas e babados largos: um quartinho clássico, cheio de delicadeza.",
       "Inclui dossel de parede no mesmo tecido, que emoldura o berço e completa a cena.",
     ],
     paleta: [
@@ -287,14 +287,14 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "primavera-delicada",
-    nome: "Projeto Primavera Delicada",
+    nome: "Quartinho Primavera Delicada",
     tema: "menina",
     estilo: "floral",
     tecido: "tricoline",
     precoAPartirDe: 1900,
     prazoDiasUteis: 20,
     descricao: [
-      "Florzinhas miúdas em tricoline 100% algodão, com rosa-chá e verde-menta: o projeto de entrada do ateliê.",
+      "Florzinhas miúdas em tricoline 100% algodão, com rosa-chá e verde-menta: o quartinho de entrada do ateliê.",
       "Leve, alegre e fácil de combinar, com produção no menor prazo.",
     ],
     paleta: [
@@ -314,7 +314,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "lua-de-linho",
-    nome: "Projeto Lua de Linho",
+    nome: "Quartinho Lua de Linho",
     tema: "neutro",
     estilo: "nuvens",
     tecido: "linho",
@@ -341,7 +341,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "savana-oliva",
-    nome: "Projeto Savana Oliva",
+    nome: "Quartinho Savana Oliva",
     tema: "menino",
     estilo: "safari",
     tecido: "linho",
@@ -368,7 +368,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "provence-off-white",
-    nome: "Projeto Provence Off-White",
+    nome: "Quartinho Provence Off-White",
     tema: "neutro",
     estilo: "classico",
     tecido: "linho",
@@ -376,7 +376,7 @@ const PROJETOS: Projeto[] = [
     prazoDiasUteis: 35,
     chamada: "O mais completo do ateliê",
     descricao: [
-      "Off-white do kit berço ao dossel, com pregas, vivos e bordado tom sobre tom: o projeto mais completo do ateliê.",
+      "Off-white do kit berço ao dossel, com pregas, vivos e bordado tom sobre tom: o quartinho mais completo do ateliê.",
       "Um clássico provençal que serve para menina ou menino e se adapta ao quarto que crescer junto com o bebê.",
     ],
     paleta: [
@@ -396,7 +396,7 @@ const PROJETOS: Projeto[] = [
   },
   {
     slug: "ramo-de-oliveira",
-    nome: "Projeto Ramo de Oliveira",
+    nome: "Quartinho Ramo de Oliveira",
     tema: "neutro",
     estilo: "floral",
     tecido: "linho",
@@ -549,7 +549,7 @@ export function variacaoProjeto(projeto: Pick<Projeto, "tema" | "estilo">): stri
 
 // "Jardim de Camomila": o nome sem "Projeto" (nome da paleta no montador).
 export function nomeCurto(projeto: Pick<Projeto, "nome">): string {
-  return projeto.nome.replace(/^Projeto\s+/, "");
+  return projeto.nome.replace(/^(Quartinho|Projeto)\s+/, "");
 }
 
 // "Por que um projeto do ateliê": iguais em todos os projetos.
@@ -561,38 +561,39 @@ export const DIFERENCIAIS = [
   { titulo: "Entrega para todo o Brasil", texto: "Embalagem cuidadosa e envio rastreado para qualquer cidade do país." },
 ] as const;
 
-// "Como funciona": da conversa à entrega.
+// "Como funciona": da escolha à entrega (a linha do tempo "Passo a passo", secoes.tsx). `icone` é a
+// chave do ícone da etapa; `prazo`, quanto ela costuma levar.
+// [CONFIRMAR] com o ateliê os prazos de "Pedido" e "Confirmação".
 export const ETAPAS = [
-  { titulo: "Escolha", texto: "Escolha um projeto e o pacote, ou monte o seu quartinho peça por peça, e junte tudo na sacola." },
-  { titulo: "Pedido", texto: "Da sacola, o pedido segue pelo WhatsApp: uma vendedora confere as medidas do berço e da janela e a previsão do nascimento." },
-  { titulo: "Confirmação", texto: "Você recebe os valores finais, os tecidos e o prazo. Ajustes de cor e de peças entram aqui." },
-  { titulo: "Produção", texto: "Com o pedido confirmado, o ateliê corta, costura e borda tudo em 20 a 35 dias úteis." },
-  { titulo: "Entrega", texto: "O quartinho chega embalado e pronto para montar, em qualquer cidade do Brasil." },
-] as const;
-
-export const PERGUNTAS = [
   {
-    pergunta: "Com quanto tempo de antecedência devo encomendar?",
-    resposta:
-      "O ideal é fazer o pedido por volta do 5º ou 6º mês de gestação. A produção leva de 20 a 35 dias úteis, mais o prazo de envio.",
+    titulo: "Escolha",
+    texto: "Escolha um quartinho do ateliê e o pacote, ou monte o seu peça por peça, e junte tudo na sacola.",
+    prazo: "No seu tempo",
+    icone: "escolha",
   },
   {
-    pergunta: "Posso trocar cores ou peças do projeto?",
-    resposta:
-      "Pode. Os projetos são o ponto de partida: no Monte o seu quartinho você escolhe peça por peça, e no WhatsApp a vendedora ajusta a paleta e os detalhes.",
+    titulo: "Pedido",
+    texto: "Da sacola, o pedido segue pelo WhatsApp: uma vendedora confere as medidas do berço e da janela e a previsão do nascimento.",
+    prazo: "Em horário comercial",
+    icone: "pedido",
   },
   {
-    pergunta: "Vocês entregam fora de Fortaleza?",
-    resposta: "Sim, entregamos para todo o Brasil. O frete é combinado pelo WhatsApp, conforme a cidade e o volume das peças.",
+    titulo: "Confirmação",
+    texto: "Você recebe os valores finais, os tecidos e o prazo. Ajustes de cor e de peças entram aqui.",
+    prazo: "1 a 2 dias úteis",
+    icone: "confirmacao",
   },
   {
-    pergunta: "Que medidas preciso informar?",
-    resposta:
-      "As do colchão do berço (ou da mini cama) e da janela. Se ainda não tiver, mande o modelo do berço e a gente ajuda a conferir.",
+    titulo: "Produção",
+    texto: `Com o pedido confirmado, o ateliê corta, costura e borda tudo em ${PRAZO_PRODUCAO}.`,
+    prazo: PRAZO_PRODUCAO,
+    icone: "producao",
   },
   {
-    pergunta: "Os preços do site são definitivos?",
-    resposta: "Não. Os valores são \"a partir de\" e, por enquanto, fictícios. O valor final é confirmado pela vendedora no WhatsApp, com 5% OFF no Pix.",
+    titulo: "Entrega",
+    texto: "O quartinho chega embalado e pronto para montar, em qualquer cidade do Brasil.",
+    prazo: "Conforme o frete combinado",
+    icone: "entrega",
   },
 ] as const;
 
@@ -606,49 +607,49 @@ const COLECOES: Colecao[] = [
   {
     tipo: "selecao",
     slug: "menina",
-    titulo: "Projetos para menina",
+    titulo: "Quartinhos para menina",
     texto: "Florais, rendas e tons de rosa, lilás e amarelo-manteiga.",
     filtros: { tema: ["menina"] },
   },
   {
     tipo: "selecao",
     slug: "menino",
-    titulo: "Projetos para menino",
+    titulo: "Quartinhos para menino",
     texto: "Céu, safári e clássicos em azul, oliva e terracota.",
     filtros: { tema: ["menino"] },
   },
   {
     tipo: "selecao",
     slug: "neutro",
-    titulo: "Projetos neutros",
+    titulo: "Quartinhos neutros",
     texto: "Linho cru, sálvia e off-white: quartinhos que servem para menina ou menino.",
     filtros: { tema: ["neutro"] },
   },
   {
     tipo: "selecao",
     slug: "floral",
-    titulo: "Projetos florais",
+    titulo: "Quartinhos florais",
     texto: "Camomila, lavanda, oliveira e florzinhas miúdas, bordadas à mão.",
     filtros: { estilo: ["floral"] },
   },
   {
     tipo: "selecao",
     slug: "safari",
-    titulo: "Projetos safári",
+    titulo: "Quartinhos safári",
     texto: "Leãozinho, girafa e elefante em tons de areia, oliva e terracota.",
     filtros: { estilo: ["safari"] },
   },
   {
     tipo: "selecao",
     slug: "nuvens",
-    titulo: "Projetos nuvens e céu",
+    titulo: "Quartinhos nuvens e céu",
     texto: "Nuvens, lua e estrelas para um quarto leve e sereno.",
     filtros: { estilo: ["nuvens"] },
   },
   {
     tipo: "selecao",
     slug: "classico",
-    titulo: "Projetos clássicos",
+    titulo: "Quartinhos clássicos",
     texto: "Bordado inglês, babados, dossel e monograma: o quarto de geração em geração.",
     filtros: { estilo: ["classico"] },
   },
@@ -661,8 +662,8 @@ const COLECOES: Colecao[] = [
   {
     tipo: "conteudo",
     slug: "orcamento",
-    titulo: "Peça seu projeto",
-    texto: "Escolha um projeto do ateliê ou monte o seu quartinho peça por peça: tudo vai para a mesma sacola e o pedido segue pelo WhatsApp.",
+    titulo: "Peça seu quartinho",
+    texto: "Escolha um quartinho do ateliê ou monte o seu quartinho peça por peça: tudo vai para a mesma sacola e o pedido segue pelo WhatsApp.",
   },
 ];
 

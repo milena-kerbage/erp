@@ -1,5 +1,5 @@
 // Conteúdo da home do Ateliê Milena Kerbage, módulo a módulo, na ordem da página. Textos do ateliê;
-// links internos pela URL pública. `rubrica`: a etiqueta curta em caixa alta acima do título da seção.
+// links internos pela URL pública.
 // FOTOS: ainda não há. Cada mídia aceita `src` (foto .webp/.jpg ou vídeo .mp4/.webm). Os arquivos
 // entram em public/vitrine/home/<módulo>/… (caminhos sugeridos nos comentários); enquanto `src`
 // estiver vazio, a mídia desenha a composição de espera nos tons da marca (Midia.tsx).
@@ -51,10 +51,10 @@ export const SLIDES: Slide[] = [
   {
     id: "projetos",
     titulo: "O quartinho inteiro, num só tema",
-    subtitulo: "Projetos completos com kit berço, cortina, tapete e enfeites.",
+    subtitulo: "Quartinhos completos com kit berço, cortina, tapete e enfeites.",
     acoes: [
-      { rotulo: "Conhecer os projetos", href: "/projetos" },
-      { rotulo: "Como funciona", href: "/projetos/como-funciona" },
+      { rotulo: "Conhecer os quartinhos", href: "/personalizado" },
+      { rotulo: "Como funciona", href: "/personalizado/como-funciona" },
     ],
     // public/vitrine/home/hero/projetos.webp
     midia: { tom: "musgo", icone: "nuvem" },
@@ -98,14 +98,13 @@ export const PAR_EDITORIAL: Editorial[] = [
 // Grades de cards com abas (3, 4, 7 e 11).
 export type CardGrade = { rotulo: string; href: string; midia: MidiaConteudo };
 export type Aba = { rotulo: string; cards: CardGrade[] };
-export type Grade = { id: string; rubrica?: string; titulo: string; colunas: 4 | 6; abas: Aba[] };
+export type Grade = { id: string; titulo: string; colunas: 4 | 6; abas: Aba[] };
 
 const card = (rotulo: string, href: string, tom: TomMidia, icone: NomeIcone): CardGrade => ({ rotulo, href, midia: { tom, icone } });
 
 // 3. Novidades (4 cards).
 export const NOVIDADES: Grade = {
   id: "novidades",
-  rubrica: "Feito à mão",
   titulo: "Recém-saídas da costura",
   colunas: 4,
   abas: [
@@ -153,7 +152,6 @@ const porCor = (chave: string): CardGrade[] =>
 
 export const POR_COR: Grade = {
   id: "por-cor",
-  rubrica: "Paleta do ateliê",
   titulo: "Escolha pela cor",
   colunas: 6,
   abas: [
@@ -166,7 +164,6 @@ export const POR_COR: Grade = {
 // 7. Quarto de bebê (6 cards).
 export const QUARTO: Grade = {
   id: "quarto",
-  rubrica: "Para o quartinho",
   titulo: "Quarto de bebê",
   colunas: 6,
   abas: [
@@ -184,12 +181,12 @@ export const QUARTO: Grade = {
     {
       rotulo: "Por tema",
       cards: [
-        card("Floral", "/projetos/floral", "rose", "flor"),
-        card("Safári", "/projetos/safari", "cru", "folha"),
-        card("Nuvens e céu", "/projetos/nuvens", "azul", "nuvem"),
-        card("Clássico", "/projetos/classico", "branco", "tulipa"),
-        card("Para menina", "/projetos/menina", "rose", "borboleta"),
-        card("Para menino", "/projetos/menino", "salviaClara", "lua"),
+        card("Floral", "/personalizado/floral", "rose", "flor"),
+        card("Safári", "/personalizado/safari", "cru", "folha"),
+        card("Nuvens e céu", "/personalizado/nuvens", "azul", "nuvem"),
+        card("Clássico", "/personalizado/classico", "branco", "tulipa"),
+        card("Para menina", "/personalizado/menina", "rose", "borboleta"),
+        card("Para menino", "/personalizado/menino", "salviaClara", "lua"),
       ],
     },
   ],
@@ -198,7 +195,6 @@ export const QUARTO: Grade = {
 // 11. Enxoval (6 cards).
 export const ENXOVAL: Grade = {
   id: "enxoval",
-  rubrica: "Primeiros dias",
   titulo: "Monte o enxoval",
   colunas: 6,
   abas: [
@@ -232,8 +228,8 @@ export type Feature = { id: string; titulo: string; acoes: Acao[]; midia: MidiaC
 
 export const FEATURE_PROJETOS: Feature = {
   id: "feature-projetos",
-  titulo: "Projetos de quartinho: o ateliê planeja cada detalhe com você",
-  acoes: [{ rotulo: "Conhecer os projetos", href: "/projetos" }],
+  titulo: "Quartinho personalizado: o ateliê planeja cada detalhe com você",
+  acoes: [{ rotulo: "Conhecer os quartinhos", href: "/personalizado" }],
   // public/vitrine/home/features/projetos.mp4
   midia: { tom: "salvia", icone: "berco" },
 };
@@ -262,14 +258,12 @@ export const FEATURE_BORDADO: Feature = {
 // 6 e 9. Carrosséis de produtos.
 export const CARROSSEL_MAIS_VENDIDOS = {
   id: "mais-vendidos",
-  rubrica: "Mais vendidos",
   titulo: "As mais pedidas no ateliê",
   acao: { rotulo: "Ver mais vendidos", href: categoria("kit-berco", {}, "mais-vendidos") },
 };
 
 export const CARROSSEL_PRONTA_ENTREGA = {
   id: "pronta-entrega",
-  rubrica: "Pronta entrega",
   titulo: "Sai do ateliê em até 2 dias úteis",
   acao: { rotulo: "Ver tudo", href: LINKS_UTILITARIOS.loja.href },
 };

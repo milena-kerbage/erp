@@ -16,7 +16,7 @@ const CAMINHO = "/sobre";
 export const metadata: Metadata = metadataPagina({
   titulo: "Nossa história",
   descricao:
-    "Conheça o Ateliê Milena Kerbage: enxoval e quarto de bebê feitos à mão em Fortaleza, do kit berço ao projeto de quartinho completo, com entrega para todo o Brasil.",
+    "Conheça o Ateliê Milena Kerbage: enxoval e quarto de bebê feitos à mão em Fortaleza, do kit berço ao quartinho personalizado completo, com entrega para todo o Brasil.",
   caminho: CAMINHO,
   indexar: true,
 });
@@ -62,7 +62,7 @@ export default function Sobre() {
               Fazemos o kit berço, os paninhos, as toalhas e as mantas do enxoval, as peças do quarto e da maternidade. Algumas ficam
               prontas para envio, a <Link href="/pronta-entrega">pronta entrega</Link>; outras são feitas sob encomenda, com o bordado do
               nome do bebê. E, para quem quer o quarto inteiro no mesmo tema, criamos{" "}
-              <Link href="/projetos">projetos de quartinho</Link> completos.
+              <Link href="/personalizado">quartinhos personalizados</Link> completos.
             </p>
           </div>
           <p aria-hidden className={frase}>
@@ -89,7 +89,7 @@ export default function Sobre() {
             Como nasce um quartinho
           </h2>
           <p className={css({ mt: "3", maxW: "leitura", fontSize: { base: "md", md: "lg" }, lineHeight: "relaxed", color: "textoSuave" })}>
-            Da primeira conversa à entrega, cada projeto é acompanhado de perto por uma vendedora do ateliê.
+            Da primeira conversa à entrega, cada quartinho é acompanhado de perto por uma vendedora do ateliê.
           </p>
           <ol className={gradeTres}>
             {ETAPAS.map((etapa, indice) => (
@@ -100,8 +100,8 @@ export default function Sobre() {
               </li>
             ))}
           </ol>
-          <Link href="/projetos/como-funciona" className={cx(botaoContorno, css({ mt: "8" }))}>
-            Ver como funciona um projeto
+          <Link href="/personalizado/como-funciona" className={cx(botaoContorno, css({ mt: "8" }))}>
+            Ver como funciona um quartinho personalizado
           </Link>
         </section>
 

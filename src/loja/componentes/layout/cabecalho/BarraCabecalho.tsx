@@ -4,13 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
-import { CaretDown, User } from "@/loja/componentes/icones";
+import { MenuConta } from "@/loja/componentes/conta/MenuConta";
+import { CaretDown } from "@/loja/componentes/icones";
 import { EMPRESA } from "@/loja/lib/empresa";
 import { GavetaBusca } from "./GavetaBusca";
 import { PainelMegaMenu } from "./MegaMenu";
 import { MenuCelular } from "./MenuCelular";
 import type { ItemMenu } from "./menu";
-import { LINKS_UTILITARIOS, type LinkUtilitario } from "./navegacao";
+import type { LinkUtilitario } from "./navegacao";
 import { SacolaCabecalho } from "./SacolaCabecalho";
 
 // Cabeçalho da loja.
@@ -162,9 +163,8 @@ export function BarraCabecalho({
 
           <div className={utilidades}>
             <GavetaBusca termos={termos} />
-            <Link href={LINKS_UTILITARIOS.conta.href} aria-label={LINKS_UTILITARIOS.conta.rotulo} className={conta}>
-              <User size={16} aria-hidden />
-            </Link>
+            {/* Conta: a inicial do nome e o menu curto quando logada (MenuConta). */}
+            <MenuConta />
             <SacolaCabecalho />
             <MenuCelular itens={menu} links={linksGaveta} />
           </div>
@@ -236,9 +236,17 @@ const pilula = css({
   px: { desktop: "2" },
   py: { desktop: "1" },
   borderRadius: { desktop: "md" },
+  // Vidro: fundo linho bem translúcido + desfoque com saturação (o que está atrás "acende" sem
+  // atrapalhar a leitura), borda clara de 1 px e sombra mínima. Sem suporte a backdrop-filter, o
+  // fundo fica mais opaco para manter o contraste do menu.
   bg: { desktop: "vidroCabecalho" },
-  backdropFilter: { desktop: "auto" },
-  backdropBlur: { desktop: "2xl" },
+  backdropFilter: { desktop: "[blur(16px)]" },
+  borderWidth: { desktop: "1px" },
+  borderColor: { desktop: "bordaVidroCabecalho" },
+  boxShadow: { desktop: "[0 8px 32px rgba(29, 31, 27, 0.06)]" },
+  "@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))": {
+    bg: { desktop: "superficie" },
+  },
   transitionProperty: "background-color",
   transitionDuration: "normal",
   transitionTimingFunction: "assinatura",
@@ -285,7 +293,7 @@ const rotuloItem = css({
     right: "0",
     bottom: "[-4px]",
     h: "[1px]",
-    bgImage: "[repeating-linear-gradient(90deg, token(colors.marca) 0 4px, transparent 4px 7px)]",
+    bgImage: "[linear-gradient(token(colors.textoSuave), token(colors.textoSuave))]",
     opacity: "0",
     transitionProperty: "opacity",
     transitionDuration: "sublinhado",
@@ -325,14 +333,3 @@ const botaoExpandir = css({
 });
 
 const utilidades = css({ display: "inline-flex", alignItems: "center", justifySelf: "end", pr: { desktop: "1" } });
-
-const conta = css({
-  display: { base: "none", desktop: "inline-flex" },
-  alignItems: "center",
-  justifyContent: "center",
-  w: "8",
-  h: "8",
-  borderRadius: "pilula",
-  color: "escuro",
-  _focusVisible: { outline: "none", boxShadow: "anelFoco" },
-});

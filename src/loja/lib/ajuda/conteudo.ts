@@ -174,7 +174,7 @@ export const PERGUNTAS: Pergunta[] = [
     tema: "entregas",
     pergunta: "Com quanto tempo de antecedência devo encomendar?",
     resposta:
-      "Para peças sob encomenda e projetos de quartinho, peça com folga em relação à data prevista do parto e informe essa data nas observações do pedido. A vendedora confirma se o prazo atende.",
+      "Para peças sob encomenda e quartinhos personalizados, peça com folga em relação à data prevista do parto e informe essa data nas observações do pedido. A vendedora confirma se o prazo atende.",
   },
   // Trocas
   {
@@ -255,13 +255,29 @@ export const PERGUNTAS: Pergunta[] = [
     resposta:
       "Para o sono seguro, a Sociedade Brasileira de Pediatria recomenda o berço livre de protetores, travesseiros e objetos soltos enquanto o bebê dorme. Use essas peças na decoração e retire na hora de dormir.",
   },
-  // Conta neste aparelho
+  // Conta de cliente
+  {
+    id: "conta",
+    tema: "perguntas-frequentes",
+    pergunta: "Preciso criar conta para fazer o pedido?",
+    resposta:
+      "Sim, e leva menos de um minuto: nome, WhatsApp, e-mail e senha, ali mesmo na tela do pedido. Com a conta você acompanha os pedidos em qualquer aparelho e ganha 5% OFF na primeira compra (um cupom por pedido; o 5% OFF no Pix é combinado à parte, com a vendedora).",
+    link: { rotulo: "Criar conta", href: "/conta/cadastro" },
+  },
+  {
+    id: "esqueci-senha",
+    tema: "perguntas-frequentes",
+    pergunta: "Esqueci a senha. E agora?",
+    resposta:
+      "Chame o ateliê no WhatsApp: a vendedora confere a sua conta e manda um link para você criar uma senha nova. O link vale por 2 horas e funciona uma vez.",
+    link: { rotulo: "Entrar", href: "/conta/entrar" },
+  },
   {
     id: "outro-aparelho",
     tema: "perguntas-frequentes",
     pergunta: "Por que meus favoritos não aparecem em outro aparelho?",
     resposta:
-      "Porque não há login: favoritos, sacola e pedidos enviados ficam salvos só no navegador em que você usou a loja. Se limpar os dados do navegador, essa lista também é apagada.",
+      "Os pedidos ficam na sua conta, em qualquer aparelho. Já os favoritos e a sacola ficam salvos no navegador em que você usou a loja: se limpar os dados do navegador, essas listas são apagadas.",
     link: { rotulo: "Abrir Minha conta", href: "/conta" },
   },
   {
@@ -276,8 +292,8 @@ export const PERGUNTAS: Pergunta[] = [
     tema: "perguntas-frequentes",
     pergunta: "Vocês fazem o quarto completo?",
     resposta:
-      "Sim. Nos Projetos de quartinho, kit berço, cortina, tapete e enfeites são pensados juntos, no mesmo tema. Você escolhe um projeto e pede o orçamento pelo WhatsApp.",
-    link: { rotulo: "Como funciona", href: "/projetos/como-funciona" },
+      "Sim. No Personalizado, kit berço, cortina, tapete e enfeites são pensados juntos, no mesmo tema. Você escolhe um quartinho e pede o orçamento pelo WhatsApp.",
+    link: { rotulo: "Como funciona", href: "/personalizado/como-funciona" },
   },
 ];
 

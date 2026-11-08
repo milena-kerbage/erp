@@ -31,29 +31,6 @@ export const tituloSecao = css({
   textWrap: "balance",
 });
 
-// Rubrica: etiqueta curta acima do título de seção ("Feito à mão", "Para o quartinho"), em caixa alta
-// com entreletra aberta, na cor da marca (4,8:1 ou mais sobre os fundos claros), precedida de um
-// pespontinho de 24 px (a linha tracejada da costura, src/loja/estilos/pesponto.ts).
-export const rubrica = css({
-  display: "flex",
-  alignItems: "center",
-  gap: "3",
-  mb: { base: "3", desktop: "4" },
-  fontSize: "xs",
-  fontWeight: "medium",
-  lineHeight: "texto",
-  letterSpacing: "rubrica",
-  textTransform: "uppercase",
-  color: "marca",
-  _before: {
-    content: '""',
-    flexShrink: "0",
-    w: "6",
-    h: "[1px]",
-    bgImage: "[repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px)]",
-  },
-});
-
 export const tituloBloco = css({
   fontFamily: "titulo",
   fontWeight: "normal",

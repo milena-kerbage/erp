@@ -1,2 +1,5 @@
 /* Camadas do Panda CSS. Estilos de componente vão nos componentes (css/styled/receitas), não aqui. */
 @layer reset, base, tokens, recipes, utilities;
+/* Sem contorno de foco em nada da loja (decisão do ateliê). Fora das camadas de propósito: vence
+   qualquer outline de componente gerado pelo Panda, que fica dentro de @layer. */
+:focus, :focus-visible { outline: none; }

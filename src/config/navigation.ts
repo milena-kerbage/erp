@@ -60,7 +60,12 @@ export const navigation = {
     },
     { label: "Leads", href: "/leads", icon: UserFocusIcon },
     { label: "Conversas", href: "/conversas", icon: ChatsCircleIcon },
-    { label: "Clientes", href: "/clientes", icon: UsersThreeIcon },
+    {
+      label: "Clientes",
+      href: "/clientes",
+      icon: UsersThreeIcon,
+      tabs: [{ label: "Loja online", href: "/clientes/loja" }],
+    },
     {
       label: "Agenda",
       href: "/agenda",
@@ -78,6 +83,7 @@ export const navigation = {
       tabs: [
         { label: "Em andamento", href: "/pedidos/em-andamento" },
         { label: "Finalizados", href: "/pedidos/finalizados" },
+        { label: "Da loja online", href: "/pedidos/loja" },
       ],
     },
     {

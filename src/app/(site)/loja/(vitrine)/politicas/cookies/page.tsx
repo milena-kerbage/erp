@@ -38,6 +38,11 @@ const NECESSARIOS: Linha[] = [
   },
   { nome: COOKIE.consentimento, finalidade: "Guarda a sua escolha sobre os cookies opcionais.", duracao: "Até você mudar a escolha" },
   { nome: "mk_local", finalidade: "Cidade/UF e CEP que você informou, para falar de frete e retirada.", duracao: dias(VALIDADE_LOCAL_S) },
+  {
+    nome: "__Host-mk_cliente",
+    finalidade: "Sessão da sua conta de cliente (só depois de entrar ou criar a conta). Código aleatório, sem dados pessoais; httpOnly, só neste site.",
+    duracao: "Até 30 dias, ou até você sair da conta",
+  },
 ];
 
 const OPCIONAIS: Linha[] = [

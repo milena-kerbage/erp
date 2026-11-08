@@ -103,35 +103,35 @@ export const NAVEGACAO: ItemNavegacao[] = [
   },
   // Loja à parte, como o SNKRS na Nike: o quarto inteiro planejado pelo ateliê, no tema escolhido.
   {
-    rotulo: "Projetos",
-    href: "/projetos",
+    rotulo: "Personalizado",
+    href: "/personalizado",
     colunas: [
       {
         titulo: "Por tema",
-        href: "/projetos",
+        href: "/personalizado",
         links: [
-          { rotulo: "Todos os projetos", href: "/projetos" },
-          { rotulo: "Para menina", href: "/projetos/menina" },
-          { rotulo: "Para menino", href: "/projetos/menino" },
-          { rotulo: "Neutros", href: "/projetos/neutro" },
+          { rotulo: "Todos os quartinhos", href: "/personalizado" },
+          { rotulo: "Para menina", href: "/personalizado/menina" },
+          { rotulo: "Para menino", href: "/personalizado/menino" },
+          { rotulo: "Neutros", href: "/personalizado/neutro" },
         ],
       },
       {
         titulo: "Por estilo",
-        href: "/projetos",
+        href: "/personalizado",
         links: [
-          { rotulo: "Floral", href: "/projetos/floral" },
-          { rotulo: "Safári", href: "/projetos/safari" },
-          { rotulo: "Nuvens e céu", href: "/projetos/nuvens" },
-          { rotulo: "Clássico", href: "/projetos/classico" },
+          { rotulo: "Floral", href: "/personalizado/floral" },
+          { rotulo: "Safári", href: "/personalizado/safari" },
+          { rotulo: "Nuvens e céu", href: "/personalizado/nuvens" },
+          { rotulo: "Clássico", href: "/personalizado/classico" },
         ],
       },
       {
         titulo: "Seu quartinho Milena",
-        href: "/projetos/como-funciona",
+        href: "/personalizado/como-funciona",
         links: [
-          { rotulo: "Como funciona", href: "/projetos/como-funciona" },
-          { rotulo: "Peça seu projeto", href: "/projetos/orcamento" },
+          { rotulo: "Como funciona", href: "/personalizado/como-funciona" },
+          { rotulo: "Peça seu quartinho", href: "/personalizado/orcamento" },
         ],
       },
     ],
@@ -142,11 +142,11 @@ export const NAVEGACAO: ItemNavegacao[] = [
 export const LINKS_UTILITARIOS = {
   loja: { rotulo: "Pronta entrega", href: "/pronta-entrega" },
   edicao: { rotulo: "Edição do mês", href: "/edicao-do-mes" }, // coleção editorial do mês
-  pedido: { rotulo: "Pedidos enviados", href: "/conta/pedidos" },
+  pedido: { rotulo: "Meus pedidos", href: "/conta/pedidos" },
   ajuda: { rotulo: "Ajuda", href: "/ajuda" },
   franquia: { rotulo: "Fale no WhatsApp", href: `https://wa.me/${EMPRESA.whatsapp.numero}`, externo: true },
   instagram: { rotulo: "Instagram", href: REDES_SOCIAIS.instagram, externo: true },
-  // A loja não tem login: "Minha conta" mostra os favoritos e os pedidos enviados deste aparelho.
+  // "Minha conta": login por e-mail e senha (contas de cliente), pedidos, cupom de primeira compra, favoritos e dados.
   conta: { rotulo: "Minha conta", href: "/conta" },
   indique: { rotulo: "Indique o ateliê", href: "/indique" },
 } satisfies Record<string, LinkUtilitario>;
