@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
     "/api/erp/documentation": ["./docs/erp-backend.md", "./docs/erp-operacao.md"],
   },
   // Desenvolvimento: libera abrir pelo IP da rede local (celular na mesma Wi-Fi)
-  allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
+  // e por 127.0.0.1, origem exigida pelo AUTH_ORIGIN do login
+  allowedDevOrigins: ["127.0.0.1", "192.168.*.*", "10.*.*.*"],
   devIndicators: {
     position: "bottom-right",
   },
