@@ -80,6 +80,19 @@ Cadastre modelos e serviços com nome, referência/SKU, categoria, preço de ref
 
 O catálogo interno ajuda a padronizar o atendimento. A implementação atual não publica uma loja nem compartilha automaticamente coleções em plataformas externas.
 
+## Avaliações da loja
+
+Menu **Avaliações** (admin e gestão; o perfil equipe não vê o conteúdo). A loja é um catálogo com pedido pelo WhatsApp, sem conta de cliente: ninguém consegue provar a compra, então toda avaliação chega como **pendente** e só aparece na página do produto depois de aprovada aqui.
+
+1. Na aba **Pendentes**, leia o texto e abra as fotos (clique na miniatura). Confira se a foto é do produto e se não mostra rosto de criança, endereço, documento ou outro dado pessoal.
+2. **Aprovar** publica na loja na hora (nota, título, texto, nome, cidade, "para quem" e fotos). A média e a contagem do produto passam a contar com ela.
+3. **Recusar** pede um motivo interno (3 a 500 caracteres). O motivo nunca aparece na loja nem é enviado à cliente. Recusar uma avaliação já publicada a retira da loja.
+4. **Responder** grava a "Resposta do ateliê", que aparece abaixo da avaliação publicada. Salvar a resposta vazia remove a resposta. É texto público: não cite dados pessoais da cliente.
+5. **Voltar para pendente** tira da loja sem recusar.
+6. **Excluir** apaga a avaliação e as fotos de forma definitiva. Use para pedido de exclusão da cliente (LGPD) ou spam. Para só esconder, recuse.
+
+Duas pessoas moderando a mesma avaliação: a segunda recebe o aviso de que ela foi alterada e precisa atualizar a lista. O filtro **Produto** mostra só os produtos que já receberam avaliações.
+
 ## Produção
 
 Cada tarefa precisa de um pedido relacionado e descreve o trabalho, responsável, prazo, prioridade e observações. As etapas disponíveis são a fazer, corte, costura, prova, acabamento, concluída e cancelada. A prioridade pode ser baixa, normal ou alta.

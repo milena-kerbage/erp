@@ -1,12 +1,15 @@
-import type { BreadcrumbList, Product, WithContext } from "schema-dts";
+import type { BreadcrumbList, Product, Review, WithContext } from "schema-dts";
+import type { RespostaAvaliacoes } from "@/loja/lib/avaliacoes/regras";
 import type { Produto } from "@/loja/lib/catalogo/exemplos";
 import { ORIGEM } from "./config";
 
 // JSON-LD da página de produto (seo.md §6.3 e §6.6): Product + Offer + BreadcrumbList, no HTML
 // inicial. Relações do "compre junto" em isOftenBoughtWith (schema 30.1). AggregateRating só com
-// avaliações reais coletadas no site: sem avaliação, o campo não sai.
+// avaliações reais coletadas no site e APROVADAS na moderação do ERP (AggregateRating + as Review da
+// primeira página): sem avaliação aprovada, nenhum dos dois sai.
 
-export function schemaProduto(produto: Produto, relacionados: Produto[]): WithContext<Product> {
+export function schemaProduto(produto: Produto, relacionados: Produto[], avaliacoes?: RespostaAvaliacoes | null): WithContext<Product> {
+  const resumo = avaliacoes?.resumo;
   const url = `${ORIGEM}/produto/${produto.slug}`;
   return {
     "@context": "https://schema.org",
@@ -31,13 +34,26 @@ export function schemaProduto(produto: Produto, relacionados: Produto[]): WithCo
       itemCondition: "https://schema.org/NewCondition",
       seller: { "@id": `${ORIGEM}/#organization` },
     },
-    ...(produto.avaliacoes && produto.avaliacoes.total > 0
+    ...(avaliacoes && resumo && resumo.total > 0
       ? {
           aggregateRating: {
             "@type": "AggregateRating",
-            ratingValue: produto.avaliacoes.nota.toFixed(1),
-            ratingCount: produto.avaliacoes.total,
+            ratingValue: resumo.media.toFixed(1),
+            ratingCount: resumo.total,
+            reviewCount: resumo.total,
+            bestRating: 5,
+            worstRating: 1,
           },
+          review: avaliacoes.avaliacoes.map(
+            (avaliacao): Review => ({
+              "@type": "Review",
+              name: avaliacao.titulo,
+              reviewBody: avaliacao.texto,
+              datePublished: avaliacao.criadaEm.slice(0, 10),
+              author: { "@type": "Person", name: avaliacao.nome },
+              reviewRating: { "@type": "Rating", ratingValue: avaliacao.nota, bestRating: 5, worstRating: 1 },
+            }),
+          ),
         }
       : {}),
   };

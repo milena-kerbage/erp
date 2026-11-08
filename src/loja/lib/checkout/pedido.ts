@@ -16,9 +16,16 @@ export type LinhaPedido = {
   nome: string;
   codigo?: string; // SKU, para a vendedora achar a peça
   quantidade: number;
-  detalhes: string[]; // "Cor: Rosê", "Tamanho do berço: …", "Bordado: …"
+  detalhes: string[]; // "Cor: Rosê", "Tamanho do berço: …", "Bordado: …"; no projeto, "Pacote: …"
   precoCentavos: number; // preço unitário de tabela
+  // Projeto de quarto (pacote + opcionais) e quartinho personalizado (módulos do "Monte o seu"): o que
+  // vem, com as opções e o "a partir de" de cada parte.
+  tipo?: "projeto" | "personalizado";
+  modulos?: { nome: string; detalhe?: string; precoCentavos: number }[];
 };
+
+// Prazo de produção dos projetos de quarto (lib/carrinho/totais.ts, PRODUCAO_PROJETO).
+const PRAZO_PROJETOS = "20 a 35 dias úteis";
 
 export const LIMITE_LOCAL = 80;
 export const LIMITE_OBSERVACOES = 500;
@@ -41,8 +48,9 @@ export function reaisTexto(valorCentavos: number): string {
   return `${valorCentavos < 0 ? "-" : ""}R$ ${inteiro},${fracao}`;
 }
 
-// Texto da conversa: itens com quantidade, detalhes e valores "a partir de", cupom, a menção ao 5% OFF
-// no Pix (sem calcular o valor) e os dados da cliente. O frete fica para a conversa.
+// Texto da conversa: itens com quantidade, detalhes e valores "a partir de" (no projeto e no quartinho
+// personalizado, também o que vem, parte por parte), cupom, a menção ao 5% OFF no Pix (sem calcular
+// o valor) e os dados da cliente. O frete fica para a conversa.
 export function montarMensagemPedido({
   linhas,
   cliente,
@@ -58,10 +66,19 @@ export function montarMensagemPedido({
   const desconto = cupom?.descontoCentavos ?? 0;
   const itens = linhas.map((linha, indice) => {
     const total = linha.precoCentavos * linha.quantidade;
+    const modulos = linha.modulos ?? [];
     return [
-      `${indice + 1}) ${linha.nome}${linha.codigo ? ` (cód. ${linha.codigo})` : ""}`,
+      `${indice + 1}) ${linha.nome}${linha.codigo ? ` (cód. ${linha.codigo})` : ""}${linha.tipo === "personalizado" ? " [montado no site]" : ""}`,
       `   Quantidade: ${linha.quantidade}`,
       ...linha.detalhes.map((detalhe) => `   ${detalhe}`),
+      ...(modulos.length > 0
+        ? [
+            `   ${linha.tipo === "personalizado" ? "Peças escolhidas" : "O que vem"}:`,
+            ...modulos.map(
+              (modulo) => `   - ${modulo.nome}${modulo.detalhe ? ` (${modulo.detalhe})` : ""}: a partir de ${reaisTexto(modulo.precoCentavos)}`,
+            ),
+          ]
+        : []),
       linha.quantidade > 1
         ? `   A partir de ${reaisTexto(linha.precoCentavos)} cada (${reaisTexto(total)})`
         : `   A partir de ${reaisTexto(total)}`,
@@ -72,6 +89,9 @@ export function montarMensagemPedido({
     ...(cupom && desconto > 0 ? [`Cupom ${cupom.codigo}: -${reaisTexto(desconto)}`] : []),
     `Total estimado a partir de ${reaisTexto(subtotal - desconto)}, sem o frete`,
     `Vi que no Pix tem ${descontoPixPercentual}% OFF.`,
+    ...(linhas.some((linha) => linha.tipo)
+      ? [`Os projetos de quarto são feitos sob encomenda (produção de ${PRAZO_PROJETOS}): podemos conferir as medidas do berço e da janela?`]
+      : []),
   ];
   const dados = [
     `Nome: ${cliente.nome.trim()}`,

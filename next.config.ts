@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react", "@phosphor-icons/react/ssr"],
+    // O proxy (src/proxy.ts) copia o corpo da requisição até este limite (padrão 10 MB). A API de
+    // avaliações da loja aceita até 13 MiB (4 fotos de 3 MiB + campos) e recusa o excesso com 413.
+    proxyClientMaxBodySize: "14mb",
   },
   compiler: {
     emotion: true,

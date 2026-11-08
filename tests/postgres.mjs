@@ -26,7 +26,7 @@ process.env.ERP_WEBHOOK_ALLOWED_HOSTS = 'hooks.example.com';
 const storage = await import('../src/lib/database.ts');
 try {
   await engine.exec('CREATE ROLE anon; CREATE ROLE authenticated;');
-  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql']) {
+  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql', '008_loja_avaliacoes.sql']) {
     await engine.exec(readFileSync(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
   }
   const privileges = await engine.query("SELECT has_schema_privilege('anon', 'erp_auth', 'USAGE') AS auth_access, has_schema_privilege('authenticated', 'erp_whatsapp', 'USAGE') AS whatsapp_access, has_schema_privilege('anon', 'erp_meta', 'USAGE') AS meta_access");
@@ -34,7 +34,7 @@ try {
   assert.equal((await engine.query("SELECT has_schema_privilege('anon','erp_core','USAGE') AS exposed")).rows[0].exposed,false);
   const tables = await engine.query("SELECT COUNT(*)::integer AS count FROM pg_tables WHERE schemaname IN ('erp_auth','erp_whatsapp','erp_meta','erp_core') AND rowsecurity = false");
   assert.equal(tables.rows[0].count, 0, 'Tabelas privadas devem ter RLS habilitado');
-  console.log('OK: sete migrações PostgreSQL aplicadas, schemas privados e RLS habilitado');
+  console.log('OK: oito migrações PostgreSQL aplicadas, schemas privados e RLS habilitado');
   await socket.start();
   const auth = await import('../src/lib/auth/core.ts');
   const wa = await import('../src/lib/whatsapp/core.ts');

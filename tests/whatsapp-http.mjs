@@ -107,7 +107,7 @@ try {
   console.log('OK: gestor autorizado, origem, bootstrap bloqueado em produção, credenciais protegidas, checklist e testes persistidos');
   const erp='/api/erp';
   assert.equal((await request(erp,{},false)).status,401);
-  const catalog=await (await request(erp)).json();assert.equal(catalog.routes.length,28);assert.equal(catalog.baseUrl,publicOrigin);
+  const catalog=await (await request(erp)).json();assert.equal(catalog.routes.length,31);assert.equal(catalog.baseUrl,publicOrigin);
   for(const document of ['technical','operation']) {
     const guide=await request(erp+'/documentation?document='+document);
     assert.equal(guide.status,200);assert.match(guide.headers.get('content-disposition'),/^attachment;/);assert.ok((await guide.text()).length>5000);
@@ -195,9 +195,29 @@ try {
   assert.equal((await post(erp+'/webhooks/'+hook.webhook.id,{},publicOrigin,'DELETE')).status,200);
   const notices=await (await request(erp+'/notifications',{headers:{cookie:staffCookie}})).json();assert.ok(notices.notifications.length>0);assert.equal(notices.notifications[0].read,false);
   assert.equal((await request(erp+'/notifications',{method:'PATCH',headers:{cookie:staffCookie,origin:publicOrigin,'content-type':'application/json'},body:JSON.stringify({id:notices.notifications[0].id,read:true,archived:true})})).status,200);
-  for(const path of ['/agenda','/orcamentos','/pedidos','/pedidos/em-andamento','/pedidos/finalizados','/catalogo','/producao','/estoque','/estoque/materiais','/estoque/movimentacoes','/financeiro','/financeiro/receber','/financeiro/pagar','/financeiro/fluxo-de-caixa','/relatorios','/conta','/conta/novidades','/ajuda']) {
+  for(const path of ['/agenda','/orcamentos','/pedidos','/pedidos/em-andamento','/pedidos/finalizados','/catalogo','/avaliacoes','/producao','/estoque','/estoque/materiais','/estoque/movimentacoes','/financeiro','/financeiro/receber','/financeiro/pagar','/financeiro/fluxo-de-caixa','/relatorios','/conta','/conta/novidades','/ajuda']) {
     const response=await request(path);assert.ok([200,307].includes(response.status),path+' página');assert.equal((await request(path,{},false)).status,307,path+' privada');
   }
+  // Moderação das avaliações da loja (migração 008): avaliação semeada no mesmo SQLite do servidor.
+  process.env.ERP_DB_PATH=join(folder,'erp.sqlite');
+  const lojaAvaliacoes=await import('../src/lib/loja/avaliacoes.ts');
+  const sharp=(await import('sharp')).default;
+  const fotoTeste=await sharp({create:{width:900,height:700,channels:3,background:{r:230,g:200,b:190}}}).withExif({IFD0:{Artist:'Pessoa'}}).jpeg().toBuffer();
+  const enviada=await lojaAvaliacoes.criarAvaliacao({campos:{produto:'kit-teste',nota:'5',titulo:'Lindo',texto:'O enxoval chegou perfeito e muito bem embalado.',nome:'Ana',consentimento:'true',iniciado:String(Date.now()-60000)},fotos:[fotoTeste],ip:'203.0.113.80'},{produtoExiste:()=>true});
+  assert.equal((await request(erp+'/avaliacoes',{headers:{cookie:staffCookie}},false)).status,403,'equipe sem gestão não modera');
+  const fila=await (await request(erp+'/avaliacoes?status=pendente')).json();
+  assert.equal(fila.contagem.pendente,1);const pendente=fila.avaliacoes.find(item=>item.id===enviada.id);assert.ok(pendente);
+  const miniatura=await request(erp+'/avaliacoes/foto/'+pendente.fotos[0].id+'?tamanho=mini');assert.equal(miniatura.status,200);assert.equal(miniatura.headers.get('content-type'),'image/webp');
+  assert.equal((await request(erp+'/avaliacoes/foto/'+pendente.fotos[0].id,{},false)).status,401);
+  assert.equal((await post(erp+'/avaliacoes/'+pendente.id,{revisao:pendente.revisao,status:'recusada'},publicOrigin,'PATCH')).status,400,'recusa exige motivo');
+  assert.equal((await post(erp+'/avaliacoes/'+pendente.id,{revisao:pendente.revisao,status:'aprovada'},'https://evil.example','PATCH')).status,403);
+  const aprovada=await (await post(erp+'/avaliacoes/'+pendente.id,{revisao:pendente.revisao,status:'aprovada'},publicOrigin,'PATCH')).json();assert.equal(aprovada.avaliacao.status,'aprovada');
+  assert.equal((await post(erp+'/avaliacoes/'+pendente.id,{revisao:pendente.revisao,resposta:'Atrasada'},publicOrigin,'PATCH')).status,409);
+  assert.equal((await post(erp+'/avaliacoes/'+pendente.id,{revisao:aprovada.avaliacao.revisao,resposta:'Obrigada, Ana!'},publicOrigin,'PATCH')).status,200);
+  assert.equal((await request(erp+'/avaliacoes/'+pendente.id+'?revisao=1',{method:'DELETE',headers:{origin:publicOrigin}})).status,409);
+  assert.equal((await request(erp+'/avaliacoes/'+pendente.id+'?revisao='+(aprovada.avaliacao.revisao+1),{method:'DELETE',headers:{origin:publicOrigin}})).status,200);
+  assert.equal((await request(erp+'/avaliacoes/foto/'+pendente.fotos[0].id+'?tamanho=mini')).status,404,'fotos excluídas junto');
+  console.log('OK: moderação de avaliações da loja via handlers reais (papéis, origem, revisão, fotos e exclusão)');
   const notFound=await request('/rota-inexistente');assert.ok([200,404].includes(notFound.status));assert.match(await notFound.text(),/NEXT_HTTP_ERROR_FALLBACK;404|This page could not be found/,'Next.js pode servir 404 semântico após iniciar o streaming');
   console.log('OK: ERP completo via handlers reais, revisões, oito recursos, papéis, bearer, convites, fotos/anexos, webhooks e notificações');
   const challenge = '/api/whatsapp/webhook?hub.mode=subscribe&hub.challenge=challenge-http&hub.verify_token=';

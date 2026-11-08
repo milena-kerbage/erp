@@ -16,12 +16,12 @@ const writeTest = args.includes('--write-test');
 const persist = args.includes('--persist');
 const confirmed = args.includes('--confirm=ESCREVER-DADOS-DE-TESTE');
 
-// Tabelas esperadas após as sete migrações em supabase/migrations.
+// Tabelas esperadas após as oito migrações em supabase/migrations.
 const expected = {
   erp_auth: ['users', 'sessions', 'resets', 'attempts', 'members', 'invitations', 'api_keys', 'profile_photos', 'app_webhooks', 'webhook_deliveries', 'notification_states', 'access_audit'],
   erp_whatsapp: ['contacts', 'messages', 'consent_audit', 'webhook_events', 'send_requests', 'pending_statuses', 'suppression', 'deletion_audit', 'metadata', 'rate_limits', 'integration_settings', 'integration_audit', 'management_checklist', 'management_tests', 'management_oauth_states'],
   erp_meta: ['deletion_requests'],
-  erp_core: ['workspace_settings', 'funnels', 'leads', 'lead_notes', 'lead_attachments', 'records', 'erp_audit'],
+  erp_core: ['workspace_settings', 'funnels', 'leads', 'lead_notes', 'lead_attachments', 'records', 'erp_audit', 'loja_avaliacoes', 'loja_avaliacao_fotos'],
 };
 const counted = ['erp_auth.users', 'erp_core.workspace_settings', 'erp_core.funnels', 'erp_core.leads', 'erp_core.records', 'erp_whatsapp.contacts'];
 

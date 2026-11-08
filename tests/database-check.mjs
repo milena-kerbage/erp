@@ -50,14 +50,14 @@ try {
   console.log('OK: banco vazio é reportado sem alterar nada e sem expor a conexão');
 
   await engine.exec('CREATE ROLE anon; CREATE ROLE authenticated;');
-  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql']) {
+  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql', '008_loja_avaliacoes.sql']) {
     await engine.exec(readFileSync(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
   }
   const migrated = await run();
   assert.equal(migrated.status, 0, migrated.output);
-  for (const schema of ['erp_auth: 12/12', 'erp_whatsapp: 15/15', 'erp_meta: 1/1', 'erp_core: 7/7', 'RLS habilitado em 35/35', 'anon e authenticated sem USAGE', 'nenhuma concessão']) assert.ok(migrated.output.includes(schema), `esperava "${schema}" em:\n${migrated.output}`);
+  for (const schema of ['erp_auth: 12/12', 'erp_whatsapp: 15/15', 'erp_meta: 1/1', 'erp_core: 9/9', 'RLS habilitado em 37/37', 'anon e authenticated sem USAGE', 'nenhuma concessão']) assert.ok(migrated.output.includes(schema), `esperava "${schema}" em:\n${migrated.output}`);
   assert.match(migrated.output, /erp_core\.records: 0 registro/);
-  console.log('OK: esquemas, RLS e privilégios verificados nas sete migrações');
+  console.log('OK: esquemas, RLS e privilégios verificados nas oito migrações');
 
   const unconfirmed = await run(['--write-test']);
   assert.equal(unconfirmed.status, 1);

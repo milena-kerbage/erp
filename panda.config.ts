@@ -76,6 +76,11 @@ export default defineConfig({
         // Edição do mês (lululemon-animacoes-edicao.md §1): parallax leve da mídia dos blocos
         // editoriais, ligado à rolagem (animation-timeline). A mídia é 16% mais alta que o bloco.
         parallaxBloco: { from: { transform: "translateY(-6%)" }, to: { transform: "translateY(6%)" } },
+        // Transição de página da loja (TransicaoPagina): o conteúdo antigo some e o novo entra subindo
+        // 8 px. Com movimento reduzido, só a opacidade.
+        sairPagina: { from: { opacity: "1" }, to: { opacity: "0" } },
+        entrarPagina: { from: { opacity: "0", transform: "translateY(8px)" }, to: { opacity: "1", transform: "none" } },
+        aparecerPagina: { from: { opacity: "0" }, to: { opacity: "1" } },
       },
       tokens: {
         // Escala de títulos da referência (lululemon-referencia.md §5.7) que não existe no preset.
@@ -177,6 +182,9 @@ export default defineConfig({
           controle: { value: "125ms" }, // botões sobre a galeria (opacidade)
           aparecer: { value: "250ms" }, // pílula fixa, setas do card e rótulo "Ver"
           modal: { value: "125ms" }, // diálogo central: fade-in-up de 50 px (lululemon-animacoes-edicao.md §1)
+          // Transição de página: o antigo sai em 180 ms e o novo entra em 360 ms, 100 ms depois.
+          saidaPagina: { value: "180ms" },
+          entradaPagina: { value: "360ms" },
         },
         easings: {
           padrao: { value: "cubic-bezier(0.2, 0, 0, 1)" },
@@ -218,6 +226,11 @@ export default defineConfig({
           gavetaSacola: { value: "entrarDireita 500ms cubic-bezier(0.5, 0, 0, 1)" },
           veuSacola: { value: "escurecer 500ms cubic-bezier(0.5, 0, 0, 1)" },
           pulsar: { value: "pulsar 1.6s ease-in-out infinite" },
+          // Transição de página (View Transitions e o fallback sem a API), no easing da assinatura.
+          sairPagina: { value: "sairPagina 180ms cubic-bezier(0.5, 0, 0, 1) both" },
+          entrarPagina: { value: "entrarPagina 360ms cubic-bezier(0.5, 0, 0, 1) 100ms both" },
+          sairPaginaReduzida: { value: "sairPagina 100ms linear both" },
+          aparecerPagina: { value: "aparecerPagina 150ms linear both" },
         },
         shadows: {
           suave: { value: "0 1px 3px rgba(29, 31, 27, 0.08), 0 1px 2px rgba(29, 31, 27, 0.04)" },
@@ -332,6 +345,31 @@ export default defineConfig({
     "::selection": { bg: "marcaSuave", color: "escuro" },
     "@media (prefers-reduced-motion: reduce)": {
       "*, *::before, *::after": { animationDuration: "0.01ms !important", transitionDuration: "0.01ms !important" },
+      // Transição de página sem deslocamento: só um fade curto.
+      "::view-transition-old(.loja-sai)": { animation: "sairPaginaReduzida" },
+      "::view-transition-new(.loja-entra)": { animation: "aparecerPagina" },
     },
+    // Transição de página (src/loja/componentes/layout/TransicaoPagina.tsx). O React aplica as classes
+    // loja-sai/loja-entra ao conteúdo que sai e ao que entra; o resto da página (raiz: faixa e rodapé)
+    // troca na hora, sem cross-fade, e o cabeçalho e as gavetas abertas ficam parados por cima.
+    // Cliques durante a animação vão para a página nova (o overlay não captura o ponteiro).
+    "::view-transition": { pointerEvents: "none" },
+    "::view-transition-group(root)": { animation: "none" },
+    "::view-transition-old(root)": { display: "none" },
+    "::view-transition-new(root)": { animation: "none" },
+    "::view-transition-old(.loja-sai)": { animation: "sairPagina" },
+    "::view-transition-new(.loja-entra)": { animation: "entrarPagina" },
+    "::view-transition-group(loja-cabecalho)": { animation: "none", zIndex: "1" },
+    "::view-transition-old(loja-cabecalho)": { display: "none" },
+    "::view-transition-new(loja-cabecalho)": { animation: "none" },
+    "::view-transition-group(*.loja-dialogo)": { animation: "none", zIndex: "2" },
+    "::view-transition-old(*.loja-dialogo)": { display: "none" },
+    "::view-transition-new(*.loja-dialogo)": { animation: "none" },
+    // Sem a API (navegadores antigos): o conteúdo novo só entra com o mesmo fade + 8 px ao remontar.
+    "@supports not (view-transition-name: none)": {
+      "[data-transicao-pagina][data-entrando]": { animation: "entrarPagina" },
+    },
+    // O foco vai para o título (ou o conteúdo) da página nova: sem anel nesse foco programático.
+    "[data-transicao-pagina]:focus, [data-transicao-pagina] h1[tabindex='-1']:focus": { outline: "none" },
   },
 });

@@ -4,10 +4,13 @@ import { type ReactNode, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
+import { produtoDoProjeto } from "@/loja/lib/carrinho/linhas";
 import { centavos } from "@/loja/lib/carrinho/totais";
+import { buscarProjeto, OPCIONAIS, PACOTES, pacoteValido } from "@/loja/lib/casas/catalogo";
 import { Dialogo } from "./Dialogo";
 import { type ItemCarrinho, type Personalizacao, ROTULO_PERSONALIZACAO } from "./estado";
 import { botaoEscuro, largo, opcaoPilula } from "./estilos";
+import { FotoItem } from "./FotoItem";
 import { Quantidade, situacaoDe } from "./ItemSacola";
 import { reais } from "./Resumo";
 
@@ -25,6 +28,21 @@ export function personalizacaoPadrao(produto: ProdutoCarrinho): Personalizacao |
 // Montado só enquanto há um alvo (a página usa `key` para recomeçar a cada abertura). Fechar (Esc,
 // véu, X ou depois de salvar) passa pelo close() do <dialog>, que devolve o foco a quem abriu.
 export function PainelEditar({
+  alvo,
+  porSlug,
+  aoFechar,
+  aoSalvar,
+}: {
+  alvo: AlvoEdicao;
+  porSlug: Map<string, ProdutoCarrinho>;
+  aoFechar: () => void;
+  aoSalvar: (alvo: AlvoEdicao, novo: ItemCarrinho) => void;
+}) {
+  if (alvo.item.tipo === "projeto") return <EditarProjeto alvo={alvo} aoFechar={aoFechar} aoSalvar={aoSalvar} />;
+  return <EditarProduto alvo={alvo} porSlug={porSlug} aoFechar={aoFechar} aoSalvar={aoSalvar} />;
+}
+
+function EditarProduto({
   alvo,
   porSlug,
   aoFechar,
@@ -88,7 +106,7 @@ export function PainelEditar({
       <div className={css({ display: "grid", gridTemplateColumns: "[120px minmax(0, 1fr)]", gap: "4", alignItems: "start" })}>
         <FotoProduto foto={produto.foto} sizes="120px" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
         <div className={css({ display: "grid", gap: "2" })}>
-          <p className={css({ fontSize: "xs", lineHeight: "texto", color: "textoSuave" })}>{situacaoDe(produto, { slug, quantidade, personalizacao })}</p>
+          <p className={css({ fontSize: "xs", lineHeight: "texto", color: "textoSuave" })}>{situacaoDe(produto, { personalizacao })}</p>
           <p className={css({ fontSize: "md", lineHeight: "texto", color: "escuro" })}>{produto.nome}</p>
           <p className={css({ fontSize: "sm", color: "escuro" })}>
             <span className={css({ fontSize: "xs", color: "textoSuave" })}>a partir de </span>
@@ -136,6 +154,96 @@ export function PainelEditar({
                 {ROTULO_PERSONALIZACAO[opcao]}
               </button>
             ))}
+          </Grupo>
+        )}
+
+        <div>
+          <p className={rotuloGrupo}>Quantidade</p>
+          <Quantidade quantidade={quantidade} nome={produto.nome} aoMudar={setQuantidade} />
+        </div>
+      </div>
+    </Dialogo>
+  );
+}
+
+// Projeto de quarto: troca o pacote, liga e desliga os opcionais e muda a quantidade, com o "a partir
+// de" atualizado na hora (mesmos controles e medidas da edição de peça).
+function EditarProjeto({
+  alvo,
+  aoFechar,
+  aoSalvar,
+}: {
+  alvo: AlvoEdicao;
+  aoFechar: () => void;
+  aoSalvar: (alvo: AlvoEdicao, novo: ItemCarrinho) => void;
+}) {
+  const [aberto, setAberto] = useState(true);
+  const [pacote, setPacote] = useState(pacoteValido(alvo.item.pacote));
+  const [opcionais, setOpcionais] = useState<string[]>(alvo.item.opcionais ?? []);
+  const [quantidade, setQuantidade] = useState(alvo.item.quantidade);
+  const projeto = buscarProjeto(alvo.item.slug);
+  const novo: ItemCarrinho = { tipo: "projeto", slug: alvo.item.slug, pacote, opcionais, quantidade };
+  const produto = produtoDoProjeto(novo);
+  if (!projeto || !produto) return null;
+  const disponiveis = OPCIONAIS.filter((opcional) => projeto.opcionais.includes(opcional.id));
+  const itensPacote = PACOTES.find((atual) => atual.nome === pacote)?.itens ?? [];
+
+  return (
+    <Dialogo
+      aberto={aberto}
+      aoFechar={aoFechar}
+      titulo="Editar projeto"
+      variante="gaveta"
+      rodape={
+        <button
+          type="button"
+          onClick={() => {
+            aoSalvar(alvo, novo);
+            setAberto(false);
+          }}
+          className={cx(botaoEscuro, largo)}
+        >
+          Salvar alterações
+        </button>
+      }
+    >
+      <div className={css({ display: "grid", gridTemplateColumns: "[120px minmax(0, 1fr)]", gap: "4", alignItems: "start" })}>
+        <FotoItem produto={produto} sizes="120px" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
+        <div className={css({ display: "grid", gap: "2" })}>
+          <p className={css({ fontSize: "xs", lineHeight: "texto", color: "textoSuave" })}>{situacaoDe(produto)}</p>
+          <p className={css({ fontSize: "md", lineHeight: "texto", color: "escuro" })}>{produto.nome}</p>
+          <p aria-live="polite" className={css({ fontSize: "sm", color: "escuro" })}>
+            <span className={css({ fontSize: "xs", color: "textoSuave" })}>a partir de </span>
+            {reais(centavos(produto.preco) * quantidade)}
+          </p>
+        </div>
+      </div>
+
+      <div className={css({ display: "grid", gap: "8", mt: "8" })}>
+        <Grupo titulo="Pacote" valor={pacote} apoio={`Inclui: ${itensPacote.join("; ")}.`}>
+          {PACOTES.map((opcao) => (
+            <button key={opcao.nome} type="button" aria-pressed={pacote === opcao.nome} onClick={() => setPacote(opcao.nome)} className={opcaoPilula}>
+              {opcao.nome}
+            </button>
+          ))}
+        </Grupo>
+
+        {disponiveis.length > 0 && (
+          <Grupo titulo="Opcionais" valor={opcionais.length > 0 ? `${opcionais.length} ${opcionais.length === 1 ? "escolhido" : "escolhidos"}` : undefined}>
+            {disponiveis.map((opcional) => {
+              const ligado = opcionais.includes(opcional.id);
+              return (
+                <button
+                  key={opcional.id}
+                  type="button"
+                  aria-pressed={ligado}
+                  onClick={() => setOpcionais((atuais) => (ligado ? atuais.filter((id) => id !== opcional.id) : [...atuais, opcional.id]))}
+                  className={opcaoPilula}
+                >
+                  {opcional.curto} · + {reais(opcional.preco * 100)}
+                </button>
+              );
+            })}
           </Grupo>
         )}
 

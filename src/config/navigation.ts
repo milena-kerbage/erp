@@ -12,6 +12,7 @@ import {
   SealCheckIcon,
   SparkleIcon,
   SquaresFourIcon,
+  StarIcon,
   ToggleLeftIcon,
   UserFocusIcon,
   UsersIcon,
@@ -84,6 +85,7 @@ export const navigation = {
       href: "/catalogo",
       icon: BookOpenTextIcon,
     },
+    { label: "Avaliações", href: "/avaliacoes", icon: StarIcon },
     {
       label: "Produção",
       href: "/producao",

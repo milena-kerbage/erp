@@ -14,6 +14,7 @@ export { Barcode } from "@phosphor-icons/react/dist/ssr/Barcode";
 export { Bathtub } from "@phosphor-icons/react/dist/ssr/Bathtub";
 export { Bed } from "@phosphor-icons/react/dist/ssr/Bed";
 export { Calculator } from "@phosphor-icons/react/dist/ssr/Calculator";
+export { Camera } from "@phosphor-icons/react/dist/ssr/Camera";
 export { CalendarBlank } from "@phosphor-icons/react/dist/ssr/CalendarBlank";
 export { Car } from "@phosphor-icons/react/dist/ssr/Car";
 export { CaretDown } from "@phosphor-icons/react/dist/ssr/CaretDown";

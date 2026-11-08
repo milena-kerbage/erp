@@ -41,14 +41,18 @@ export function validarCupom(codigo: string, subtotalCentavos: number): Resultad
 // O frete e o prazo de entrega são combinados com o ateliê na conversa; aqui não há cálculo de frete.
 
 // Prazo de produção do pedido: pronta entrega sai do ateliê em até 2 dias úteis; peça sob
-// encomenda (costura e bordado) leva de 15 a 25 dias úteis. O pedido sai inteiro, então vale o da
-// peça mais demorada. [CONFIRMAR] prazos com o ateliê.
+// encomenda (costura e bordado) leva de 15 a 25 dias úteis; projeto de quarto (pronto ou montado no
+// "Monte o seu") leva de 20 a 35. O pedido sai inteiro, então vale o da peça mais demorada.
+// [CONFIRMAR] prazos com o ateliê.
 export type Prazo = { min: number; max: number };
 export const PRODUCAO_PRONTA: Prazo = { min: 1, max: 2 };
 export const PRODUCAO_ENCOMENDA: Prazo = { min: 15, max: 25 };
+export const PRODUCAO_PROJETO: Prazo = { min: 20, max: 35 };
 
-export function prazoDeProducao(itens: { prontaEntrega: boolean }[]): Prazo {
-  return itens.every((item) => item.prontaEntrega) ? PRODUCAO_PRONTA : PRODUCAO_ENCOMENDA;
+export function prazoDeProducao(itens: { prontaEntrega: boolean; producao?: Prazo }[]): Prazo {
+  return itens
+    .map((item) => item.producao ?? (item.prontaEntrega ? PRODUCAO_PRONTA : PRODUCAO_ENCOMENDA))
+    .reduce((maior, prazo) => (prazo.max > maior.max || (prazo.max === maior.max && prazo.min > maior.min) ? prazo : maior), PRODUCAO_PRONTA);
 }
 
 export function textoPrazo({ min, max }: Prazo): string {

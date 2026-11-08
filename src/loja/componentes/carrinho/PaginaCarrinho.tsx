@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { ArrowsClockwise, ChatsCircle, Tag, Truck, WhatsappLogo } from "@/loja/componentes/icones";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
+import { resolverItem } from "@/loja/lib/carrinho/linhas";
 import {
   CUPONS,
   calcularTotais,
   DESCONTO_PIX_PERCENTUAL,
   MAX_PARCELAS,
   PARCELA_MINIMA_CENTAVOS,
+  PRODUCAO_ENCOMENDA,
   PRODUCAO_PRONTA,
+  PRODUCAO_PROJETO,
   prazoDeProducao,
   textoPrazo,
 } from "@/loja/lib/carrinho/totais";
@@ -24,7 +28,9 @@ import {
   adicionarAoCarrinho,
   alterarQuantidade,
   atualizarItem,
+  chaveItem,
   type ItemCarrinho,
+  migrarSelecaoAntiga,
   type PreferenciasCompra,
   removerDoCarrinho,
   restaurarNoCarrinho,
@@ -36,6 +42,7 @@ import {
   usePreferenciasCompra,
 } from "./estado";
 import { botaoContorno, botaoEscuro, largo, linkAcao, tituloBloco, tituloPagina } from "./estilos";
+import { FotoItem } from "./FotoItem";
 import { atributosDe, ItemSacola } from "./ItemSacola";
 import { type AlvoEdicao, PainelEditar, personalizacaoPadrao } from "./PainelEditar";
 import { reais, SeletorCupom } from "./Resumo";
@@ -46,13 +53,12 @@ type Remocao = { item: ItemCarrinho; produto: ProdutoCarrinho };
 
 // Contas da sacola (pura): linhas, cupom e totais "a partir de". A loja é um catálogo
 // com preço e o pedido segue pelo WhatsApp: frete e prazo de entrega são combinados com o ateliê,
-// então não entram aqui; o prazo de PRODUÇÃO (pronta entrega x sob encomenda) continua.
+// então não entram aqui; o prazo de PRODUÇÃO (pronta entrega x sob encomenda x projeto) continua.
+// Produtos, projetos de quarto e o quartinho personalizado ficam na mesma sacola (resolverItem).
 function calcular(itens: ItemCarrinho[], porSlug: Map<string, ProdutoCarrinho>, preferencias: PreferenciasCompra) {
-  const linhas = itens.flatMap((item) => {
-    const produto = porSlug.get(item.slug);
-    return produto ? [{ item, produto }] : [];
-  });
-  const indisponiveis = itens.filter((item) => !porSlug.has(item.slug));
+  const resolvidos = itens.map((item) => ({ item, produto: resolverItem(item, porSlug) }));
+  const linhas = resolvidos.flatMap(({ item, produto }) => (produto ? [{ item, produto }] : []));
+  const indisponiveis = resolvidos.flatMap(({ item, produto }) => (produto ? [] : [item]));
   const precos = linhas.map(({ item, produto }) => ({ preco: produto.preco, quantidade: item.quantidade }));
   const cupom = CUPONS.find((item) => item.codigo === preferencias.cupom);
   const totais = calcularTotais(precos, cupom);
@@ -81,15 +87,18 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
   const [anuncio, setAnuncio] = useState("");
   const temporizador = useRef<number | undefined>(undefined);
   const titulo = useRef<HTMLHeadingElement>(null);
+  const router = useRouter();
 
   useEffect(() => () => window.clearTimeout(temporizador.current), []);
+  // Projetos da antiga "seleção de projetos" (mk_projetos) entram na sacola na primeira visita.
+  useEffect(() => migrarSelecaoAntiga(), []);
 
   if (itens === null) return <Esqueleto />;
 
   const conta = calcular(itens, porSlug, preferencias);
   const { linhas, totais, cupom } = conta;
   const vazia = linhas.length === 0;
-  const noCarrinho = new Set(linhas.map(({ item }) => item.slug));
+  const noCarrinho = new Set(linhas.flatMap(({ item, produto }) => (produto.tipo ? [] : [item.slug])));
   const salvos = favoritos.filter((slug) => !noCarrinho.has(slug)).flatMap((slug) => porSlug.get(slug) ?? []);
   const escolher = (slugs: string[], fora: Set<string>, quantidade: number) =>
     [...new Set(slugs)]
@@ -145,7 +154,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
   }
 
   function salvarEdicao(alvo: AlvoEdicao, novo: ItemCarrinho) {
-    const nome = porSlug.get(novo.slug)?.nome ?? "Item";
+    const nome = resolverItem(novo, porSlug)?.nome ?? "Item";
     if (alvo.modo === "mover") {
       adicionarAoCarrinho(novo);
       tirarDosFavoritos(alvo.item.slug);
@@ -156,11 +165,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
     }
     // Mudou a linha (outra cor, tamanho ou bordado) ou o favorito saiu da lista: o botão que abriu o
     // painel não existe mais, então o foco vai para o título (depois do close() do diálogo).
-    const mesmaLinha =
-      alvo.modo === "editar" &&
-      alvo.item.slug === novo.slug &&
-      alvo.item.variacao === novo.variacao &&
-      alvo.item.personalizacao === novo.personalizacao;
+    const mesmaLinha = alvo.modo === "editar" && chaveItem(alvo.item) === chaveItem(novo);
     if (!mesmaLinha) window.setTimeout(() => titulo.current?.focus({ preventScroll: true }), 50);
   }
 
@@ -228,13 +233,14 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
               <ul aria-label="Itens da sacola">
                 {linhas.map(({ item, produto }) => (
                   <ItemSacola
-                    key={`${item.slug}-${item.variacao ?? ""}-${item.personalizacao ?? ""}`}
+                    key={chaveItem(item)}
                     item={item}
                     produto={produto}
                     aoMudarQuantidade={(quantidade) => mudarQuantidade(item, produto.nome, quantidade)}
                     aoRemover={() => setRemocao({ item, produto })}
-                    aoEditar={() => setEdicao({ modo: "editar", item })}
-                    aoSalvar={() => salvarParaDepois(item, produto.nome)}
+                    // O quartinho personalizado volta ao montador com as escolhas; o resto edita na gaveta.
+                    aoEditar={() => (produto.tipo === "personalizado" && produto.href ? router.push(produto.href) : setEdicao({ modo: "editar", item }))}
+                    aoSalvar={produto.tipo ? undefined : () => salvarParaDepois(item, produto.nome)}
                   />
                 ))}
               </ul>
@@ -283,7 +289,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
         {remocao && (
           <>
             <div className={css({ display: "flex", gap: "4", alignItems: "flex-start" })}>
-              <FotoProduto foto={remocao.produto.foto} sizes="80px" className={css({ w: "20", aspectRatio: "[5 / 6]" })} />
+              <FotoItem produto={remocao.produto} sizes="80px" className={css({ w: "20", aspectRatio: "[5 / 6]" })} />
               <div className={css({ minW: "0", fontSize: "sm", lineHeight: "texto" })}>
                 <p className={css({ color: "escuro" })}>{remocao.produto.nome}</p>
                 {atributosDe(remocao.produto, remocao.item).map((linha) => (
@@ -304,26 +310,28 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
             >
               Remover
             </button>
-            <div className={css({ mt: "4", textAlign: "center" })}>
-              <button
-                type="button"
-                onClick={() => {
-                  const alvo = remocao;
-                  setRemocao(null);
-                  salvarParaDepois(alvo.item, alvo.produto.nome);
-                }}
-                className={linkAcao}
-              >
-                Salvar nos favoritos
-              </button>
-            </div>
+            {!remocao.produto.tipo && (
+              <div className={css({ mt: "4", textAlign: "center" })}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const alvo = remocao;
+                    setRemocao(null);
+                    salvarParaDepois(alvo.item, alvo.produto.nome);
+                  }}
+                  className={linkAcao}
+                >
+                  Salvar nos favoritos
+                </button>
+              </div>
+            )}
           </>
         )}
       </Dialogo>
 
       {edicao && (
         <PainelEditar
-          key={`${edicao.modo}-${edicao.item.slug}-${edicao.item.variacao ?? ""}-${edicao.item.personalizacao ?? ""}`}
+          key={`${edicao.modo}-${chaveItem(edicao.item)}`}
           alvo={edicao}
           porSlug={porSlug}
           aoFechar={() => setEdicao(null)}
@@ -410,8 +418,8 @@ function ResumoSacola({ conta }: { conta: Conta }) {
               Produção{" "}
               <DicaInfo rotulo="Como funciona o prazo de produção">
                 Peças a pronta entrega saem do ateliê em até {textoPrazo(PRODUCAO_PRONTA)}; as feitas sob encomenda (costura e
-                bordado) levam de 15 a 25 dias úteis. O pedido sai inteiro, então vale o prazo da peça mais demorada. O prazo de
-                entrega é combinado pelo WhatsApp.
+                bordado) levam de {textoPrazo(PRODUCAO_ENCOMENDA)}, e os projetos de quarto, de {textoPrazo(PRODUCAO_PROJETO)}. O
+                pedido sai inteiro, então vale o prazo da peça mais demorada. O prazo de entrega é combinado pelo WhatsApp.
               </DicaInfo>
             </>
           }
@@ -462,7 +470,11 @@ function ResumoSacola({ conta }: { conta: Conta }) {
         <Link href="/projetos" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
           Conheça os Projetos
         </Link>{" "}
-        do ateliê.
+        ou{" "}
+        <Link href="/projetos/monte-o-seu" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
+          monte o seu quartinho
+        </Link>
+        .
       </p>
     </aside>
   );

@@ -1,145 +1,116 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { css, cx } from "styled-system/css";
-import { adicionarAoCarrinho } from "@/loja/componentes/carrinho/estado";
-import { Imagem } from "@/loja/componentes/inicio/blocos";
-import { dataCurta, diaPorExtenso, type Pedido, type Status, situacao, type Tom } from "@/loja/lib/pedidos/status";
+import { botaoContorno, botaoEscuro, linkAcao } from "@/loja/componentes/carrinho/estilos";
+import { WhatsappLogo } from "@/loja/componentes/icones";
+import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
+import { decimal } from "@/loja/lib/carrinho/totais";
+import type { Foto } from "@/loja/lib/catalogo/fotos";
+import { linkWhatsApp } from "@/loja/lib/checkout/pedido";
+import { EMPRESA } from "@/loja/lib/empresa";
+import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { dataDoEnvio, mensagemDeReenvio, type PedidoEnviado, quantidadeDePecas } from "@/loja/lib/pedidos/historico";
 
-// Selo da situação do pedido: cor pelo tom (atenção = laranja da ação, sucesso = verde).
-export function SeloStatus({ status }: { status: Status }) {
-  const { rotulo, tom } = situacao(status);
+// Peças comuns de "Minha conta neste aparelho": card do pedido enviado, botão de reenvio, miniaturas
+// e o esqueleto de carregamento (os dados vêm do navegador, depois de montar).
+
+export type FotosPorSlug = Record<string, Foto | undefined>;
+
+export const reais = (valorCentavos: number) => formatarPreco(decimal(valorCentavos));
+
+export const contagemPecas = (quantidade: number) => `${quantidade} ${quantidade === 1 ? "peça" : "peças"}`;
+
+// Abre o WhatsApp do ateliê com a mesma mensagem do pedido (e uma linha avisando que é reenvio).
+export function BotaoReenviar({ pedido, contorno = false, className }: { pedido: PedidoEnviado; contorno?: boolean; className?: string }) {
   return (
-    <span data-tom={tom} className={selo}>
-      <span aria-hidden className={css({ w: "2", h: "2", borderRadius: "full", bg: "currentColor" })} />
-      {rotulo}
-    </span>
+    <a
+      href={linkWhatsApp(EMPRESA.whatsapp.numero, mensagemDeReenvio(pedido))}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cx(contorno ? botaoContorno : botaoEscuro, className)}
+    >
+      <WhatsappLogo size={18} aria-hidden /> Reenviar no WhatsApp
+      <span className={css({ srOnly: true })}> o pedido {pedido.numero} (abre em nova aba)</span>
+    </a>
   );
 }
 
-// Até 4 miniaturas coladas; o resto vira "+N".
-export function Miniaturas({ itens, tamanho = "16" }: { itens: Pedido["itens"]; tamanho?: "12" | "16" }) {
-  const visiveis = itens.slice(0, 4);
-  const resto = itens.length - visiveis.length;
+// Até 4 fotos pequenas; o resto vira "+N".
+export function Miniaturas({ pedido, fotos }: { pedido: PedidoEnviado; fotos: FotosPorSlug }) {
+  const visiveis = pedido.itens.slice(0, 4);
+  const resto = pedido.itens.length - visiveis.length;
   return (
     <ul aria-hidden className={css({ display: "flex", gap: "2" })}>
-      {visiveis.map((item) => (
-        <li key={`${item.slug}-${item.variacao ?? ""}`} className={css({ position: "relative" })}>
-          <Imagem
-            tom="claro"
-            className={cx(css({ borderRadius: "sm" }), tamanho === "16" ? css({ w: "16", h: "16" }) : css({ w: "12", h: "12" }))}
-          />
-          <span className={contador}>{item.quantidade}</span>
+      {visiveis.map((item, indice) => (
+        <li key={`${item.slug ?? item.nome}-${indice}`} className={css({ w: "14", flexShrink: "0" })}>
+          <FotoProduto foto={item.slug ? fotos[item.slug] : undefined} sizes="56px" className={css({ aspectRatio: "[5 / 6]", borderRadius: "sm" })} />
         </li>
       ))}
-      {resto > 0 && <li className={cx(maisItens, tamanho === "16" ? css({ w: "16", h: "16" }) : css({ w: "12", h: "12" }))}>+{resto}</li>}
+      {resto > 0 && (
+        <li className={maisItens}>
+          +{resto}
+        </li>
+      )}
     </ul>
   );
 }
 
-export function BarraProgresso({ valor, tom }: { valor: number; tom: Tom }) {
+// Card da lista: data, número, miniaturas, total "a partir de" e as ações.
+export function CardPedido({ pedido, fotos, titulo: Titulo = "h2" }: { pedido: PedidoEnviado; fotos: FotosPorSlug; titulo?: "h2" | "h3" }) {
+  const href = `/conta/pedidos/${pedido.numero}`;
   return (
-    <div aria-hidden className={css({ h: "1", borderRadius: "full", bg: "superficieSuave", overflow: "hidden" })}>
-      <div data-tom={tom} className={preenchimento} style={{ width: `${Math.round(valor * 100)}%` }} />
+    <article aria-labelledby={`pedido-${pedido.numero}`} className={card}>
+      <div className={css({ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", gap: "2" })}>
+        <Titulo id={`pedido-${pedido.numero}`} className={css({ fontSize: "lg", fontWeight: "medium", color: "escuro" })}>
+          Enviado em {dataDoEnvio(pedido.enviadoEm)}
+        </Titulo>
+        <p className={css({ fontSize: "sm", color: "textoSuave" })}>{pedido.numero}</p>
+      </div>
+      <div className={css({ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "4", mt: "4" })}>
+        <Miniaturas pedido={pedido} fotos={fotos} />
+        <p className={css({ fontSize: "sm", color: "texto", textAlign: { md: "right" } })}>
+          {contagemPecas(quantidadeDePecas(pedido))} · {pedido.retirar ? "Retirada no ateliê" : "Entrega a combinar"}
+          <span className={css({ display: "block", color: "escuro" })}>
+            <span className={css({ fontSize: "xs", color: "textoSuave" })}>a partir de </span>
+            <span className={css({ fontSize: "md", fontWeight: "medium" })}>{reais(pedido.totalCentavos)}</span>
+          </span>
+        </p>
+      </div>
+      <div className={css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4", mt: "5" })}>
+        <BotaoReenviar pedido={pedido} contorno />
+        <Link href={href} className={linkAcao}>
+          Ver detalhes <span className={css({ srOnly: true })}>do pedido {pedido.numero}</span>
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+export function EsqueletoConta({ blocos = 2 }: { blocos?: number }) {
+  return (
+    <div aria-busy="true" aria-label="Carregando" className={css({ display: "grid", gap: "4" })}>
+      {Array.from({ length: blocos }, (_, indice) => (
+        <div key={indice} className={css({ h: "[180px]", borderRadius: "cartao", bg: "placeholder", animation: "pulsar" })} />
+      ))}
     </div>
   );
 }
 
-// Frase principal do pedido ("Chega quinta, 5 de nov.", "Entregue em 19 out 2026"…).
-export function mensagemPrincipal(pedido: Pedido): string {
-  const ultimo = (status: Status) => pedido.historico.findLast((evento) => evento.status === status)?.em;
-  switch (pedido.status) {
-    case "aguardando_pagamento":
-      return pedido.pagamento.forma === "pix" ? "Pague o Pix para confirmar o pedido" : "Pagamento em análise";
-    case "entregue":
-      return `Entregue em ${dataCurta(ultimo("entregue") ?? pedido.criadoEm)}`;
-    case "retirado":
-      return `Retirado em ${dataCurta(ultimo("retirado") ?? pedido.criadoEm)}`;
-    case "cancelado":
-      return `Cancelado em ${dataCurta(ultimo("cancelado") ?? pedido.criadoEm)}`;
-    case "pronto_para_retirada":
-      return pedido.entrega.tipo === "retirada" && pedido.entrega.retiraAte
-        ? `Pronto para retirar até ${diaPorExtenso(pedido.entrega.retiraAte)}`
-        : "Pronto para retirar";
-    case "saiu_para_entrega":
-      return "Chega hoje";
-    case "em_separacao":
-      return pedido.entrega.tipo === "retirada"
-        ? `Em produção no ateliê · pronto a partir de ${diaPorExtenso(pedido.entrega.previsao)}`
-        : `Em produção no ateliê · chega até ${diaPorExtenso(pedido.entrega.previsao)}`;
-    default:
-      if (pedido.entrega.tipo === "endereco" && pedido.entrega.agendamento)
-        return `Entrega agendada para ${diaPorExtenso(pedido.entrega.agendamento.data)}, ${pedido.entrega.agendamento.periodo}`;
-      return pedido.entrega.tipo === "retirada"
-        ? `Pronto para retirar a partir de ${diaPorExtenso(pedido.entrega.previsao)}`
-        : `Chega até ${diaPorExtenso(pedido.entrega.previsao)}`;
-  }
-}
-
-// "Comprar de novo": põe os itens no carrinho e avisa com link para ele.
-export function comprarDeNovo(itens: Pedido["itens"]) {
-  for (const item of itens) adicionarAoCarrinho({ slug: item.slug, variacao: item.variacao, quantidade: item.quantidade });
-}
-
-// Hora atual só depois de montar (evita diferença entre o HTML do servidor e o navegador) e
-// atualizada a cada `intervalo` ms (contagem do Pix).
-export function useAgora(intervalo = 0): number | null {
-  const [agora, setAgora] = useState<number | null>(null);
-  useEffect(() => {
-    setAgora(Date.now());
-    if (!intervalo) return;
-    const id = window.setInterval(() => setAgora(Date.now()), intervalo);
-    return () => window.clearInterval(id);
-  }, [intervalo]);
-  return agora;
-}
-
-const selo = css({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "1.5",
-  h: "7",
-  px: "3",
-  borderRadius: "full",
-  fontSize: "sm",
-  fontWeight: "semibold",
-  whiteSpace: "nowrap",
-  "&[data-tom=atencao]": { bg: "alertaSuave", color: "alerta" },
-  "&[data-tom=andamento]": { bg: "linkSuave", color: "link" },
-  "&[data-tom=sucesso]": { bg: "sucessoSuave", color: "sucesso" },
-  "&[data-tom=neutro]": { bg: "superficieSuave", color: "textoSuave" },
-});
-
-const preenchimento = css({
-  h: "full",
-  borderRadius: "full",
-  "&[data-tom=atencao]": { bg: "alerta" },
-  "&[data-tom=andamento]": { bg: "link" },
-  "&[data-tom=sucesso]": { bg: "sucesso" },
-  "&[data-tom=neutro]": { bg: "textoSuave" },
-});
-
-const contador = css({
-  position: "absolute",
-  top: "[-6px]",
-  right: "[-6px]",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minW: "5",
-  h: "5",
-  px: "1",
-  borderRadius: "full",
-  bg: "escuro",
-  color: "fundo",
-  fontSize: "2xs",
-  fontWeight: "bold",
+const card = css({
+  p: { base: "4", md: "6" },
+  borderWidth: "1px",
+  borderColor: "borda",
+  borderRadius: "cartao",
+  bg: "superficie",
 });
 
 const maisItens = css({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  w: "14",
+  aspectRatio: "[5 / 6]",
   borderRadius: "sm",
   bg: "superficieSuave",
   fontSize: "sm",

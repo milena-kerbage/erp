@@ -3,6 +3,7 @@ import Link from "next/link";
 import { css } from "styled-system/css";
 import { AcoesCompra } from "@/loja/componentes/compra/AcoesCompra";
 import { RodapeCompra } from "@/loja/componentes/compra/RodapeCompra";
+import { TransicaoPagina } from "@/loja/componentes/layout/TransicaoPagina";
 import { EMPRESA } from "@/loja/lib/empresa";
 
 // Grupo (compra): sacola e checkout sem distrações (lululemon-sacola.md §1): cabeçalho MÍNIMO de
@@ -12,7 +13,8 @@ import { EMPRESA } from "@/loja/lib/empresa";
 export default function LayoutCompra({ children }: LayoutProps<"/loja">) {
   return (
     <div className={css({ minH: "dvh", display: "flex", flexDirection: "column", bg: "fundo" })}>
-      <header className={css({ borderBottomWidth: "1px", borderColor: "borda", bg: "fundo" })}>
+      {/* Mesmo nome de transição do cabeçalho da loja: fica parado na troca de página. */}
+      <header className={css({ borderBottomWidth: "1px", borderColor: "borda", bg: "fundo", viewTransitionName: "loja-cabecalho" })}>
         <div className={barra}>
           <Link href="/" aria-label={`${EMPRESA.nomeFantasia}, página inicial`} className={logo}>
             <Image
@@ -28,7 +30,7 @@ export default function LayoutCompra({ children }: LayoutProps<"/loja">) {
         </div>
       </header>
       <main id="conteudo" className={css({ flex: "1" })}>
-        {children}
+        <TransicaoPagina>{children}</TransicaoPagina>
       </main>
       <RodapeCompra />
     </div>

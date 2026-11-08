@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { css } from "styled-system/css";
 import { Avaliacoes } from "@/loja/componentes/produto/Avaliacoes";
-import { abasDe, coresDe, destaquesDe, dividirNome, fotosDoProduto, linhaDe, partesDaOpcao, usoDe } from "@/loja/componentes/produto/dados";
+import { abasDe, coresDe, destaquesDe, dividirNome, fotosDoProduto, linhaDe, usoDe } from "@/loja/componentes/produto/dados";
 import { Destaques } from "@/loja/componentes/produto/Destaques";
 import { Galeria } from "@/loja/componentes/produto/Galeria";
 import { GavetaDetalhes } from "@/loja/componentes/produto/GavetaDetalhes";
@@ -13,6 +13,7 @@ import { JsonLd } from "@/loja/componentes/seo/JsonLd";
 import { buscarProduto, buscarVarios, condicoesDePagamento, listarSlugs, PRONTA_ENTREGA, type Produto } from "@/loja/lib/catalogo/exemplos";
 import { fotoPrincipal } from "@/loja/lib/catalogo/fotos";
 import { schemaProduto, schemaTrilha } from "@/loja/lib/seo/produto";
+import { avaliacoesIniciais } from "@/loja/lib/avaliacoes/servidor";
 
 // Página de produto no modelo da shop.lululemon.com (lululemon-pdp.md, nov/2026), com o conteúdo do
 // ateliê: área acima da dobra em grade "1fr 440" em que a galeria corre POR TRÁS do painel de compra
@@ -21,6 +22,10 @@ import { schemaProduto, schemaTrilha } from "@/loja/lib/seo/produto";
 // avaliações e "Você também pode gostar".
 // params lido fora de <Suspense>: slug inexistente responde com status 404 de verdade (não 200 com
 // a página de "não encontrado" dentro do streaming). Os produtos conhecidos são pré-gerados no build.
+
+// Avaliações aprovadas vêm do banco com cache por produto: a página é regenerada em até 10 min, ou na
+// hora quando o ERP modera (revalidateTag "avaliacoes:<slug>").
+export const revalidate = 600;
 
 export function generateStaticParams() {
   return listarSlugs().map((slug) => ({ slug }));
@@ -49,6 +54,8 @@ export default async function PaginaProduto({ params }: PageProps<"/loja/produto
   // Selo "Novo" nas cores cujo produto-irmão é novidade.
   const novos = new Set(buscarVarios(produto.irmaos?.itens.map((irmao) => irmao.slug) ?? []).filter((irmao) => irmao.selo === "Novidade").map((irmao) => irmao.slug));
   const categoria = produto.trilha.at(-1) ?? { rotulo: "Produtos", href: "/" };
+  const avaliacoes = await avaliacoesIniciais(produto.slug);
+  const resumo = avaliacoes && avaliacoes.resumo.total > 0 ? { nota: avaliacoes.resumo.media, total: avaliacoes.resumo.total } : null;
 
   // Confirmação do carrinho: primeiro o que completa o enxoval, depois os semelhantes, até 8.
   const sugestoes = [...complementos, ...semelhantes.filter((outro) => !complementos.includes(outro))].slice(0, 8).map((outro) => ({
@@ -68,7 +75,7 @@ export default async function PaginaProduto({ params }: PageProps<"/loja/produto
 
   return (
     <article data-pagina-produto className={pdp}>
-      <JsonLd dados={schemaProduto(produto, complementos)} />
+      <JsonLd dados={schemaProduto(produto, complementos, avaliacoes)} />
       <JsonLd dados={schemaTrilha(produto)} />
 
       <CompraProvider
@@ -86,7 +93,7 @@ export default async function PaginaProduto({ params }: PageProps<"/loja/produto
           variacao: produto.variacao,
           personalizacao: produto.personalizacao,
           prontaEntrega: produto.atributos.entrega?.includes(PRONTA_ENTREGA) ?? false,
-          avaliacoes: produto.avaliacoes,
+          avaliacoes: resumo,
           foto: fotoPrincipal(produto),
         }}
         sugestoes={sugestoes}
@@ -111,10 +118,7 @@ export default async function PaginaProduto({ params }: PageProps<"/loja/produto
         <HeroLinha linha={linhaDe(produto)} />
         <Destaques frase="Feito à mão no ateliê, peça por peça." destaques={destaquesDe(produto)} fotos={fotos} />
         <Looks looks={looks} href={produto.trilha[0]?.href ?? "/"} />
-        <Avaliacoes
-          avaliacoes={produto.avaliacoes}
-          tamanhos={produto.variacao && { titulo: produto.variacao.titulo, opcoes: produto.variacao.opcoes.map((opcao) => partesDaOpcao(opcao.rotulo).curto) }}
-        />
+        <Avaliacoes produto={{ slug: produto.slug, nome: produto.nome }} inicial={avaliacoes} />
         <VoceTambem produtos={semelhantes} />
         <PilulaCompra />
       </CompraProvider>

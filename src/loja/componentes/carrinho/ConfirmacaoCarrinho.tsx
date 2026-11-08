@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { css, cx } from "styled-system/css";
+import { FotoProjeto } from "@/loja/componentes/casas/FotoProjeto";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import { WhatsappLogo } from "@/loja/componentes/icones";
+import { produtoDoProjeto, produtoDoQuartinho } from "@/loja/lib/carrinho/linhas";
 import { centavos, DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
 import type { Foto } from "@/loja/lib/catalogo/fotos";
 import { formatarPreco } from "@/loja/lib/formatacao/moeda";
 import { Dialogo } from "./Dialogo";
-import { useItensCarrinho, useQuantidadeNoCarrinho } from "./estado";
+import { type ItemCarrinho, tipoDe, useItensCarrinho, useQuantidadeNoCarrinho } from "./estado";
 import { botaoClaro, botaoEscuro } from "./estilos";
 import { reais } from "./Resumo";
 
@@ -17,6 +19,14 @@ import { reais } from "./Resumo";
 export type Sugestao = { slug: string; nome: string; pix: string; precisaEscolher: boolean; foto?: Foto; preco?: string };
 
 type DadosSacola = { precos: Record<string, string>; maisVendidos: Sugestao[] };
+
+// Preço unitário do item (centavos): produto pelo catálogo da sacola; projeto e quartinho pela escolha.
+function precoDoItem(item: ItemCarrinho, precos: Record<string, string>): number | null {
+  const tipo = tipoDe(item);
+  if (tipo === "produto") return precos[item.slug] ? centavos(precos[item.slug]) : null;
+  const produto = tipo === "projeto" ? produtoDoProjeto(item) : produtoDoQuartinho(item);
+  return produto ? centavos(produto.preco) : null;
+}
 
 // Preços do catálogo para o subtotal da sacola inteira (os itens vivem no navegador e a página de
 // produto só conhece a própria peça). Uma busca por visita, reaproveitada a cada confirmação.
@@ -44,7 +54,8 @@ export function ConfirmacaoCarrinho({
   aoFechar: () => void;
   // `preco` (opcional): preço de tabela da peça, para o "a partir de" (sem ele, só o selo do Pix).
   // `pontos`: legado do Clube Milena, que saiu da loja; aceito e ignorado até a página de produto parar de mandar.
-  item: { nome: string; foto?: Foto; detalhe?: string; quantidade: number; pix: string; pontos?: number; preco?: string };
+  // `paleta`: projeto de quarto e quartinho personalizado (a foto é a composição nos tons da paleta).
+  item: { nome: string; foto?: Foto; detalhe?: string; quantidade: number; pix: string; pontos?: number; preco?: string; paleta?: readonly string[] };
   sugestoes: Sugestao[];
 }) {
   const quantidade = useQuantidadeNoCarrinho();
@@ -64,10 +75,7 @@ export function ConfirmacaoCarrinho({
 
   const subtotal =
     dados && itens
-      ? itens.reduce((soma, atual) => {
-          const preco = dados.precos[atual.slug];
-          return preco ? soma + centavos(preco) * atual.quantidade : soma;
-        }, 0)
+      ? itens.reduce((soma, atual) => soma + (precoDoItem(atual, dados.precos) ?? 0) * atual.quantidade, 0)
       : null;
   const combina = (sugestoes.length > 0 ? sugestoes : (dados?.maisVendidos ?? [])).slice(0, 6);
 
@@ -104,7 +112,11 @@ export function ConfirmacaoCarrinho({
 
       <div className={css({ display: "grid", gridTemplateColumns: combina.length > 0 ? "[7fr 3fr]" : "[1fr]", gap: "3", mt: "6" })}>
         <div className={css({ minW: "0" })}>
-          <FotoProduto foto={item.foto} sizes="(min-width: 768px) 360px, 70vw" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
+          {item.paleta ? (
+            <FotoProjeto paleta={item.paleta} foto={item.foto} sizes="(min-width: 768px) 360px, 70vw" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
+          ) : (
+            <FotoProduto foto={item.foto} sizes="(min-width: 768px) 360px, 70vw" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
+          )}
           <div className={css({ display: "grid", gap: "1", mt: "4", fontSize: "sm", lineHeight: "texto" })}>
             <p className={css({ color: "escuro" })}>{item.nome}</p>
             {item.detalhe && <p className={css({ fontSize: "xs", color: "textoSuave" })}>{item.detalhe}</p>}

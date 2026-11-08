@@ -4,7 +4,7 @@ import { AVISO_PRECOS } from "@/loja/lib/casas/catalogo";
 
 // Aviso de preços de demonstração em UMA linha discreta ("Valores de demonstração ⓘ"): o texto
 // completo abre por baixo ao tocar/clicar (<details>, acessível e sem JavaScript). Substitui o
-// parágrafo longo que se repetia na listagem, na página do projeto e na seleção.
+// parágrafo longo que se repetia na listagem, na página do projeto e no montador.
 export function AvisoDemonstracao({ complemento, className }: { complemento?: string; className?: string }) {
   return (
     <details className={cx(css({ fontSize: "xs", lineHeight: "texto", color: "textoSuave" }), className)}>

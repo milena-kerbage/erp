@@ -1,4 +1,6 @@
-// Área Projetos (quarto de bebê completo): catálogo, filtros, propagandas e mensagem de orçamento.
+// Área Projetos (quarto de bebê completo): catálogo, filtros, pacotes, opcionais e propagandas. O
+// pedido do projeto vai pela sacola (tests/loja/carrinho.test.mjs) e o montador tem o próprio teste
+// (tests/loja/montador.test.mjs).
 // O arquivo mantém o nome "casas" porque os módulos ainda vivem em src/loja/lib/casas.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -12,9 +14,15 @@ import {
   fotosDoProjeto,
   listarColecoes,
   listarProjetos,
+  nomeCurto,
+  OPCIONAIS,
+  opcionaisValidos,
   PACOTES,
+  pacoteValido,
   precoDoPacote,
+  precoDoProjeto,
   projetosEmDestaque,
+  variacaoProjeto,
 } from "../../src/loja/lib/casas/catalogo.ts";
 import {
   alternarFiltro,
@@ -26,7 +34,6 @@ import {
   ORDENACOES_PROJETOS,
   valorDoFiltro,
 } from "../../src/loja/lib/casas/filtragem.ts";
-import { linkWhatsapp, montarMensagem, PEDIDO_VAZIO, validarPedido } from "../../src/loja/lib/casas/mensagem.ts";
 import { ORDENS, slug } from "../../src/loja/lib/seo/urls.ts";
 
 const projetos = [
@@ -149,9 +156,18 @@ test("coleções batem com o menu e não colidem com projetos", () => {
   const navegacao = readFileSync(new URL("../../src/loja/componentes/layout/cabecalho/navegacao.ts", import.meta.url), "utf8");
   const doMenu = [...navegacao.matchAll(/href: "\/projetos\/([^"?/]+)"/g)].map(([, caminho]) => caminho);
   assert.ok(doMenu.length >= 9, doMenu.join(","));
-  for (const caminho of doMenu) assert.ok(buscarColecao(caminho), `/projetos/${caminho} sem página`);
+  // Rotas próprias ao lado de /projetos/[slug]: o montador e o redirecionamento da antiga seleção.
+  const ROTAS_PROPRIAS = ["monte-o-seu", "selecao"];
+  for (const caminho of doMenu.filter((item) => !ROTAS_PROPRIAS.includes(item))) assert.ok(buscarColecao(caminho), `/projetos/${caminho} sem página`);
   for (const colecao of listarColecoes()) assert.equal(buscarProjeto(colecao.slug), null, colecao.slug);
-  assert.equal(buscarColecao("selecao"), null); // rota própria
+  for (const rota of ROTAS_PROPRIAS) {
+    assert.equal(buscarColecao(rota), null, rota);
+    assert.equal(buscarProjeto(rota), null, rota);
+  }
+  const rotas = new URL("../../src/app/(site)/loja/(vitrine)/projetos/", import.meta.url);
+  assert.ok(readFileSync(new URL("monte-o-seu/page.tsx", rotas), "utf8").includes("Montador"));
+  // A antiga seleção de projetos virou a sacola: 308 para /carrinho.
+  assert.match(readFileSync(new URL("selecao/route.ts", rotas), "utf8"), /status: 308, headers: \{ Location: "\/carrinho" \}/);
   assert.deepEqual(buscarColecao("floral")?.filtros, { estilo: ["floral"] });
 });
 
@@ -168,31 +184,28 @@ test("pacotes e preço por pacote", () => {
   assert.match(AVISO_PRECOS, /fictícios/);
 });
 
-test("mensagem de orçamento: validação, texto e link do WhatsApp", () => {
-  const hoje = "2026-11-08";
-  const erros = validarPedido(PEDIDO_VAZIO, hoje);
-  assert.deepEqual(Object.keys(erros).sort(), ["nascimento", "nome", "tema", "whatsapp"]);
-  const dados = {
-    nome: " Ana ",
-    whatsapp: "(85) 99999-1234",
-    nascimento: "2027-03-15",
-    tema: "neutro",
-    medidas: "Colchão 60 × 130 cm",
-    observacoes: "",
-  };
-  assert.deepEqual(validarPedido(dados, hoje), {});
-  assert.ok(validarPedido({ ...dados, whatsapp: "1234" }, hoje).whatsapp);
-  assert.ok(validarPedido({ ...dados, nascimento: "2020-01-01" }, hoje).nascimento);
-  assert.deepEqual(validarPedido({ ...dados, nascimento: "2026-10-01" }, hoje), {}); // bebê recém-nascido também
-  const texto = montarMensagem(dados, [{ nome: "Projeto Nuvem Sálvia", pacote: "Completo", preco: "R$ 4.100" }]);
-  assert.match(texto, /• Projeto Nuvem Sálvia, pacote Completo \(a partir de R\$ 4\.100\)/);
-  assert.match(texto, /Nome: Ana\n/);
-  assert.match(texto, /Previsão do nascimento: 15\/03\/2027/);
-  assert.match(texto, /Tema: Neutro/);
-  assert.match(texto, /Medidas do berço\/quarto: Colchão 60 × 130 cm/);
-  assert.doesNotMatch(texto, /Observações/);
-  assert.match(montarMensagem(dados, []), /^Olá! Gostaria de um orçamento/);
-  assert.equal(linkWhatsapp("+55 (85) 98582-2208", "Olá!"), "https://wa.me/5585985822208?text=Ol%C3%A1!");
+test("opcionais e preço da escolha (pacote + opcionais), variação do título e nome curto", () => {
+  assert.deepEqual(
+    OPCIONAIS.map((opcional) => opcional.id),
+    ["kit-mini-cama", "paninhos"],
+  );
+  for (const projeto of listarProjetos()) {
+    for (const id of projeto.opcionais) assert.ok(OPCIONAIS.some((opcional) => opcional.id === id), `${projeto.slug}: ${id}`);
+  }
+  const jardim = buscarProjeto("jardim-de-camomila");
+  assert.equal(precoDoProjeto(jardim, "Essencial"), 3900);
+  assert.equal(precoDoProjeto(jardim, "Completo", ["paninhos"]), 3900 + 1200 + 290);
+  assert.equal(precoDoProjeto(jardim, "Completo", ["paninhos", "kit-mini-cama", "x"]), 3900 + 1200 + 290 + 790);
+  // Opcional que o projeto não oferece não entra (Céu de Algodão não tem kit mini cama).
+  const ceu = buscarProjeto("ceu-de-algodao");
+  assert.deepEqual(opcionaisValidos(ceu, ["kit-mini-cama", "paninhos", "paninhos"]), ["paninhos"]);
+  assert.equal(precoDoProjeto(ceu, "Essencial", ["kit-mini-cama"]), ceu.precoAPartirDe);
+  assert.equal(pacoteValido("Completo"), "Completo");
+  assert.equal(pacoteValido("Premium"), "Essencial");
+  assert.equal(pacoteValido(undefined), "Essencial");
+  assert.equal(variacaoProjeto(jardim), "Floral · Menina");
+  assert.equal(variacaoProjeto(buscarProjeto("nuvem-salvia")), "Nuvens e céu · Neutro");
+  assert.equal(nomeCurto(jardim), "Jardim de Camomila");
 });
 
 test("propagandas: dados completos, link dentro de /projetos e números batem com o catálogo", async () => {
@@ -210,9 +223,18 @@ test("propagandas: dados completos, link dentro de /projetos e números batem co
 });
 
 test("sem resto de casas, vestidos ou da marca antiga nos dados", () => {
-  const arquivos = ["catalogo.ts", "filtragem.ts", "propagandas.ts", "mensagem.ts"].map((nome) =>
+  const arquivos = ["catalogo.ts", "filtragem.ts", "propagandas.ts", "modulos.ts"].map((nome) =>
     readFileSync(new URL(`../../src/loja/lib/casas/${nome}`, import.meta.url), "utf8"),
   );
   const proibido = /steel|fast|m²|obra\b|franquia|terreno|vestido|noiva|madrinha|debutante|\bprova\b/i;
   for (const texto of arquivos) assert.doesNotMatch(texto.replace(/src\/loja\/lib\/casas/g, ""), proibido);
+});
+
+test("o fluxo separado de seleção saiu: sem mk_projetos fora da migração e sem os componentes antigos", () => {
+  const casas = new URL("../../src/loja/componentes/casas/", import.meta.url);
+  for (const antigo of ["SelecaoProjetos.tsx", "FormularioPedido.tsx", "estadoSelecao.ts", "AvisoCarrinhoCasas.tsx", "SeletorPacote.tsx"]) {
+    assert.throws(() => readFileSync(new URL(antigo, casas)), { code: "ENOENT" }, antigo);
+  }
+  const estado = readFileSync(new URL("../../src/loja/componentes/carrinho/estado.ts", import.meta.url), "utf8");
+  assert.match(estado, /migrarSelecaoAntiga/);
 });

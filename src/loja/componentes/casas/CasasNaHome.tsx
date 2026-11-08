@@ -31,8 +31,8 @@ export function CasasNaHome() {
             <Link href="/projetos" className={botao({ variante: "escuro", tamanho: "m" })}>
               Ver os projetos
             </Link>
-            <Link href="/projetos/orcamento" className={botao({ variante: "contorno", tamanho: "m" })}>
-              Peça seu projeto
+            <Link href="/projetos/monte-o-seu" className={botao({ variante: "contorno", tamanho: "m" })}>
+              Monte o seu quartinho
             </Link>
           </div>
         </div>

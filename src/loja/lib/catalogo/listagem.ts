@@ -126,6 +126,18 @@ export function contarFacetas(itens: ItemListavel[], filtros: Record<string, str
   return saida;
 }
 
+// Atributos que não descrevem a peça ("retirada: Sim") ficam fora do texto de busca.
+const ATRIBUTOS_FORA_DA_BUSCA = new Set(["retirada"]);
+
+// Texto pesquisável da peça: nome, marca, caminho e os rótulos das facetas (cor, tecido, tema,
+// "para"…), para "verde", "menina" ou "pronta entrega" acharem as peças certas. Sem acento e sem caixa.
+export function textoDeBusca(item: ItemListavel): string {
+  const atributos = Object.entries(item.atributos)
+    .filter(([chave]) => !ATRIBUTOS_FORA_DA_BUSCA.has(chave))
+    .flatMap(([, valores]) => valores);
+  return slugificar(`${item.nome} ${item.marca} ${item.caminho.replace(/\//g, " ")} ${atributos.join(" ")}`);
+}
+
 // Busca simples por termos (todos precisam aparecer), sem acento e sem caixa.
 export function buscarTexto<T extends ItemListavel>(itens: T[], termo: string): T[] {
   const termos = slugificar(termo)
@@ -133,7 +145,7 @@ export function buscarTexto<T extends ItemListavel>(itens: T[], termo: string): 
     .filter((parte) => parte.length > 1);
   if (termos.length === 0) return [];
   return itens.filter((item) => {
-    const texto = slugificar(`${item.nome} ${item.marca} ${item.caminho.replace(/\//g, " ")}`);
+    const texto = textoDeBusca(item);
     return termos.every((parte) => texto.includes(parte));
   });
 }

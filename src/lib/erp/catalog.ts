@@ -27,5 +27,8 @@ export const ERP_ROUTE_CATALOG = [
  {path:'/api/erp/webhooks/{id}/test',methods:'POST',roles:'Admin',bearer:false,purpose:'Evento real de teste: {confirmation:"TESTAR"}; verifique ok/status/error.'},
  {path:'/api/erp/webhooks/deliveries',methods:'GET, POST',roles:'Admin',bearer:false,purpose:'Fila e histórico; nova tentativa {id,confirmation:"REENVIAR"}, máximo cinco.'},
  {path:'/api/erp/notifications',methods:'GET, PATCH',roles:'Equipe',bearer:false,purpose:'Auditoria real; leitura/arquivo por usuário: {id,read?,archived?} ou {all:true}.'},
+ {path:'/api/erp/avaliacoes',methods:'GET',roles:'Admin e gestão',bearer:false,purpose:'Moderação das avaliações da loja: ?status=pendente|aprovada|recusada|todas&produto=slug&limit&offset; inclui contagem por situação.'},
+ {path:'/api/erp/avaliacoes/{id}',methods:'PATCH, DELETE',roles:'Admin e gestão',bearer:false,purpose:'Moderação {revisao,status?,motivo?,resposta?} (recusa exige motivo interno); exclusão definitiva com ?revisao=N, fotos incluídas.'},
+ {path:'/api/erp/avaliacoes/foto/{id}',methods:'GET',roles:'Admin e gestão',bearer:false,purpose:'Foto WebP da avaliação em qualquer situação: ?tamanho=mini|grande.'},
  {path:'/api/erp/documentation',methods:'GET',roles:'Equipe',bearer:false,purpose:'Manual técnico Markdown; document=operation baixa o guia operacional.'},
 ] as const;

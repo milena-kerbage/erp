@@ -16,6 +16,7 @@ import { BotaoFavoritar } from "./BotaoFavoritar";
 import { classeDaCor } from "./cores";
 import type { CorProduto } from "./dados";
 import { partesDaOpcao } from "./dados";
+import { abrirFormularioAvaliacao } from "./avaliacoes/eventos";
 import { Estrelas } from "./Estrelas";
 
 // Só o que o painel precisa (o produto inteiro não vai para o navegador).
@@ -346,26 +347,25 @@ export function PainelCompra() {
 
       <hr className={divisoria} />
 
-      <a href="#avaliacoes" className={resumoAvaliacoes}>
-        {dados.avaliacoes ? (
-          <>
-            <span className={notaGrande}>{dados.avaliacoes.nota.toFixed(1).replace(".", ",")}</span>
-            <Estrelas nota={dados.avaliacoes.nota} />
-            <span className={totalAvaliacoes}>
-              {dados.avaliacoes.total} {dados.avaliacoes.total === 1 ? "avaliação" : "avaliações"}
-              <CaretDown size={14} aria-hidden />
-            </span>
-          </>
-        ) : (
-          <>
-            <Estrelas nota={0} />
-            <span className={totalAvaliacoes}>
-              Seja a primeira a avaliar
-              <CaretDown size={14} aria-hidden />
-            </span>
-          </>
-        )}
-      </a>
+      {/* Nota real (só avaliações aprovadas no ERP): leva às avaliações. Sem nenhuma, abre o formulário. */}
+      {dados.avaliacoes && dados.avaliacoes.total > 0 ? (
+        <a href="#avaliacoes" className={resumoAvaliacoes}>
+          <span className={notaGrande}>{dados.avaliacoes.nota.toFixed(1).replace(".", ",")}</span>
+          <Estrelas nota={dados.avaliacoes.nota} />
+          <span className={totalAvaliacoes}>
+            {dados.avaliacoes.total} {dados.avaliacoes.total === 1 ? "avaliação" : "avaliações"}
+            <CaretDown size={14} aria-hidden />
+          </span>
+        </a>
+      ) : (
+        <button type="button" aria-haspopup="dialog" onClick={abrirFormularioAvaliacao} className={cx(resumoAvaliacoes, css({ w: "full", cursor: "pointer", textAlign: "left" }))}>
+          <Estrelas nota={0} />
+          <span className={totalAvaliacoes}>
+            Seja a primeira a avaliar
+            <CaretRight size={14} aria-hidden />
+          </span>
+        </button>
+      )}
     </div>
   );
 }

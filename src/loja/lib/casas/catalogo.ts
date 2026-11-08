@@ -20,20 +20,48 @@ export type Projeto = ProjetoFiltravel & {
   descricao: string[]; // 1º parágrafo = resumo
   paleta: Cor[];
   pecas: string[]; // o que o projeto tem no pacote Completo, no tema
-  opcionais: string[]; // peças que podem entrar no orçamento (kit mini cama, enxoval de paninhos…)
+  opcionais: OpcionalId[]; // peças que podem entrar no pedido (kit mini cama, enxoval de paninhos)
   fotos: number; // public/vitrine/projetos/<slug>/foto-N.webp (0 = placeholder)
 };
 
 export type Foto = { src: string; alt: string };
 
 export const AVISO_PRECOS =
-  "Valores fictícios, apenas para demonstração. O orçamento real depende das medidas, dos tecidos e das peças escolhidas.";
+  "Valores fictícios, apenas para demonstração. O valor final depende das medidas, dos tecidos e das peças escolhidas e é confirmado pela vendedora no WhatsApp.";
 
 export const PRAZO_PRODUCAO = "20 a 35 dias úteis";
 export const ENTREGA = "Entrega para todo o Brasil";
 
-const KIT_MINI_CAMA = "Kit mini cama no mesmo tema";
-const PANINHOS = "Enxoval de paninhos (boca, ombro e fraldas de pano)";
+// Opcionais do projeto: entram na sacola junto com o pacote e somam ao "a partir de" (valores
+// fictícios, como os preços). `produto`: a peça equivalente do catálogo (para o link).
+export const OPCIONAIS = [
+  {
+    id: "kit-mini-cama",
+    nome: "Kit mini cama no mesmo tema",
+    curto: "Kit mini cama",
+    apoio: "Protetor baixo, colcha e lençol para a mini cama montessoriana.",
+    preco: 790,
+    produto: "kit-mini-cama-montessoriana-4-pecas",
+  },
+  {
+    id: "paninhos",
+    nome: "Enxoval de paninhos (boca, ombro e fraldas de pano)",
+    curto: "Paninhos",
+    apoio: "Fraldas de boca, de ombro e de pano com o acabamento do projeto.",
+    preco: 290,
+    produto: "fraldas-de-boca-bordadas-kit-com-3",
+  },
+] as const;
+
+export type OpcionalId = (typeof OPCIONAIS)[number]["id"];
+export type Opcional = (typeof OPCIONAIS)[number];
+
+const KIT_MINI_CAMA: OpcionalId = "kit-mini-cama";
+const PANINHOS: OpcionalId = "paninhos";
+
+export function buscarOpcional(id: string): Opcional | undefined {
+  return OPCIONAIS.find((opcional) => opcional.id === id);
+}
 
 // Ordem de "Em destaque".
 const PROJETOS: Projeto[] = [
@@ -496,6 +524,34 @@ export function precoDoPacote(projeto: Projeto, pacote: string): number {
   return projeto.precoAPartirDe + (PACOTES.find((item) => item.nome === pacote)?.acrescimo ?? 0);
 }
 
+export function pacoteValido(pacote: string | undefined): NomePacote {
+  return PACOTES.find((item) => item.nome === pacote)?.nome ?? PACOTES[0].nome;
+}
+
+// Só os opcionais que o projeto oferece, sem repetir e na ordem de OPCIONAIS.
+export function opcionaisValidos(projeto: Pick<Projeto, "opcionais">, ids: readonly string[] = []): OpcionalId[] {
+  return OPCIONAIS.map((opcional) => opcional.id).filter((id) => ids.includes(id) && projeto.opcionais.includes(id));
+}
+
+// Preço "a partir de" da escolha na página do projeto e na sacola: pacote + opcionais (reais).
+export function precoDoProjeto(projeto: Projeto, pacote: string, opcionais: readonly string[] = []): number {
+  return opcionaisValidos(projeto, opcionais).reduce(
+    (soma, id) => soma + (buscarOpcional(id)?.preco ?? 0),
+    precoDoPacote(projeto, pacote),
+  );
+}
+
+// "Floral · Menina": a variação em cinza no título da página do projeto (como o "9 peças" dos produtos).
+export function variacaoProjeto(projeto: Pick<Projeto, "tema" | "estilo">): string {
+  const tema = projeto.tema === "menina" ? "Menina" : projeto.tema === "menino" ? "Menino" : "Neutro";
+  return `${rotuloEstilo(projeto.estilo)} · ${tema}`;
+}
+
+// "Jardim de Camomila": o nome sem "Projeto" (nome da paleta no montador).
+export function nomeCurto(projeto: Pick<Projeto, "nome">): string {
+  return projeto.nome.replace(/^Projeto\s+/, "");
+}
+
 // "Por que um projeto do ateliê": iguais em todos os projetos.
 export const DIFERENCIAIS = [
   { titulo: "Tudo no mesmo tema", texto: "Kit berço, cortina, tapete e enfeites pensados juntos, com a mesma paleta e o mesmo acabamento." },
@@ -507,9 +563,9 @@ export const DIFERENCIAIS = [
 
 // "Como funciona": da conversa à entrega.
 export const ETAPAS = [
-  { titulo: "Escolha", texto: "Escolha um projeto, ou mais de um para comparar, e o pacote que faz sentido para o seu quarto." },
-  { titulo: "Conversa", texto: "Pelo WhatsApp, a gente entende o quarto, as medidas do berço e da janela e a previsão do nascimento." },
-  { titulo: "Orçamento", texto: "Você recebe o orçamento com as peças, os tecidos e o prazo. Ajustes de cor e de peças entram aqui." },
+  { titulo: "Escolha", texto: "Escolha um projeto e o pacote, ou monte o seu quartinho peça por peça, e junte tudo na sacola." },
+  { titulo: "Pedido", texto: "Da sacola, o pedido segue pelo WhatsApp: uma vendedora confere as medidas do berço e da janela e a previsão do nascimento." },
+  { titulo: "Confirmação", texto: "Você recebe os valores finais, os tecidos e o prazo. Ajustes de cor e de peças entram aqui." },
   { titulo: "Produção", texto: "Com o pedido confirmado, o ateliê corta, costura e borda tudo em 20 a 35 dias úteis." },
   { titulo: "Entrega", texto: "O quartinho chega embalado e pronto para montar, em qualquer cidade do Brasil." },
 ] as const;
@@ -518,12 +574,12 @@ export const PERGUNTAS = [
   {
     pergunta: "Com quanto tempo de antecedência devo encomendar?",
     resposta:
-      "O ideal é pedir o orçamento por volta do 5º ou 6º mês de gestação. A produção leva de 20 a 35 dias úteis, mais o prazo de envio.",
+      "O ideal é fazer o pedido por volta do 5º ou 6º mês de gestação. A produção leva de 20 a 35 dias úteis, mais o prazo de envio.",
   },
   {
     pergunta: "Posso trocar cores ou peças do projeto?",
     resposta:
-      "Pode. Os projetos são o ponto de partida: no orçamento ajustamos a paleta, trocamos peças e incluímos itens como o kit mini cama.",
+      "Pode. Os projetos são o ponto de partida: no Monte o seu quartinho você escolhe peça por peça, e no WhatsApp a vendedora ajusta a paleta e os detalhes.",
   },
   {
     pergunta: "Vocês entregam fora de Fortaleza?",
@@ -536,7 +592,7 @@ export const PERGUNTAS = [
   },
   {
     pergunta: "Os preços do site são definitivos?",
-    resposta: "Não. Os valores mostrados aqui são fictícios, só para demonstração. O valor real vem no orçamento.",
+    resposta: "Não. Os valores são \"a partir de\" e, por enquanto, fictícios. O valor final é confirmado pela vendedora no WhatsApp, com 5% OFF no Pix.",
   },
 ] as const;
 
@@ -606,7 +662,7 @@ const COLECOES: Colecao[] = [
     tipo: "conteudo",
     slug: "orcamento",
     titulo: "Peça seu projeto",
-    texto: "Conte sobre o quarto e a previsão do nascimento. A gente responde pelo WhatsApp com o orçamento.",
+    texto: "Escolha um projeto do ateliê ou monte o seu quartinho peça por peça: tudo vai para a mesma sacola e o pedido segue pelo WhatsApp.",
   },
 ];
 

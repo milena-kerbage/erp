@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ATALHOS_PROJETOS } from "@/loja/componentes/casas/comuns";
 import { ListagemProjetos } from "@/loja/componentes/casas/ListagemProjetos";
-import { DiferenciaisProjetos } from "@/loja/componentes/casas/secoes";
+import { ConviteMontador, DiferenciaisProjetos } from "@/loja/componentes/casas/secoes";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
 import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
@@ -14,7 +14,8 @@ import { schemaListagemProjetos, schemaTrilhaProjetos } from "@/loja/lib/seo/pro
 // Projetos (item "Projetos" do menu, como o SNKRS na Nike): quartos de bebê completos no mesmo padrão
 // da listagem de produtos (Lululemon, referencia.md §13): topo com título, contagem e atalhos; grade
 // de 2 px; visualização e filtros na barra flutuante do site; "Continue explorando" no fim. O topo é
-// estático; só a grade filtrada fica no <Suspense>.
+// estático; só a grade filtrada fica no <Suspense>. O "Monte o seu quartinho" entra como 1º card da
+// grade e no convite logo abaixo dela.
 
 export const metadata: Metadata = {
   title: "Projetos: quarto de bebê completo",
@@ -34,6 +35,7 @@ export default function PaginaProjetos({ searchParams }: PageProps<"/loja/projet
       <Suspense fallback={<EsqueletoGrade />}>
         <ListagemProjetos projetos={projetos} categoria="projetos" searchParams={searchParams} />
       </Suspense>
+      <ConviteMontador />
       <DiferenciaisProjetos />
       <ContinueExplorando base="Projetos" categorias={categoriasRelacionadas(["projetos"]).filter((elo) => !elo.href.startsWith("/projetos"))} />
     </>

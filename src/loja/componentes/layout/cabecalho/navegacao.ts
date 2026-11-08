@@ -146,8 +146,13 @@ export const LINKS_UTILITARIOS = {
   ajuda: { rotulo: "Ajuda", href: "/ajuda" },
   franquia: { rotulo: "Fale no WhatsApp", href: `https://wa.me/${EMPRESA.whatsapp.numero}`, externo: true },
   instagram: { rotulo: "Instagram", href: REDES_SOCIAIS.instagram, externo: true },
-  cadastro: { rotulo: "Cadastre-se", href: "/conta/cadastro" },
-  entrar: { rotulo: "Entrar", href: "/conta/entrar" },
+  // A loja não tem login: "Minha conta" mostra os favoritos e os pedidos enviados deste aparelho.
+  conta: { rotulo: "Minha conta", href: "/conta" },
+  // LEGADO, só para o rodapé (revisado na próxima lapidação) e o ícone da barra do cabeçalho, que ainda
+  // leem estas chaves: "Entrar" e "Cadastre-se" saíram (/conta/entrar e /conta/cadastro redirecionam
+  // para /conta). `cadastro` aponta para a indicação para o rodapé não repetir "Minha conta".
+  entrar: { rotulo: "Minha conta", href: "/conta" },
+  cadastro: { rotulo: "Indique o ateliê", href: "/indique" },
 } satisfies Record<string, LinkUtilitario>;
 
 // Painel de busca vazio. Trocar pelos termos reais do relatório de busca interna (GA4) assim que houver dados.

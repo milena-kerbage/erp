@@ -6,12 +6,13 @@ import { useSyncExternalStore } from "react";
 // O formato já é o que o backend vai receber: produto, variação escolhida e quantidade.
 // Leituras falham em silêncio (navegação privada sem storage): o site continua funcionando.
 
-// `personalizacao`: peça que aceita bordado com o nome, escolhida "com" ou "sem" bordado na página de
-// produto (o nome o ateliê confirma pelo WhatsApp). Opcional: itens antigos e peças sem bordado não
-// têm o campo. O mesmo produto com e sem bordado são linhas diferentes.
-export type Personalizacao = "com" | "sem";
-export const ROTULO_PERSONALIZACAO: Record<Personalizacao, string> = { com: "Com bordado do nome", sem: "Sem bordado" };
-export type ItemCarrinho = { slug: string; variacao?: string; quantidade: number; personalizacao?: Personalizacao };
+// O formato do item (produto, projeto ou quartinho personalizado) e a validação ficam em
+// src/loja/lib/carrinho/item.ts, puros e testados; aqui só a leitura e a gravação no navegador.
+// Import relativo com extensão: este arquivo também roda no `node --test`.
+import { type ItemCarrinho, itensDaSelecaoAntiga, limparItem, MAX_QUANTIDADE, mesmoItem } from "../../lib/carrinho/item.ts";
+
+export { chaveItem, ROTULO_PERSONALIZACAO, tipoDe } from "../../lib/carrinho/item.ts";
+export type { ItemCarrinho, Personalizacao, TipoItem } from "../../lib/carrinho/item.ts";
 
 const CARRINHO = "mk_carrinho";
 const FAVORITOS = "mk_favoritos";
@@ -43,10 +44,6 @@ function interpretar<T>(bruto: string): T[] {
   }
 }
 
-const MAX_QUANTIDADE = 999;
-// A mesma peça com a mesma escolha (tamanho e bordado) é uma linha só.
-const mesmoItem = (a: ItemCarrinho, b: { slug: string; variacao?: string; personalizacao?: Personalizacao }) =>
-  a.slug === b.slug && a.variacao === b.variacao && a.personalizacao === b.personalizacao;
 
 function assinar(aoMudar: () => void) {
   window.addEventListener(EVENTO, aoMudar);
@@ -57,11 +54,37 @@ function assinar(aoMudar: () => void) {
   };
 }
 
-export function adicionarAoCarrinho(item: ItemCarrinho) {
+export function adicionarAoCarrinho(novo: ItemCarrinho) {
+  const item = limparItem(novo);
+  if (!item) return;
   const itens = itensValidos(ler(CARRINHO));
   const igual = itens.find((atual) => mesmoItem(atual, item));
   if (igual) igual.quantidade = Math.min(MAX_QUANTIDADE, igual.quantidade + item.quantidade);
   else itens.push(item);
+  gravar(CARRINHO, itens);
+}
+
+// Seleção de projetos antiga (`mk_projetos`): na primeira visita depois da mudança, os projetos vão
+// para a sacola com o pacote escolhido e a chave antiga sai do navegador.
+const SELECAO_ANTIGA = "mk_projetos";
+
+export function migrarSelecaoAntiga() {
+  let bruto: string | null = null;
+  try {
+    bruto = window.localStorage.getItem(SELECAO_ANTIGA);
+    if (bruto === null) return;
+    window.localStorage.removeItem(SELECAO_ANTIGA);
+  } catch {
+    return;
+  }
+  let antigos: unknown = [];
+  try {
+    antigos = JSON.parse(bruto);
+  } catch {
+    // seleção ilegível: só some
+  }
+  const itens = itensValidos(ler(CARRINHO));
+  for (const item of itensDaSelecaoAntiga(antigos)) if (!itens.some((atual) => mesmoItem(atual, item))) itens.push(item);
   gravar(CARRINHO, itens);
 }
 
@@ -87,16 +110,10 @@ export function useFavorito(slug: string): [boolean, () => void] {
 }
 
 
-// Itens válidos (quantidade inteira entre 1 e 999): o storage pode ter sido editado à mão.
+// Itens válidos (quantidade inteira entre 1 e 999, só os campos do tipo): o storage pode ter sido
+// editado à mão.
 function itensValidos(bruto: string): ItemCarrinho[] {
-  return interpretar<ItemCarrinho>(bruto)
-    .filter((item) => typeof item?.slug === "string")
-    .map(({ slug, variacao, quantidade, personalizacao }) => ({
-      slug,
-      ...(typeof variacao === "string" ? { variacao } : {}),
-      quantidade: Math.min(MAX_QUANTIDADE, Math.max(1, Math.trunc(Number(quantidade) || 1))),
-      ...(personalizacao === "com" || personalizacao === "sem" ? { personalizacao } : {}),
-    }));
+  return interpretar<unknown>(bruto).flatMap((item) => limparItem(item) ?? []);
 }
 
 // null enquanto a página ainda não leu o navegador (no servidor e na hidratação): a tela mostra
@@ -144,19 +161,15 @@ export function restaurarNoCarrinho(item: ItemCarrinho, posicao: number) {
   gravar(CARRINHO, itens);
 }
 
-// "Editar" da sacola: troca tamanho, cor (outro slug), bordado e quantidade da linha, no mesmo lugar. Se a
-// nova escolha já existe em outra linha, as duas viram uma só (quantidades somadas). Pura: testada
-// em tests/loja/carrinho.test.mjs.
+// "Editar" da sacola: troca tamanho, cor (outro slug), bordado e quantidade da linha (no projeto, o
+// pacote e os opcionais; no quartinho, o conjunto refeito no montador), no mesmo lugar. Se a nova
+// escolha já existe em outra linha, as duas viram uma só (quantidades somadas). Pura: testada em
+// tests/loja/carrinho.test.mjs.
 export function editarItens(itens: ItemCarrinho[], alvo: ItemCarrinho, novo: ItemCarrinho): ItemCarrinho[] {
   const posicao = itens.findIndex((item) => mesmoItem(item, alvo));
-  if (posicao < 0) return itens;
-  const quantidade = Math.min(MAX_QUANTIDADE, Math.max(1, Math.trunc(novo.quantidade) || 1));
-  const limpo: ItemCarrinho = {
-    slug: novo.slug,
-    ...(novo.variacao ? { variacao: novo.variacao } : {}),
-    quantidade,
-    ...(novo.personalizacao ? { personalizacao: novo.personalizacao } : {}),
-  };
+  const limpo = limparItem(novo);
+  if (posicao < 0 || !limpo) return itens;
+  const quantidade = limpo.quantidade;
   const outra = itens.findIndex((item, indice) => indice !== posicao && mesmoItem(item, limpo));
   if (outra < 0) return itens.map((item, indice) => (indice === posicao ? limpo : item));
   const somada = { ...itens[outra], quantidade: Math.min(MAX_QUANTIDADE, itens[outra].quantidade + quantidade) };

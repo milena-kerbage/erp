@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 import { css } from "styled-system/css";
+import { CampoBuscaPagina } from "@/loja/componentes/busca/CampoBuscaPagina";
 import { RESPIRO_LATERAL } from "@/loja/componentes/layout/cabecalho/estilos";
 import { TERMOS_MAIS_BUSCADOS } from "@/loja/componentes/layout/cabecalho/navegacao";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
@@ -16,6 +17,10 @@ import { montarUrlBusca, normalizarBusca, ORDEM_PADRAO } from "@/loja/lib/seo/ur
 
 // Resultado da busca interna com a mesma listagem da categoria (Lululemon). Nunca indexável:
 // noindex aqui e /busca bloqueado no robots.txt (seo.md §3.6).
+// No topo, o campo em pílula já com o termo (refazer a busca sem abrir a gaveta), o título com a
+// contagem e, sem termo ou sem resultado, os mais buscados. Trocar só o termo (/busca?q=a → q=b)
+// também anima: o conteúdo é uma ViewTransition com key = termo (o caminho não muda, então a
+// TransicaoPagina do layout não dispara).
 export const metadata: Metadata = {
   title: "Busca",
   robots: { index: false, follow: true },
@@ -56,40 +61,47 @@ async function ConteudoBusca({ searchParams }: Pick<PageProps<"/loja/busca">, "s
 
   return (
     <>
-      <CabecalhoListagem
-        trilha={[]}
-        titulo={termo ? `Resultados para “${termo}”` : "O que você procura?"}
-        total={filtrar(encontrados, filtros).length}
-        atalhos={categorias}
-      />
-      {encontrados.length > 0 ? (
-        <Resultado
-          contexto={{ tipo: "busca", termo }}
-          itensBase={encontrados}
-          filtros={filtros}
-          ordem={busca.get("ordem") ?? ORDEM_PADRAO}
-          pagina={pagina}
-        />
-      ) : (
-        <section aria-label="Sugestões de busca" className={css({ px: RESPIRO_LATERAL, py: "16" })}>
-          <p className={css({ fontSize: "xl", color: "escuro" })}>
-            {termo ? "Não achamos nada com esse termo. Que tal um destes?" : "Comece por um dos termos mais buscados:"}
-          </p>
-          <ul className={css({ display: "flex", flexWrap: "wrap", gap: "2", mt: "6" })}>
-            {TERMOS_MAIS_BUSCADOS.map((sugestao) => (
-              <li key={sugestao}>
-                <Link href={montarUrlBusca(sugestao)} className={sugestaoEstilo}>
-                  {sugestao}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      <ContinueExplorando
-        base={termo || "o enxoval"}
-        categorias={categoriasRelacionadas(categorias.map((categoria) => categoria.href.slice(1)))}
-      />
+      <div className={css({ px: { base: "3", md: "5", desktop: "10" }, pt: { base: "5", desktop: "8" } })}>
+        <CampoBuscaPagina key={termo} termo={termo} />
+      </div>
+      <ViewTransition key={termo} enter="loja-entra" exit="loja-sai" update="none" default="none">
+        <div>
+          <CabecalhoListagem
+            trilha={[]}
+            titulo={termo ? `Resultados para “${termo}”` : "O que você procura?"}
+            total={filtrar(encontrados, filtros).length}
+            atalhos={categorias}
+          />
+          {encontrados.length > 0 ? (
+            <Resultado
+              contexto={{ tipo: "busca", termo }}
+              itensBase={encontrados}
+              filtros={filtros}
+              ordem={busca.get("ordem") ?? ORDEM_PADRAO}
+              pagina={pagina}
+            />
+          ) : (
+            <section aria-label="Sugestões de busca" className={css({ px: RESPIRO_LATERAL, py: "16" })}>
+              <p className={css({ fontSize: "xl", color: "escuro" })}>
+                {termo ? `Nenhum resultado para “${termo}”. Confira a grafia ou experimente um dos mais buscados:` : "Comece por um dos termos mais buscados:"}
+              </p>
+              <ul className={css({ display: "flex", flexWrap: "wrap", gap: "2", mt: "6" })}>
+                {TERMOS_MAIS_BUSCADOS.map((sugestao) => (
+                  <li key={sugestao}>
+                    <Link href={montarUrlBusca(sugestao)} className={sugestaoEstilo}>
+                      {sugestao}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <ContinueExplorando
+            base={termo || "o enxoval"}
+            categorias={categoriasRelacionadas(categorias.map((categoria) => categoria.href.slice(1)))}
+          />
+        </div>
+      </ViewTransition>
     </>
   );
 }

@@ -1,28 +1,40 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import { css } from "styled-system/css";
-import { DetalhePedido } from "@/loja/componentes/conta/DetalhePedido";
-import { buscarPedidoDeExemplo, pedidosDeExemplo } from "@/loja/lib/pedidos/exemplos";
+import { DetalhePedidoEnviado } from "@/loja/componentes/conta/DetalhePedidoEnviado";
+import { fotosDoCatalogo, MolduraConta } from "@/loja/componentes/conta/MolduraConta";
+import { metadataPagina } from "@/loja/lib/seo/institucional";
 
-// Acompanhamento de um pedido (referencia.md §16). Os de exemplo saem prontos do build; um número
-// fora da lista pode ser um pedido simulado no checkout, que só o navegador conhece.
-export function generateStaticParams() {
-  return pedidosDeExemplo().map((pedido) => ({ numero: pedido.numero }));
-}
-
+// Detalhe de um pedido enviado deste aparelho. O número só existe no navegador da cliente: o
+// servidor entrega a moldura e o componente lê o pedido do localStorage.
 export async function generateMetadata({ params }: PageProps<"/loja/conta/pedidos/[numero]">): Promise<Metadata> {
-  return { title: `Pedido ${(await params).numero.toUpperCase()}` };
+  const numero = numeroDe((await params).numero);
+  return metadataPagina({
+    titulo: `Pedido ${numero}`,
+    descricao: "Detalhes do pedido enviado pelo WhatsApp a partir deste aparelho.",
+    caminho: `/conta/pedidos/${numero}`,
+    indexar: false,
+  });
 }
 
-export default function Pedido({ params }: PageProps<"/loja/conta/pedidos/[numero]">) {
+function numeroDe(bruto: string): string {
+  let numero = bruto;
+  try {
+    numero = decodeURIComponent(bruto);
+  } catch {
+    // número malformado: segue como veio e o componente mostra "não encontrado"
+  }
+  return numero.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40);
+}
+
+export default async function Pedido({ params }: PageProps<"/loja/conta/pedidos/[numero]">) {
+  const numero = numeroDe((await params).numero);
   return (
-    <Suspense fallback={<div aria-busy="true" className={css({ h: "[480px]", mt: "6", bg: "placeholder", borderRadius: "cartao" })} />}>
-      <Conteudo params={params} />
-    </Suspense>
+    <MolduraConta
+      trilha={[
+        { rotulo: "Pedidos enviados", href: "/conta/pedidos" },
+        { rotulo: numero, href: `/conta/pedidos/${numero}` },
+      ]}
+    >
+      <DetalhePedidoEnviado numero={numero} fotos={fotosDoCatalogo()} />
+    </MolduraConta>
   );
-}
-
-async function Conteudo({ params }: Pick<PageProps<"/loja/conta/pedidos/[numero]">, "params">) {
-  const numero = decodeURIComponent((await params).numero).toUpperCase();
-  return <DetalhePedido numero={numero} exemplo={buscarPedidoDeExemplo(numero)} />;
 }

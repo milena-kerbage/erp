@@ -9,7 +9,7 @@ import { CATEGORIAS_EXISTENTES } from "@/loja/lib/catalogo/categorias";
 import { REGRAS_SEO } from "@/loja/lib/seo/config";
 import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 import { AreaProjetos } from "./AreaProjetos";
-import { CardProjeto } from "./CardProjeto";
+import { CardMonteOSeu, CardProjeto } from "./CardProjeto";
 
 type Busca = Record<string, string | string[] | undefined>;
 
@@ -52,8 +52,8 @@ export async function ListagemProjetos({
         <Link href={`/${categoria}`} scroll={false} className={linkSublinhado}>
           Limpar filtros
         </Link>
-        <Link href="/projetos/orcamento" className={linkSublinhado}>
-          Peça seu projeto
+        <Link href="/projetos/monte-o-seu" className={linkSublinhado}>
+          Monte o seu quartinho
         </Link>
       </div>
     </div>
@@ -80,10 +80,14 @@ export async function ListagemProjetos({
 }
 
 // Grade de produtos da Lululemon: 2 px de espaço branco entre os cards; grande 1/2/3 colunas,
-// pequena 2/3/4 (data-densidade da área, botões "Visualização").
+// pequena 2/3/4 (data-densidade da área, botões "Visualização"). O 1º card é a entrada do "Monte o
+// seu quartinho" (projeto personalizado).
 export function GradeProjetos({ projetos }: { projetos: Projeto[] }) {
   return (
     <ul className={grade}>
+      <li>
+        <CardMonteOSeu />
+      </li>
       {projetos.map((projeto, indice) => (
         <li key={projeto.slug}>
           <CardProjeto

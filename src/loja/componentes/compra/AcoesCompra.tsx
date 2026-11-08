@@ -31,7 +31,7 @@ export function AcoesCompra() {
           </Link>
         </>
       )}
-      <Link href={LINKS_UTILITARIOS.entrar.href} aria-label="Entrar na sua conta" className={conta}>
+      <Link href={LINKS_UTILITARIOS.conta.href} aria-label="Minha conta" className={conta}>
         <User size={22} aria-hidden />
       </Link>
     </div>

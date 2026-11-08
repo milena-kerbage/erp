@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { type ReactNode, type RefObject, type SyntheticEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 
@@ -13,6 +14,9 @@ import { css, cx } from "styled-system/css";
 // A saída sempre espera o fim da transição (transitionend, com prazo de segurança) antes de fechar o
 // <dialog>. Esc e o clique no véu fecham com animação; o foco volta ao gatilho. Com
 // prefers-reduced-motion, abre e fecha sem deslocamento (o globalCss zera as durações).
+// Troca de página (TransicaoPagina): toda gaveta aberta começa a fechar quando o caminho muda (os
+// links das gavetas já fecham no clique; isto cobre o resto) e, enquanto aberta, ganha nome próprio
+// de transição (classe loja-dialogo), então fica por cima do conteúdo que troca e sai deslizando.
 
 export const DURACAO_GAVETA = 500;
 const FOLGA = 120; // prazo extra para o transitionend (aba em segundo plano não anima)
@@ -76,6 +80,14 @@ export function useDialogoAnimado({
   const aoFecharAtual = useRef(aoFechar);
   const aoFechadoAtual = useRef(aoFechado);
   const [montada, setMontada] = useState(false);
+  const caminho = usePathname();
+  const caminhoAnterior = useRef(caminho);
+
+  useEffect(() => {
+    if (caminhoAnterior.current === caminho) return;
+    caminhoAnterior.current = caminho;
+    if (abertaAtual.current) aoFecharAtual.current();
+  }, [caminho]);
 
   useEffect(() => {
     abertaAtual.current = aberta;
@@ -230,6 +242,10 @@ const casca = css({
   overflow: "clip",
   overscrollBehavior: "contain",
   "&::backdrop": { bg: "transparent" },
+  // Na transição de página, a gaveta aberta (ou saindo) é capturada à parte e fica por cima.
+  // match-element dá um nome único por elemento (duas gavetas empilhadas não colidem); sem suporte,
+  // a declaração é ignorada e a gaveta só entra na captura da página.
+  _open: { viewTransitionName: "match-element", viewTransitionClass: "loja-dialogo" },
 });
 
 // Véu: fade até 50% em 500 ms (ease-out na entrada, ease-in na saída). O toque nele não rola nada.

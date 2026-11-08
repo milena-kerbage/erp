@@ -199,6 +199,8 @@ const cabecalho = css({
   transition: "transform",
   transitionDuration: "sublinhado",
   transitionTimingFunction: "assinatura",
+  // Fica parado (e por cima do conteúdo) na transição de página (TransicaoPagina e globalCss).
+  viewTransitionName: "loja-cabecalho",
   // Sem condição de tela aninhada aqui: o Panda gera a classe e a regra com a ordem das condições
   // trocada (desktop:[&…] × [&…]:desktop) e a regra não casa. Quem limita ao celular é o JavaScript.
   "&[data-escondido]": { transform: "translateY(-100%)" },

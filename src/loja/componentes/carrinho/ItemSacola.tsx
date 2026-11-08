@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { css, cx } from "styled-system/css";
 import { Minus, Plus, Trash } from "@/loja/componentes/icones";
-import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
+import { atributosDoItem } from "@/loja/lib/carrinho/linhas";
 import { centavos, PRODUCAO_ENCOMENDA, PRODUCAO_PRONTA, textoPrazo } from "@/loja/lib/carrinho/totais";
-import { type ItemCarrinho, ROTULO_PERSONALIZACAO } from "./estado";
+import type { ItemCarrinho } from "./estado";
 import { linkAcao } from "./estilos";
+import { FotoItem } from "./FotoItem";
 import { reais } from "./Resumo";
 
-// Situação da peça (a linha "Free 30-day returns" da referência): prazo de produção e trocas.
-export function situacaoDe(produto: ProdutoCarrinho, item?: ItemCarrinho): string {
+// Situação da peça (a linha "Free 30-day returns" da referência): prazo de produção e trocas. Projeto
+// e quartinho personalizado têm o próprio prazo (20 a 35 dias úteis) e são feitos sob medida.
+export function situacaoDe(produto: ProdutoCarrinho, item?: Pick<ItemCarrinho, "personalizacao">): string {
+  if (produto.producao) return `Projeto sob encomenda · produção de ${textoPrazo(produto.producao)}`;
   const prazo = produto.prontaEntrega
     ? `Pronta entrega · sai em até ${textoPrazo(PRODUCAO_PRONTA)}`
     : `Sob encomenda · produção de ${textoPrazo(PRODUCAO_ENCOMENDA)}`;
@@ -19,15 +22,11 @@ export function situacaoDe(produto: ProdutoCarrinho, item?: ItemCarrinho): strin
   return item?.personalizacao === "com" ? prazo : `${prazo} · Trocas em até 7 dias`;
 }
 
-// Linhas de atributos (12, cinza): cor, tamanho do berço, bordado e a unidade quando não é "peça".
-export function atributosDe(produto: ProdutoCarrinho, item: { variacao?: string; personalizacao?: ItemCarrinho["personalizacao"] }) {
-  return [
-    produto.cor && `Cor: ${produto.cor}`,
-    item.variacao && `${produto.variacaoTitulo ?? "Opção"}: ${item.variacao}`,
-    item.personalizacao && `Bordado: ${ROTULO_PERSONALIZACAO[item.personalizacao]}`,
-    produto.unidade !== "peça" && `Vendido por ${produto.unidade}`,
-  ].filter((linha): linha is string => Boolean(linha));
-}
+// Linhas de atributos (12, cinza): cor, tamanho do berço, bordado e a unidade quando não é "peça"; no
+// projeto, pacote, opcionais e paleta; no quartinho, tema, paleta, berço, bordado e os módulos.
+export const atributosDe = atributosDoItem;
+
+export const hrefDe = (produto: Pick<ProdutoCarrinho, "href" | "slug">) => produto.href ?? `/produto/${produto.slug}`;
 
 // Item da sacola (lululemon-sacola.md §4): foto 5:6 à esquerda (mín. 210 no desktop, metade da largura
 // no celular, ocupando 2 linhas), à direita situação, nome, preço, atributos e a pílula de quantidade;
@@ -45,20 +44,15 @@ export function ItemSacola({
   aoMudarQuantidade: (quantidade: number) => void;
   aoRemover: () => void;
   aoEditar: () => void;
-  aoSalvar: () => void;
+  aoSalvar?: () => void; // só peças do catálogo vão para os favoritos
 }) {
   const unitario = centavos(produto.preco);
   const total = unitario * item.quantidade;
-  const href = `/produto/${produto.slug}`;
+  const href = hrefDe(produto);
   return (
     <li className={cx("group", tile)}>
       <Link href={href} tabIndex={-1} aria-hidden className={foto}>
-        <FotoProduto
-          foto={produto.foto}
-          segunda={produto.segunda}
-          sizes="(min-width: 992px) 240px, 50vw"
-          className={css({ aspectRatio: "[5 / 6]", w: "full" })}
-        />
+        <FotoItem produto={produto} segunda sizes="(min-width: 992px) 240px, 50vw" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
       </Link>
 
       <div className={info}>
@@ -80,10 +74,13 @@ export function ItemSacola({
       </div>
 
       <div className={acoes}>
-        <button type="button" onClick={aoSalvar} className={linkAcao}>
-          Salvar nos favoritos
-        </button>
-        <button type="button" onClick={aoEditar} aria-haspopup="dialog" className={linkAcao}>
+        {aoSalvar && (
+          <button type="button" onClick={aoSalvar} className={linkAcao}>
+            Salvar nos favoritos
+          </button>
+        )}
+        {/* O quartinho personalizado é editado no próprio montador (link); o resto, na gaveta. */}
+        <button type="button" onClick={aoEditar} aria-haspopup={produto.tipo === "personalizado" ? undefined : "dialog"} className={linkAcao}>
           Editar <span className={css({ srOnly: true })}>{produto.nome}</span>
         </button>
         <button type="button" onClick={aoRemover} aria-haspopup="dialog" className={linkAcao}>

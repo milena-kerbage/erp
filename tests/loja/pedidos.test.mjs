@@ -1,103 +1,110 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  acoes,
-  diaPorExtenso,
-  diasParaAgendar,
-  linhaDoTempo,
-  noFiltro,
-  previsaoPorPrazo,
-  progresso,
-  situacao,
-} from "../../src/loja/lib/pedidos/status.ts";
+  buscarNoHistorico,
+  criarPedidoEnviado,
+  dataDoEnvio,
+  gerarNumeroPedido,
+  interpretarHistorico,
+  MAXIMO_PEDIDOS,
+  mensagemDeReenvio,
+  quantidadeDePecas,
+  registrarNoHistorico,
+  removerDoHistorico,
+} from "../../src/loja/lib/pedidos/historico.ts";
 
-const entrega = {
-  tipo: "endereco",
-  modalidade: "Normal",
-  destino: "Rio de Janeiro/RJ",
-  prazo: "3 a 5 dias úteis",
-  previsao: "2026-11-05",
-  rastreio: "XX",
-};
-const historico = [
-  { status: "aguardando_pagamento", em: "2026-10-30T10:00:00-03:00" },
-  { status: "pagamento_aprovado", em: "2026-10-30T10:02:00-03:00" },
-  { status: "em_separacao", em: "2026-10-30T15:00:00-03:00" },
-  { status: "nota_emitida", em: "2026-10-31T09:00:00-03:00" },
-  { status: "em_transporte", em: "2026-11-01T08:00:00-03:00" },
+// "Minha conta neste aparelho": pedidos enviados pelo WhatsApp guardados no navegador.
+
+const AGORA = new Date("2026-11-08T17:32:00Z"); // 14:32 em Fortaleza
+const sempre = (valor) => () => valor;
+
+const linhas = [
+  {
+    nome: "Kit berço Jardim rosê 9 peças",
+    codigo: "MK-1001",
+    quantidade: 2,
+    detalhes: ["Cor: Rosê", "Bordado: Com bordado do nome"],
+    precoCentavos: 149000,
+    slug: "kit-berco-jardim-rose",
+    href: "/produto/kit-berco-jardim-rose",
+    modulos: [{ nome: "extra que não deve ir para o storage" }],
+  },
+  { nome: "Manta de tricô", quantidade: 1, detalhes: [], precoCentavos: 26900 },
 ];
 
-test("linha do tempo da entrega: feitos, atual e próximos (produção antes da nota)", () => {
-  const passos = linhaDoTempo({ entrega, status: "em_transporte", historico });
-  assert.deepEqual(
-    passos.map((passo) => passo.rotulo),
-    ["Pedido recebido", "Pagamento aprovado", "Em produção no ateliê", "Nota fiscal emitida", "Em transporte", "Entregue"],
-  );
-  assert.deepEqual(
-    passos.map((passo) => passo.estado),
-    ["feito", "feito", "feito", "feito", "atual", "proximo"],
-  );
-  assert.equal(passos[4].em, "2026-11-01T08:00:00-03:00");
-  assert.equal(progresso({ entrega, status: "em_transporte", historico }), 4.5 / 6);
-});
-
-test("saiu para entrega aparece como passo atual de Em transporte", () => {
-  const passos = linhaDoTempo({
-    entrega,
-    status: "saiu_para_entrega",
-    historico: [...historico, { status: "saiu_para_entrega", em: "2026-11-04T07:30:00-03:00" }],
+function pedido(extra = {}) {
+  return criarPedidoEnviado({
+    itens: linhas,
+    cupom: { codigo: "ENXOVAL10", descontoCentavos: 32490 },
+    retirar: false,
+    local: "  Recife/PE ",
+    mensagem: "Olá, Ateliê Milena Kerbage! Quero fazer este pedido",
+    agora: AGORA,
+    aleatorio: sempre(0),
+    ...extra,
   });
-  assert.equal(passos[4].rotulo, "Saiu para entrega");
-  assert.equal(passos[4].estado, "atual");
-  assert.equal(passos[4].em, "2026-11-04T07:30:00-03:00");
+}
+
+test("número do pedido: data de Fortaleza e sufixo sem caracteres ambíguos", () => {
+  assert.equal(gerarNumeroPedido(AGORA, sempre(0)), "MK-261108-2222");
+  assert.equal(gerarNumeroPedido(new Date("2026-11-09T02:00:00Z"), sempre(0)), "MK-261108-2222"); // 23h do dia 8 em Fortaleza
+  assert.match(gerarNumeroPedido(AGORA), /^MK-261108-[2-9A-HJ-NP-Z]{4}$/);
 });
 
-test("entregue e retirada concluídos; cancelado mostra só o que aconteceu", () => {
-  const entregue = linhaDoTempo({
-    entrega,
-    status: "entregue",
-    historico: [...historico, { status: "entregue", em: "2026-11-04T14:00:00-03:00" }],
-  });
-  assert.ok(entregue.every((passo) => passo.estado === "feito"));
-  const retirada = { tipo: "retirada", local: "Ateliê Milena Kerbage · Fortaleza", prazo: "2 dias úteis", previsao: "2026-11-02" };
-  const pronto = linhaDoTempo({ entrega: retirada, status: "pronto_para_retirada", historico: historico.slice(0, 2) });
+test("criar o registro: totais, cupom, local aparado e só os campos conhecidos dos itens", () => {
+  const registro = pedido();
+  assert.equal(registro.numero, "MK-261108-2222");
+  assert.equal(registro.enviadoEm, AGORA.toISOString());
+  assert.equal(registro.subtotalCentavos, 2 * 149000 + 26900);
+  assert.equal(registro.totalCentavos, 2 * 149000 + 26900 - 32490);
+  assert.deepEqual(registro.cupom, { codigo: "ENXOVAL10", descontoCentavos: 32490 });
+  assert.equal(registro.local, "Recife/PE");
+  assert.equal(registro.itens[0].href, "/produto/kit-berco-jardim-rose");
+  assert.equal("modulos" in registro.itens[0], false);
+  assert.equal(registro.itens[1].slug, undefined);
+  assert.equal(quantidadeDePecas(registro), 3);
+  const semCupom = pedido({ cupom: { codigo: "X", descontoCentavos: 0 }, local: "" });
+  assert.equal(semCupom.cupom, undefined);
+  assert.equal(semCupom.local, undefined);
+  assert.equal(semCupom.totalCentavos, semCupom.subtotalCentavos);
+});
+
+test("interpretar o storage: descarta lixo, repetidos e links externos; mais novo primeiro", () => {
+  const antigo = { ...pedido(), numero: "MK-261101-AAAA", enviadoEm: "2026-11-01T12:00:00.000Z" };
+  const novo = pedido();
+  const bruto = JSON.stringify([
+    antigo,
+    novo,
+    { ...novo }, // repetido
+    { numero: "MK-X", enviadoEm: "ontem", itens: [], mensagem: "x" }, // data inválida e sem itens
+    { ...novo, numero: "MK-261108-BBBB", itens: [{ nome: "Peça", quantidade: 1, detalhes: [], precoCentavos: 100, href: "https://golpe.com" }] },
+    null,
+    "texto",
+  ]);
+  const lista = interpretarHistorico(bruto);
   assert.deepEqual(
-    pronto.map((passo) => passo.estado),
-    ["feito", "feito", "feito", "atual", "proximo"],
+    lista.map((item) => item.numero),
+    ["MK-261108-2222", "MK-261108-BBBB", "MK-261101-AAAA"],
   );
-  const cancelado = linhaDoTempo({
-    entrega,
-    status: "cancelado",
-    historico: [...historico.slice(0, 2), { status: "cancelado", em: "2026-10-30T11:00:00-03:00" }],
-  });
-  assert.equal(cancelado.length, 2);
-  assert.equal(progresso({ entrega, status: "cancelado", historico }), 0);
+  assert.equal(lista[1].itens[0].href, undefined);
+  assert.deepEqual(interpretarHistorico("{quebrado"), []);
+  assert.deepEqual(interpretarHistorico(null), []);
+  assert.deepEqual(interpretarHistorico('{"a":1}'), []);
 });
 
-test("ações por situação e filtros", () => {
-  assert.equal(acoes({ status: "aguardando_pagamento", entrega }).pagar, true);
-  assert.equal(acoes({ status: "em_separacao", entrega }).cancelar, true);
-  assert.equal(acoes({ status: "em_transporte", entrega }).cancelar, false);
-  assert.equal(acoes({ status: "em_transporte", entrega }).reagendar, true);
-  assert.equal(acoes({ status: "em_transporte", entrega }).rastrear, true);
-  assert.equal(acoes({ status: "entregue", entrega }).trocar, true);
-  assert.equal(acoes({ status: "pagamento_aprovado", entrega }).notaFiscal, false);
-  assert.equal(acoes({ status: "em_separacao", entrega }).notaFiscal, false); // em produção: nota ainda não saiu
-  assert.equal(acoes({ status: "nota_emitida", entrega }).notaFiscal, true);
-  assert.equal(situacao("em_separacao").rotulo, "Em produção no ateliê");
-  assert.equal(noFiltro("em_transporte", "andamento"), true);
-  assert.equal(noFiltro("entregue", "andamento"), false);
-  assert.equal(noFiltro("retirado", "concluidos"), true);
-  assert.equal(situacao("pronto_para_retirada").tom, "atencao");
+test("registrar, buscar e remover; o histórico guarda no máximo os mais recentes", () => {
+  let lista = [];
+  for (let indice = 0; indice < MAXIMO_PEDIDOS + 5; indice++) lista = registrarNoHistorico(lista, { ...pedido(), numero: `MK-${indice}` });
+  assert.equal(lista.length, MAXIMO_PEDIDOS);
+  assert.equal(lista[0].numero, `MK-${MAXIMO_PEDIDOS + 4}`);
+  assert.equal(buscarNoHistorico(lista, ` mk-${MAXIMO_PEDIDOS + 4} `)?.numero, `MK-${MAXIMO_PEDIDOS + 4}`);
+  lista = removerDoHistorico(lista, `MK-${MAXIMO_PEDIDOS + 4}`);
+  assert.equal(buscarNoHistorico(lista, `MK-${MAXIMO_PEDIDOS + 4}`), undefined);
+  assert.equal(lista.length, MAXIMO_PEDIDOS - 1);
 });
 
-test("datas no fuso de Brasília e dias para agendar sem domingo", () => {
-  assert.equal(diaPorExtenso("2026-11-05"), "quinta, 5 de nov.");
-  const dias = diasParaAgendar(new Date(2026, 10, 6), 3); // sexta, 6/nov
-  assert.deepEqual(dias, ["2026-11-07", "2026-11-09", "2026-11-10"]); // pula o domingo 8
-});
-
-test("previsão por prazo em dias úteis", () => {
-  assert.equal(previsaoPorPrazo("3 a 5 dias úteis", new Date(2026, 10, 2)), "2026-11-09"); // seg 2/nov + 5 úteis
-  assert.equal(previsaoPorPrazo("Pronto em 1 dia útil", new Date(2026, 10, 6)), "2026-11-09"); // sexta → segunda
+test("reenvio: a mesma mensagem com a data do pedido; data por extenso em Fortaleza", () => {
+  const registro = pedido();
+  assert.equal(mensagemDeReenvio(registro), `(Reenviando o pedido que montei no site em 08/11/2026.)\n\n${registro.mensagem}`);
+  assert.equal(dataDoEnvio(registro.enviadoEm), "8 de novembro de 2026, 14:32");
 });

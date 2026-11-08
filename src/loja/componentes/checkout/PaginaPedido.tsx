@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 import {
+  chaveItem,
   esvaziarCarrinho,
   salvarPreferenciasCompra,
   useItensCarrinho,
@@ -14,12 +15,15 @@ import { atributosDe } from "@/loja/componentes/carrinho/ItemSacola";
 import { reais } from "@/loja/componentes/carrinho/Resumo";
 import { CheckCircle, WhatsappLogo } from "@/loja/componentes/icones";
 import { useLocal } from "@/loja/componentes/localizacao/estado";
-import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
+import { FotoItem } from "@/loja/componentes/carrinho/FotoItem";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
+import { linhaDoPedido, resolverItem } from "@/loja/lib/carrinho/linhas";
 import { CUPONS, calcularTotais, centavos, DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
 import { type ClientePedido, errosPedido, LIMITE_OBSERVACOES, linkWhatsApp, montarMensagemPedido } from "@/loja/lib/checkout/pedido";
 import { type Erros, mascararTelefone } from "@/loja/lib/checkout/validacao";
 import { EMPRESA } from "@/loja/lib/empresa";
+import { criarPedidoEnviado } from "@/loja/lib/pedidos/historico";
+import { registrarPedidoEnviado } from "@/loja/componentes/conta/historico";
 import { AreaTexto, Campo, Marcacao } from "./Campo";
 
 const ORDEM_CAMPOS = ["nome", "whatsapp", "local", "observacoes"] as const;
@@ -27,8 +31,9 @@ const ORDEM_CAMPOS = ["nome", "whatsapp", "local", "observacoes"] as const;
 // Pedido pelo WhatsApp (no lugar do checkout com pagamento): a loja é um CATÁLOGO COM PREÇO. A cliente
 // revisa as peças, deixa nome e WhatsApp (cidade/UF ou CEP, retirada no ateliê e observações são
 // opcionais) e o site abre a conversa com o ateliê com a mensagem pronta; uma vendedora confirma
-// valores, bordado, frete, prazo e pagamento ali. Nada é cobrado nem guardado no site: os dados da
-// cliente vão só na mensagem. Mesmo layout mínimo da sacola (grupo compra).
+// valores, bordado, frete, prazo e pagamento ali. Nada é cobrado nem enviado ao servidor: os dados da
+// cliente vão só na mensagem, e um resumo fica no navegador (Minha conta › Pedidos enviados).
+// Mesmo layout mínimo da sacola (grupo compra).
 export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
   const itens = useItensCarrinho();
   const preferencias = usePreferenciasCompra();
@@ -50,7 +55,7 @@ export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
   if (itens === null) return <Esqueleto />;
 
   const linhas = itens.flatMap((item) => {
-    const produto = porSlug.get(item.slug);
+    const produto = resolverItem(item, porSlug);
     return produto ? [{ item, produto }] : [];
   });
   if (linhas.length === 0) return <Vazio />;
@@ -76,18 +81,28 @@ export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
       return;
     }
     const texto = montarMensagemPedido({
-      linhas: linhas.map(({ item, produto }) => ({
-        nome: produto.nome,
-        codigo: produto.sku,
-        quantidade: item.quantidade,
-        detalhes: atributosDe(produto, item),
-        precoCentavos: centavos(produto.preco),
-      })),
+      // Produtos, projetos e o quartinho personalizado, cada um com os seus detalhes (linhaDoPedido).
+      linhas: linhas.map(({ item, produto }) => linhaDoPedido(item, produto)),
       cliente,
       cupom: cupom && totais.descontoCupom > 0 ? { codigo: cupom.codigo, descontoCentavos: totais.descontoCupom } : undefined,
       descontoPixPercentual: DESCONTO_PIX_PERCENTUAL,
     });
     const link = linkWhatsApp(EMPRESA.whatsapp.numero, texto);
+    // "Minha conta neste aparelho": guarda o resumo do pedido enviado só no navegador, para rever e
+    // reenviar (lib/pedidos/historico.ts). Nada vai para o servidor.
+    registrarPedidoEnviado(
+      criarPedidoEnviado({
+        itens: linhas.map(({ item, produto }) => ({
+          ...linhaDoPedido(item, produto),
+          slug: produto.slug,
+          href: produto.href ?? `/produto/${produto.slug}`,
+        })),
+        cupom: cupom && totais.descontoCupom > 0 ? { codigo: cupom.codigo, descontoCentavos: totais.descontoCupom } : undefined,
+        retirar: cliente.retirar,
+        local: cliente.local,
+        mensagem: texto,
+      }),
+    );
     salvarPreferenciasCompra({ entrega: cliente.retirar ? "retirada" : "endereco" });
     // Dentro do clique (gesto da cliente): o navegador deixa abrir a aba do WhatsApp.
     window.open(link, "_blank", "noopener,noreferrer");
@@ -158,7 +173,11 @@ export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
                 <WhatsappLogo size={18} aria-hidden /> Fazer pedido pelo WhatsApp
               </button>
               <p className={css({ mt: "3", fontSize: "xs", lineHeight: "texto", color: "textoSuave", textAlign: "center" })}>
-                O WhatsApp abre com a mensagem do pedido: é só enviar. Seus dados vão só nessa mensagem.
+                O WhatsApp abre com a mensagem do pedido: é só enviar. Seus dados vão só nessa mensagem, e um resumo fica salvo neste
+                aparelho, em Minha conta.{" "}
+                <Link href="/politicas/privacidade" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
+                  Privacidade
+                </Link>
               </p>
             </div>
           </form>
@@ -176,10 +195,10 @@ export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
           <ul className={css({ display: "grid", gap: "4", mt: "6" })}>
             {linhas.map(({ item, produto }) => (
               <li
-                key={`${item.slug}-${item.variacao ?? ""}-${item.personalizacao ?? ""}`}
+                key={chaveItem(item)}
                 className={css({ display: "grid", gridTemplateColumns: "[64px minmax(0, 1fr)]", gap: "3", alignItems: "start" })}
               >
-                <FotoProduto foto={produto.foto} sizes="64px" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
+                <FotoItem produto={produto} sizes="64px" className={css({ aspectRatio: "[5 / 6]", w: "full" })} />
                 <div className={css({ minW: "0", fontSize: "sm", lineHeight: "texto" })}>
                   <p className={css({ color: "escuro" })}>{produto.nome}</p>
                   <p className={css({ fontSize: "xs", color: "textoSuave" })}>Quantidade: {item.quantidade}</p>
@@ -245,6 +264,13 @@ function Enviado({ link }: { link: string }) {
           <a href={link} target="_blank" rel="noopener noreferrer" className={linkAcao}>
             Se o WhatsApp não abriu, toque aqui
           </a>
+        </p>
+        <p className={css({ mt: "2", fontSize: "sm", color: "textoSuave" })}>
+          O resumo ficou salvo neste aparelho, em{" "}
+          <Link href="/conta/pedidos" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
+            Minha conta › Pedidos enviados
+          </Link>
+          .
         </p>
 
         {esvaziada ? (

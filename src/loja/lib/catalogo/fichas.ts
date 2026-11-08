@@ -140,3 +140,17 @@ export function fichaTecnica(dados: Dados): GrupoFicha[] {
     ],
   });
 }
+
+// Cuidados por tecido para a página de ajuda "Cuidados com as peças" (/ajuda/tecidos-e-cuidados):
+// os tecidos com os mesmos cuidados saem agrupados, na ordem em que aparecem acima.
+export function cuidadosPorTecido(): Array<{ tecidos: string[]; composicoes: string[]; cuidados: Array<[string, string]> }> {
+  const grupos = new Map<string, { tecidos: string[]; composicoes: string[]; cuidados: Array<[string, string]> }>();
+  for (const [tecido, info] of Object.entries(TECIDOS)) {
+    const chave = JSON.stringify(info.cuidados);
+    const grupo = grupos.get(chave) ?? { tecidos: [], composicoes: [], cuidados: info.cuidados };
+    grupo.tecidos.push(tecido);
+    grupo.composicoes.push(info.composicao);
+    grupos.set(chave, grupo);
+  }
+  return [...grupos.values()];
+}

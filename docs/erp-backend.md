@@ -10,7 +10,7 @@ O guia de operação da interface está em [erp-operacao.md](erp-operacao.md), e
 
 ## 1. Preparação e banco
 
-Aplicar, em ordem, as sete migrações de `supabase/migrations` (todas idempotentes: `IF NOT EXISTS`, sem `DROP`/`DELETE`; a aplicação no projeto real exige autorização do responsável):
+Aplicar, em ordem, as oito migrações de `supabase/migrations` (todas idempotentes: `IF NOT EXISTS`, sem `DROP`/`DELETE`; a aplicação no projeto real exige autorização do responsável):
 
 | Migração | Conteúdo |
 | --- | --- |
@@ -21,6 +21,7 @@ Aplicar, em ordem, as sete migrações de `supabase/migrations` (todas idempoten
 | `005_integration_manager.sql` | Checklist, testes e estado OAuth |
 | `006_erp.sql` | CRM, notas/anexos, funis, preferências, registros e auditoria |
 | `007_workspace_access.sql` | Papéis, convites, chaves, fotos, webhooks e notificações |
+| `008_loja_avaliacoes.sql` | Avaliações de produto da loja e suas fotos (em `erp_core`), moderadas pelo ERP |
 
 Os esquemas privados são `erp_auth`, `erp_whatsapp`, `erp_meta` e `erp_core`. As tabelas têm RLS habilitada; `PUBLIC`, `anon` e `authenticated` não recebem acesso público. Os esquemas devem permanecer fora da Data API pública do Supabase. O servidor utiliza uma conexão privilegiada autorizada aos esquemas. O papel da conexão e seus privilégios precisam ser conferidos no projeto real.
 
@@ -48,11 +49,11 @@ Faltando `DATABASE_URL`, qualquer rota que toque o banco responde 503 `DATABASE_
 
 Para gravar `DATABASE_URL` sem expô-la, rode `npm run env:set-database-url` num terminal: o prompt é oculto e o valor vai direto para `.env.local` (permissão 0600), sem aparecer no chat, no histórico do shell ou em logs. Basta a senha do banco: o comando monta a conexão direta `postgres@db.<project-id>.supabase.co:5432` (exige IPv6; o host do pooler depende de região e índice e precisa ser copiado do painel Connect). O Supabase usa uma CA própria: baixe o certificado em Database Settings > SSL Configuration e informe o caminho quando o comando perguntar (vira `DATABASE_SSL_CA`).
 
-`npm run db:migrate -- --confirm=APLICAR-MIGRACOES` aplica as sete migrações em ordem (cada arquivo na sua transação, idempotentes). Ele recusa rodar sem a confirmação explícita e, se já houver tabelas `erp_*`, só reaplica com `--allow-existing`. Em 17/10/2026 as sete foram aplicadas no projeto Supabase de produção (4 esquemas, 35 tabelas, RLS em todas).
+`npm run db:migrate -- --confirm=APLICAR-MIGRACOES` aplica as migrações em ordem (cada arquivo na sua transação, idempotentes). Ele recusa rodar sem a confirmação explícita e, se já houver tabelas `erp_*`, só reaplica com `--allow-existing`. Em 17/10/2026 as sete primeiras foram aplicadas no projeto Supabase de produção (4 esquemas, 35 tabelas, RLS em todas). A `008_loja_avaliacoes.sql` (2 tabelas a mais em `erp_core`, total 37) ainda **não** foi aplicada em produção: até lá, a loja mostra o estado vazio das avaliações e a tela de moderação responde com erro de banco. Para aplicar, com autorização do responsável: `npm run db:migrate -- --confirm=APLICAR-MIGRACOES --allow-existing` (reexecuta as anteriores sem efeito, porque são idempotentes) e confira com `npm run db:check`.
 
 `npm run db:crud -- --confirm=ESCREVER-DADOS-DE-TESTE` exercita o código real do ERP contra o banco configurado em processos separados (criar lead, mudar de etapa, nota, reler após reiniciar, arquivar, filtros) e remove ao final só o lead `[TESTE-INTEGRACAO]`, suas notas e a auditoria do ator de teste. A configuração inicial criada no primeiro acesso (1 linha de `workspace_settings` e 3 funis) permanece.
 
-`npm run db:check` confere variáveis (só nomes), conexão TLS, tabelas das sete migrações, RLS, privilégios de `anon`/`authenticated` e contagens, tudo em transação somente leitura. A escrita de teste é opt-in e reversível: `npm run db:check -- --write-test --confirm=ESCREVER-DADOS-DE-TESTE` (insere e desfaz com ROLLBACK) e, adicionando `--persist`, grava, lê por outra conexão e remove o registro `teste-integracao-…`.
+`npm run db:check` confere variáveis (só nomes), conexão TLS, tabelas das oito migrações, RLS, privilégios de `anon`/`authenticated` e contagens, tudo em transação somente leitura. A escrita de teste é opt-in e reversível: `npm run db:check -- --write-test --confirm=ESCREVER-DADOS-DE-TESTE` (insere e desfaz com ROLLBACK) e, adicionando `--persist`, grava, lê por outra conexão e remove o registro `teste-integracao-…`.
 
 O pool `pg` compartilha uma conexão por instância. Cada operação usa uma transação e `SET LOCAL search_path`. Consultas usam parâmetros, sem prepared statements nomeados. TLS verifica o servidor; nenhuma dispensa de certificado é permitida na produção. Na Vercel, faltar `DATABASE_URL` provoca erro: não há fallback para SQLite efêmero.
 
@@ -107,6 +108,9 @@ Desativar uma pessoa preserva cadastro e histórico, mas revoga sessões e chave
 | `/api/erp/webhooks/{id}/test` | POST | Evento real de teste |
 | `/api/erp/webhooks/deliveries` | GET, POST | Histórico e nova tentativa |
 | `/api/erp/notifications` | GET, PATCH | Eventos reais e escolhas por usuário |
+| `/api/erp/avaliacoes` | GET | Moderação das avaliações da loja (admin e gestão): `status`, `produto`, paginação e contagem por situação |
+| `/api/erp/avaliacoes/{id}` | PATCH, DELETE | Aprovar, recusar (motivo interno), voltar para pendente, responder como o ateliê; exclusão definitiva com as fotos |
+| `/api/erp/avaliacoes/foto/{id}` | GET | Foto WebP da avaliação em qualquer situação (`tamanho=mini|grande`) |
 | `/api/erp/documentation` | GET | Manual técnico; `document=operation` para operação |
 | `/api/auth/accept-invitation` | POST | Ativar conta com token/senha |
 
@@ -165,6 +169,12 @@ Download de anexo exige sessão, verifica a ficha e responde como attachment/oct
 
 Notificações são derivadas da auditoria de operações efetivamente gravadas. Leitura e arquivo pertencem a cada pessoa, com estado persistido; dados financeiros são filtrados pelo papel. São consultadas no carregamento, nas mudanças do ERP e ao abrir o painel. Não são push/email de fundo. Preferências de automações sem executor externo disponível permanecem identificadas na interface.
 
+### Avaliações da loja
+
+As avaliações de produto enviadas na loja ficam em `erp_core.loja_avaliacoes` e `erp_core.loja_avaliacao_fotos` (migração 008), no mesmo adaptador do ERP (SQLite local explícito ou PostgreSQL). Código: `src/lib/loja/avaliacoes.ts`. Tudo entra como `pendente`; só `aprovada` aparece na loja. Cada foto chega com até 3 MiB (JPEG, PNG ou WebP conferidos pelos bytes), é recomprimida com `sharp` para WebP (lado máximo de 1600 px, qualidade 80, mais uma miniatura de 400 px) e perde todos os metadados (EXIF, GPS, ICC) antes de ir para o banco em BYTEA. O IP do envio só existe como HMAC para o limite de 3 avaliações por hora e é apagado na moderação ou depois de 24 horas.
+
+A moderação usa revisão otimista (`revisao`, 409 `REVISION_CONFLICT`), exige `admin` ou `manager` com sessão (sem chave Bearer) e registra `created` (ator `loja`), `approved`, `rejected`, `reopened`, `replied`, `reply_removed` e `removed` em `erp_audit` (recurso `avaliacoes`), que alimentam as notificações de admin e gestão. Aprovar, recusar uma publicada, responder ou excluir revalida na hora a página do produto (`revalidateTag("avaliacoes:<slug>")`). Exclusão apaga a avaliação e as fotos; recusar só esconde.
+
 ## 8. Webhooks de saída
 
 Cadastro administrativo aceita URL HTTPS pública na porta 443, sem userinfo, IP literal ou fragmento. O host precisa estar autorizado exatamente em `ERP_WEBHOOK_ALLOWED_HOSTS` para entrega. DNS é validado e fixado à conexão TLS; redes privadas, locais e reservadas são rejeitadas. Certificado é verificado e redirects não são seguidos. O segredo HMAC fica cifrado com AES-GCM e AAD do endpoint, usando a chave privada da instalação.
@@ -205,4 +215,4 @@ Resultados da rodada de 12/10/2026: checagem TypeScript e build de produção co
 
 As suítes isolam arquivos/credenciais e não devem ser executadas contra banco de clientes. O HTTP completo cobre também ERP, convites, Bearer, papéis, arquivos e páginas operacionais. A preparação local não declara aprovação Meta nem disponibilidade remota. A inspeção visual por ferramenta de navegador não foi concluída, devido ao bloqueio de controle registrado nesta sessão.
 
-Antes de publicar: configurar os projetos reais, sete migrações, TLS, origem HTTPS, administradores, key encryption, hosts autorizados, política de backups/restauração, SMTP se usado, Meta/WABA/número e rotinas de operação. Faça smoke test no ambiente de homologação com contas e dados autorizados. O [checklist WhatsApp](pendencias-implantacao-whatsapp.md) complementa esses itens; o guia Meta não substitui os requisitos operacionais dos outros módulos.
+Antes de publicar: configurar os projetos reais, oito migrações, TLS, origem HTTPS, administradores, key encryption, hosts autorizados, política de backups/restauração, SMTP se usado, Meta/WABA/número e rotinas de operação. Faça smoke test no ambiente de homologação com contas e dados autorizados. O [checklist WhatsApp](pendencias-implantacao-whatsapp.md) complementa esses itens; o guia Meta não substitui os requisitos operacionais dos outros módulos.

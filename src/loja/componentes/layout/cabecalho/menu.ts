@@ -34,7 +34,7 @@ export const LINKS_SERVICO: LinkUtilitario[] = [LINKS_UTILITARIOS.ajuda, LINKS_U
 
 // Rodapé da gaveta do celular (Sign In · Help · Download the App · Gift Cards).
 export const LINKS_GAVETA: LinkUtilitario[] = [
-  LINKS_UTILITARIOS.entrar,
+  LINKS_UTILITARIOS.conta,
   LINKS_UTILITARIOS.pedido,
   LINKS_UTILITARIOS.ajuda,
   LINKS_UTILITARIOS.franquia,
@@ -181,6 +181,7 @@ export function montarMenu(): ItemMenu[] {
         tipo: "colunas",
         destaques: [
           { rotulo: "Todos os projetos", href: "/projetos" },
+          { rotulo: "Monte o seu quartinho", href: "/projetos/monte-o-seu" },
           { rotulo: "Como funciona", href: "/projetos/como-funciona" },
           { rotulo: "Peça seu projeto", href: "/projetos/orcamento" },
           EDICAO,
@@ -191,7 +192,7 @@ export function montarMenu(): ItemMenu[] {
           card("Para menina", "/projetos/menina", "rose", "flor", "projetos/menina"),
           card("Para menino", "/projetos/menino", "azul", "nuvem", "projetos/menino"),
           card("Neutros", "/projetos/neutro", "linho", "folha", "projetos/neutro"),
-          card("Peça seu projeto", "/projetos/orcamento", "salvia", "berco", "projetos/orcamento"),
+          card("Monte o seu", "/projetos/monte-o-seu", "salvia", "berco", "projetos/monte-o-seu"),
         ],
         promo: {
           titulo: "O quartinho inteiro, planejado pelo ateliê",

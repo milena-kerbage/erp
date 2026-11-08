@@ -29,7 +29,9 @@
     "meta:deletion": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/meta-deletion.mjs",
     "whatsapp:check": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/check-whatsapp.mjs",
     "whatsapp:maintenance": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/whatsapp-maintenance.mjs",
-    "test:loja": "node --experimental-strip-types --test 'tests/loja/**/*.test.mjs'"
+    "test:loja": "node --experimental-strip-types --test 'tests/loja/**/*.test.mjs'",
+    "test:avaliacoes": "node --experimental-strip-types --test tests/avaliacoes.test.mjs",
+    "test:avaliacoes:postgres": "AVALIACOES_TEST_POSTGRES=1 node --experimental-strip-types --test tests/avaliacoes.test.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^10.7.0",

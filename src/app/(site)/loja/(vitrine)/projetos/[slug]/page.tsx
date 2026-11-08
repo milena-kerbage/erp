@@ -3,27 +3,33 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { css } from "styled-system/css";
-import { ATALHOS_SELECOES, SugestoesProjetos } from "@/loja/componentes/casas/comuns";
-import { PedidoComSelecao, type ResumoProjeto } from "@/loja/componentes/casas/FormularioPedido";
-import { GaleriaProjeto } from "@/loja/componentes/casas/GaleriaProjeto";
-import { LateralProjeto } from "@/loja/componentes/casas/LateralProjeto";
+import { botao } from "styled-system/recipes";
+import { ATALHOS_SELECOES } from "@/loja/componentes/casas/comuns";
+import { abasDoProjeto, fotosDaGaleria, pecasDoQuarto } from "@/loja/componentes/casas/dadosProjeto";
+import { GavetaProjeto } from "@/loja/componentes/casas/GavetaProjeto";
 import { ListagemProjetos } from "@/loja/componentes/casas/ListagemProjetos";
+import { PainelProjeto, PilulaProjeto, ProjetoProvider } from "@/loja/componentes/casas/PainelProjeto";
 import {
-  DetalhesProjeto,
+  ConviteMontador,
   DiferenciaisProjetos,
   EtapasProjetos,
-  PainelProjeto,
+  OQueVemNoQuarto,
+  OutrosProjetos,
+  PaletaDoProjeto,
+  PerguntasProjetos,
   projetosParecidos,
-  TrilhaProjeto,
 } from "@/loja/componentes/casas/secoes";
 import { RESPIRO_LATERAL } from "@/loja/componentes/layout/cabecalho/estilos";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
 import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
+import { Galeria } from "@/loja/componentes/produto/Galeria";
+import { FaleComAtelie, PorQueVaiAmar, recuo } from "@/loja/componentes/produto/secoes";
 import { JsonLd } from "@/loja/componentes/seo/JsonLd";
 import {
   AVISO_PRECOS,
   buscarColecao,
+  buscarOpcional,
   buscarProjeto,
   type Colecao,
   ENTREGA,
@@ -31,21 +37,25 @@ import {
   fotosDoProjeto,
   listarColecoes,
   listarProjetos,
-  PERGUNTAS,
   PRAZO_PRODUCAO,
   type Projeto,
   prazoDoProjeto,
   resumoProjeto,
+  rotuloTema,
+  variacaoProjeto,
 } from "@/loja/lib/casas/catalogo";
 import { filtrarProjetos } from "@/loja/lib/casas/filtragem";
 import { categoriasRelacionadas } from "@/loja/lib/catalogo/categorias";
+import { buscarVarios, condicoesDePagamento } from "@/loja/lib/catalogo/exemplos";
+import { fotoPrincipal } from "@/loja/lib/catalogo/fotos";
 import { EMPRESA } from "@/loja/lib/empresa";
 import { schemaListagemProjetos, schemaProjeto, schemaTrilhaProjetos } from "@/loja/lib/seo/projetos";
 
-// /projetos/<slug>: a página de um projeto (PDP da Adidas, referencia.md §12) ou uma das páginas do
-// menu "Projetos" (navegacao.ts): seleções como /projetos/floral (listagem com filtro fixo) e
-// conteúdos (/projetos/como-funciona, /projetos/orcamento). Os slugs não colidem (testado em
-// tests/loja/casas.test.mjs). Tudo pré-gerado no build. A seleção (/projetos/selecao) tem rota própria.
+// /projetos/<slug>: a página de um projeto (no padrão da página de produto, lululemon-pdp.md) ou uma
+// das páginas do menu "Projetos" (navegacao.ts): seleções como /projetos/floral (listagem com filtro
+// fixo) e conteúdos (/projetos/como-funciona, /projetos/orcamento). Os slugs não colidem (testado em
+// tests/loja/casas.test.mjs). Tudo pré-gerado no build. Rotas próprias: /projetos/monte-o-seu (o
+// montador) e /projetos/selecao (308 para a sacola, onde os projetos ficam junto com os produtos).
 
 type Props = PageProps<"/loja/projetos/[slug]">;
 
@@ -93,10 +103,32 @@ export default async function PaginaSlugProjetos({ params, searchParams }: Props
   return <PaginaSelecao colecao={colecao} searchParams={searchParams} />;
 }
 
+// Página do projeto com a estrutura e as medidas da página de produto: no desktop, grade "1fr 440" com a
+// galeria sticky correndo POR TRÁS do painel; no celular, galeria em 100% com a barra de progresso e
+// o painel subindo por cima. Abaixo da dobra: "Por que você vai amar", gaveta de detalhes, "O que vem no
+// quarto", "Paleta do projeto", "Fale com o ateliê", passo a passo, perguntas, diferenciais e
+// "Outros projetos". O projeto vai para a mesma sacola dos produtos.
 function PaginaProjeto({ projeto }: { projeto: Projeto }) {
   const parecidos = projetosParecidos(projeto, listarProjetos());
+  const pecas = pecasDoQuarto(projeto);
+  // Só liga à peça avulsa que existe no catálogo.
+  const existentes = new Set(buscarVarios(pecas.flatMap((peca) => peca.produto ?? [])).map((produto) => produto.slug));
+  const pecasComLink = pecas.map((peca) => (peca.produto && existentes.has(peca.produto) ? peca : { ...peca, produto: undefined }));
+  // Confirmação "Adicionado ao seu enxoval": as peças avulsas que combinam com o quarto.
+  const sugestoes = buscarVarios([...existentes]).map((produto) => ({
+    slug: produto.slug,
+    nome: produto.nome,
+    pix: condicoesDePagamento(produto.preco)?.pix ?? produto.preco,
+    precisaEscolher: Boolean(produto.variacao),
+    foto: fotoPrincipal(produto),
+  }));
+  const trilha = [
+    { rotulo: "Projetos", href: "/projetos" },
+    { rotulo: rotuloTema(projeto.tema), href: `/projetos/${projeto.tema}` },
+  ];
+
   return (
-    <>
+    <article className={pdp}>
       <JsonLd dados={schemaProjeto(projeto)} />
       <JsonLd
         dados={schemaTrilhaProjetos([
@@ -104,21 +136,48 @@ function PaginaProjeto({ projeto }: { projeto: Projeto }) {
           { rotulo: projeto.nome, href: `/projetos/${projeto.slug}` },
         ])}
       />
-      <div className={grade}>
-        <TrilhaProjeto projeto={projeto} />
-        <div className={css({ gridArea: "galeria" })}>
-          <GaleriaProjeto nome={projeto.nome} fotos={fotosDoProjeto(projeto)} paleta={projeto.paleta} />
+
+      <ProjetoProvider
+        dados={{
+          slug: projeto.slug,
+          nome: projeto.nome,
+          variacao: variacaoProjeto(projeto),
+          precoBase: projeto.precoAPartirDe,
+          paleta: projeto.paleta,
+          prazo: prazoDoProjeto(projeto),
+          trilha,
+          opcionais: projeto.opcionais.flatMap((id) => {
+            const opcional = buscarOpcional(id);
+            return opcional ? [{ id: opcional.id, nome: opcional.nome, curto: opcional.curto, apoio: opcional.apoio, preco: opcional.preco }] : [];
+          }),
+        }}
+        sugestoes={sugestoes}
+      >
+        <section aria-label="Escolha do projeto" className={acimaDaDobra}>
+          <div aria-hidden className={reservaGaleria} />
+          <Galeria nome={projeto.nome} fotos={fotosDaGaleria(projeto)} temComplementos={false} />
+          <aside aria-label="Pacote e pedido" className={painel}>
+            <div aria-hidden className={extensao} />
+            <PainelProjeto />
+          </aside>
+        </section>
+
+        <PorQueVaiAmar texto={projeto.descricao[0]} />
+        <div className={css({ mt: { base: "10", desktop: "16" } })}>
+          <div className={recuo}>
+            <GavetaProjeto nome={projeto.nome} rodape={`Produção em ${prazoDoProjeto(projeto)}`} abas={abasDoProjeto(projeto)} />
+          </div>
         </div>
-        <LateralProjeto>
-          <PainelProjeto projeto={projeto} />
-        </LateralProjeto>
-        <DetalhesProjeto projeto={projeto} />
-        {/* Como "Você também poderá gostar" da PDP de produto: na coluna da galeria, abaixo dos detalhes. */}
-        <div className={css({ gridArea: "sugestoes", pb: { base: "16", lg: "24" } })}>
-          <SugestoesProjetos id="titulo-parecidos" titulo="Outros projetos" projetos={parecidos} />
-        </div>
-      </div>
-    </>
+        <OQueVemNoQuarto projeto={projeto} pecas={pecasComLink} />
+        <PaletaDoProjeto projeto={projeto} />
+        <FaleComAtelie nome={projeto.nome} />
+        <EtapasProjetos pdp />
+        <PerguntasProjetos pdp />
+        <DiferenciaisProjetos pdp />
+        <OutrosProjetos projetos={parecidos} />
+        <PilulaProjeto />
+      </ProjetoProvider>
+    </article>
   );
 }
 
@@ -175,18 +234,8 @@ function PaginaSelecao({ colecao, searchParams }: { colecao: Extract<Colecao, { 
   );
 }
 
-function resumosParaFormulario(): ResumoProjeto[] {
-  return listarProjetos().map((projeto) => ({
-    slug: projeto.slug,
-    nome: projeto.nome,
-    tema: projeto.tema,
-    resumo: resumoProjeto(projeto),
-    precoAPartirDe: projeto.precoAPartirDe,
-    paleta: projeto.paleta,
-  }));
-}
-
-// Conteúdos do menu: "Como funciona" (etapas + perguntas) e "Peça seu projeto" (formulário).
+// Conteúdos do menu: "Como funciona" (etapas + perguntas) e "Peça seu projeto" (convite: escolher um
+// projeto pronto ou montar o seu; tudo vai para a sacola e o pedido segue pelo WhatsApp).
 function PaginaConteudo({ colecao }: { colecao: Extract<Colecao, { tipo: "conteudo" }> }) {
   const caminho = `/projetos/${colecao.slug}`;
   return (
@@ -201,72 +250,112 @@ function PaginaConteudo({ colecao }: { colecao: Extract<Colecao, { tipo: "conteu
       {colecao.slug === "como-funciona" ? (
         <>
           <EtapasProjetos />
-          <section aria-labelledby="titulo-perguntas" className={css({ px: RESPIRO_LATERAL, mt: { base: "16", lg: "24" } })}>
-            <h2 id="titulo-perguntas" className={tituloBloco}>
-              Perguntas frequentes
-            </h2>
-            <dl
-              className={css({ display: "grid", gridTemplateColumns: { base: "1fr", md: "repeat(2, minmax(0, 1fr))" }, gap: "8", mt: "8" })}
-            >
-              {PERGUNTAS.map((item) => (
-                <div key={item.pergunta} className={css({ borderTopWidth: "1px", borderColor: "escuro", pt: "4" })}>
-                  <dt className={css({ fontSize: "lg", fontWeight: "semibold", color: "escuro" })}>{item.pergunta}</dt>
-                  <dd className={css({ mt: "2", lineHeight: "relaxed", color: "texto" })}>{item.resposta}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
+          <PerguntasProjetos />
+          <ConviteMontador />
         </>
       ) : (
-        <section
-          aria-labelledby="titulo-formulario"
-          className={css({
-            display: "grid",
-            gridTemplateColumns: { base: "1fr", lg: "minmax(0, 1fr) 360px" },
-            gap: { base: "10", lg: "16" },
-            alignItems: "start",
-            px: RESPIRO_LATERAL,
-            mt: { base: "10", lg: "14" },
-          })}
-        >
-          <div className={css({ maxW: "leitura" })}>
-            <h2 id="titulo-formulario" className={css({ srOnly: true })}>
-              Formulário de orçamento
-            </h2>
-            <PedidoComSelecao numero={EMPRESA.whatsapp.numero} projetos={resumosParaFormulario()} />
-          </div>
-          <aside className={css({ p: "6", borderRadius: "bloco", bg: "fundoProduto", fontSize: "sm", lineHeight: "relaxed", color: "texto" })}>
-            <p className={css({ fontSize: "lg", color: "escuro" })}>Como seguimos</p>
-            <ul className={css({ mt: "3", display: "grid", gap: "2" })}>
+        <>
+          <section aria-label="Como pedir o seu projeto" className={css({ px: RESPIRO_LATERAL, mt: { base: "10", lg: "14" } })}>
+            <ol className={caminhos}>
+              {[
+                {
+                  titulo: "Escolha um projeto do ateliê",
+                  texto: `${listarProjetos().length} quartinhos prontos para escolher o pacote e os opcionais.`,
+                  acao: { rotulo: "Ver os projetos", href: "/projetos" },
+                },
+                {
+                  titulo: "Ou monte o seu",
+                  texto: "Tema, paleta e peça por peça, do kit berço à bolsa maternidade, com o total na hora.",
+                  acao: { rotulo: "Monte o seu quartinho", href: "/projetos/monte-o-seu" },
+                },
+                {
+                  titulo: "Faça o pedido pela sacola",
+                  texto: "Projetos e peças avulsas ficam na mesma sacola. O pedido segue pelo WhatsApp com uma vendedora.",
+                  acao: { rotulo: "Ver a sacola", href: "/carrinho" },
+                },
+              ].map((passo, indice) => (
+                <li key={passo.titulo} className={cartaoCaminho}>
+                  <span className={css({ fontSize: "4xl", letterSpacing: "titulo", color: "textoSuave", fontVariantNumeric: "tabular-nums" })}>0{indice + 1}</span>
+                  <h2 className={css({ mt: "4", fontSize: "xl", fontWeight: "normal", letterSpacing: "bloco", color: "escuro" })}>{passo.titulo}</h2>
+                  <p className={css({ mt: "2", fontSize: "sm", lineHeight: "relaxed", color: "texto" })}>{passo.texto}</p>
+                  <Link href={passo.acao.href} className={css({ mt: "auto", pt: "6" })}>
+                    <span className={botao({ variante: indice === 1 ? "escuro" : "contorno", tamanho: "p" })}>{passo.acao.rotulo}</span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+            <ul className={css({ display: "grid", gap: "2", mt: "6", fontSize: "sm", lineHeight: "relaxed", color: "textoSuave" })}>
               <li>Respondemos pelo WhatsApp {EMPRESA.whatsapp.exibicao}, em horário comercial.</li>
               <li>Produção em {PRAZO_PRODUCAO} depois do pedido confirmado.</li>
-              <li>{ENTREGA}, com frete calculado no orçamento.</li>
+              <li>{ENTREGA}, com frete a combinar pelo WhatsApp. Valores &quot;a partir de&quot;, com 5% OFF no Pix.</li>
+              <li className={css({ fontSize: "xs" })}>{AVISO_PRECOS}</li>
             </ul>
-            <p className={css({ mt: "4", fontSize: "xs", color: "textoSuave" })}>{AVISO_PRECOS}</p>
-            <Link href="/projetos/como-funciona" className={css({ display: "inline-block", mt: "4", textDecoration: "underline" })}>
-              Ver como funciona
-            </Link>
-          </aside>
-        </section>
+          </section>
+          <EtapasProjetos />
+        </>
       )}
       <DiferenciaisProjetos />
-      <SugestoesProjetos id="titulo-modelos" titulo="Ou escolha um projeto" projetos={listarProjetos().slice(0, 8)} />
-      <div className={css({ h: { base: "16", lg: "24" } })} />
+      <OutrosProjetos projetos={listarProjetos().slice(0, 8)} />
     </>
   );
 }
 
-// Desktop (Adidas): galeria + painel de 480 px fixo. Celular: trilha, nome e preço antes da galeria;
-// ficha, pacotes e detalhes depois.
-const grade = css({
+// overflow-x: clip (não cria contêiner de rolagem: o sticky continua funcionando).
+const pdp = css({ overflowX: "clip", bg: "fundo" });
+
+// Mesma grade da página de produto (produto/[slug]/page.tsx): desktop "1fr 440", a galeria ocupa as
+// duas colunas e o painel fica por cima na 2ª; celular e tablet, a 1ª linha com a altura da galeria e
+// o painel na 2ª, subindo por cima da galeria sticky. isolation: isolate prende os z-index abaixo do
+// cabeçalho.
+const acimaDaDobra = css({
+  position: "relative",
+  isolation: "isolate",
   display: "grid",
-  gridTemplateColumns: { base: "minmax(0, 1fr)", lg: "minmax(0, 1fr) 480px" },
-  gridTemplateAreas: {
-    base: '"trilha" "cabecalho" "galeria" "compra" "detalhes" "sugestoes"',
-    lg: '"galeria lateral" "detalhes lateral" "sugestoes lateral"',
-  },
-  gridTemplateRows: { lg: "auto auto 1fr" },
+  gridTemplateColumns: { base: "minmax(0, 1fr)", desktop: "[minmax(0, 1fr) token(sizes.painelCompra)]" },
+  gridTemplateRows: { base: "auto auto", desktop: "auto" },
+  pt: { desktop: "4" },
+  pb: "4",
 });
+
+const reservaGaleria = css({
+  display: { base: "block", desktop: "none" },
+  gridColumn: "1",
+  gridRow: "1",
+  aspectRatio: { base: "[5 / 6]", md: "[5 / 3]" },
+  mb: "[1px]",
+});
+
+const painel = css({
+  position: "relative",
+  zIndex: "painelProduto",
+  gridColumn: { base: "1", desktop: "2" },
+  gridRow: { base: "2", desktop: "1" },
+  minW: "0",
+  px: { base: "3", md: "5", desktop: "6" },
+  pb: "8",
+  bg: "fundo",
+});
+
+// Extensão branca acima do painel, por baixo da pílula do cabeçalho (como na página de produto).
+const extensao = css({
+  display: { base: "none", desktop: "block" },
+  position: "absolute",
+  top: "[calc(-1 * (token(sizes.topoCabecalho) + token(spacing.4)))]",
+  insetX: "0",
+  h: "[calc(token(sizes.topoCabecalho) + token(spacing.4))]",
+  bg: "fundo",
+});
+
+const caminhos = css({
+  display: "grid",
+  gridTemplateColumns: { base: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" },
+  gap: "[1px]",
+  bg: "borda",
+  borderRadius: "bloco",
+  overflow: "hidden",
+});
+
+const cartaoCaminho = css({ display: "flex", flexDirection: "column", p: { base: "6", lg: "8" }, bg: "superficieSuave" });
 
 const tituloPagina = css({
   mt: { base: "10", lg: "20" },
@@ -275,13 +364,5 @@ const tituloPagina = css({
   fontWeight: "normal",
   lineHeight: "[1.1]",
   letterSpacing: "[-0.04em]",
-  color: "escuro",
-});
-
-const tituloBloco = css({
-  fontFamily: "corpo",
-  fontSize: { base: "3xl", lg: "4xl" },
-  fontWeight: "normal",
-  letterSpacing: "[-0.03em]",
   color: "escuro",
 });

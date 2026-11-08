@@ -1,11 +1,19 @@
-import type { Metadata } from "next";
-import { ListaPedidos } from "@/loja/componentes/conta/ListaPedidos";
-import { pedidosDeExemplo } from "@/loja/lib/pedidos/exemplos";
+import { fotosDoCatalogo, MolduraConta } from "@/loja/componentes/conta/MolduraConta";
+import { PedidosEnviados } from "@/loja/componentes/conta/PedidosEnviados";
+import { metadataPagina } from "@/loja/lib/seo/institucional";
 
-export const metadata: Metadata = { title: "Meus pedidos" };
+export const metadata = metadataPagina({
+  titulo: "Pedidos enviados",
+  descricao: "Os pedidos que você enviou pelo WhatsApp a partir deste aparelho, com os detalhes e o botão para reenviar.",
+  caminho: "/conta/pedidos",
+  indexar: false,
+});
 
-// Meus pedidos (referencia.md §16). Wireframe: pedidos de exemplo do servidor + os simulados no
-// checkout (navegador). [A FAZER] com login: lista da API, dinâmica e sem cache.
+// Lista do navegador (localStorage, gravada pelo checkout ao enviar o pedido): não há pedido no servidor.
 export default function Pedidos() {
-  return <ListaPedidos exemplos={pedidosDeExemplo()} />;
+  return (
+    <MolduraConta trilha={[{ rotulo: "Pedidos enviados", href: "/conta/pedidos" }]}>
+      <PedidosEnviados fotos={fotosDoCatalogo()} />
+    </MolduraConta>
+  );
 }

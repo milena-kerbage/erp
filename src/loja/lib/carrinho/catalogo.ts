@@ -1,6 +1,7 @@
 import "server-only";
 import { condicoesDePagamento, listarProdutos, PRONTA_ENTREGA, type Produto } from "@/loja/lib/catalogo/exemplos";
 import { type Foto, fotoPrincipal, segundaFoto } from "@/loja/lib/catalogo/fotos";
+import type { Prazo } from "./totais";
 
 // O essencial de cada produto para o carrinho e o checkout montarem as linhas no navegador
 // (os itens vivem no localStorage até o carrinho existir na API).
@@ -24,6 +25,13 @@ export type ProdutoCarrinho = {
   precisaEscolher: boolean;
   complementos: string[];
   semelhantes: string[];
+  // Projetos e quartinho personalizado (montados no navegador por lib/carrinho/linhas.ts):
+  tipo?: "projeto" | "personalizado";
+  href?: string; // link do item (padrão: /produto/<slug>)
+  paleta?: string[]; // cores (hex) da miniatura enquanto não há foto
+  atributos?: string[]; // linhas de atributos prontas (pacote, opcionais, tema, paleta…)
+  modulos?: { nome: string; detalhe?: string; precoCentavos: number }[]; // o que vem, para o pedido
+  producao?: Prazo; // prazo de produção próprio
 };
 
 export function catalogoParaCarrinho(): ProdutoCarrinho[] {
