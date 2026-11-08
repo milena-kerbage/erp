@@ -138,21 +138,17 @@ export const NAVEGACAO: ItemNavegacao[] = [
   },
 ];
 
-// Barra utilitária (desktop) e rodapé do menu do celular.
+// Links utilitários: rodapé do menu do celular, linha de serviço do mega menu, ícone de conta e rodapé.
 export const LINKS_UTILITARIOS = {
   loja: { rotulo: "Pronta entrega", href: "/pronta-entrega" },
   edicao: { rotulo: "Edição do mês", href: "/edicao-do-mes" }, // coleção editorial do mês
-  pedido: { rotulo: "Acompanhe seu pedido", href: "/conta/pedidos" },
+  pedido: { rotulo: "Pedidos enviados", href: "/conta/pedidos" },
   ajuda: { rotulo: "Ajuda", href: "/ajuda" },
   franquia: { rotulo: "Fale no WhatsApp", href: `https://wa.me/${EMPRESA.whatsapp.numero}`, externo: true },
   instagram: { rotulo: "Instagram", href: REDES_SOCIAIS.instagram, externo: true },
   // A loja não tem login: "Minha conta" mostra os favoritos e os pedidos enviados deste aparelho.
   conta: { rotulo: "Minha conta", href: "/conta" },
-  // LEGADO, só para o rodapé (revisado na próxima lapidação) e o ícone da barra do cabeçalho, que ainda
-  // leem estas chaves: "Entrar" e "Cadastre-se" saíram (/conta/entrar e /conta/cadastro redirecionam
-  // para /conta). `cadastro` aponta para a indicação para o rodapé não repetir "Minha conta".
-  entrar: { rotulo: "Minha conta", href: "/conta" },
-  cadastro: { rotulo: "Indique o ateliê", href: "/indique" },
+  indique: { rotulo: "Indique o ateliê", href: "/indique" },
 } satisfies Record<string, LinkUtilitario>;
 
 // Painel de busca vazio. Trocar pelos termos reais do relatório de busca interna (GA4) assim que houver dados.

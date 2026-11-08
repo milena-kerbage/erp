@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { css, cx } from "styled-system/css";
 import { ArrowLeft, ArrowRight } from "@/loja/componentes/icones";
+import { SeloFeitoAMao, temSeloFeitoAMao } from "@/loja/componentes/produto/SeloFeitoAMao";
 import { BotaoFavoritar } from "@/loja/componentes/produto/BotaoFavoritar";
 import { classeDaCor } from "@/loja/componentes/produto/cores";
 import type { CorProduto, FotoGaleria, VarianteCor } from "@/loja/componentes/produto/dados";
@@ -18,6 +19,7 @@ export type DadosCard = {
   nomeVariacao?: string;
   preco: string;
   selo?: string;
+  feitoAMao?: boolean; // peça sob encomenda: selo discreto "Feito à mão" no alto da foto
   cores: CorProduto[];
   fotos: FotoGaleria[];
 };
@@ -73,6 +75,7 @@ export function CardListagem({ dados }: { dados: DadosCard }) {
           ))}
         </div>
         {atual.selo && <span className={selo}>{atual.selo}</span>}
+        {temSeloFeitoAMao(dados.feitoAMao, atual.selo) && <SeloFeitoAMao />}
         {total > 1 && (
           <>
             {/* biome-ignore lint/a11y/useSemanticElements: grupo de dois botões em linha */}

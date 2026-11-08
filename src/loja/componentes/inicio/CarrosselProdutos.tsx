@@ -4,20 +4,35 @@ import type { Produto } from "@/loja/lib/catalogo/exemplos";
 import { CardProduto } from "./CardProduto";
 import { Carrossel } from "./Carrossel";
 import type { Acao } from "./conteudo";
-import { botaoPrimario, modulo, tituloSecao } from "./estilos";
+import { botaoPrimario, modulo, rubrica, tituloSecao } from "./estilos";
 
-// Carrossel de produtos (lululemon-referencia.md §3.7): título de 64 px e botão escuro à direita;
+// Carrossel de produtos: rubrica, título de 64 px e botão escuro à direita;
 // trilho com snap de ponta a ponta, 4 cards inteiros + a "espiada" do 5º no desktop (recuo e
 // espaço de 20), 1 card + ~88 px no celular (recuo e espaço de 12). Setas com contorno embaixo,
 // à direita. A largura do card vem da fórmula da referência, em unidades do contêiner.
-export function CarrosselProdutos({ id, titulo, acao, produtos }: { id: string; titulo: string; acao: Acao; produtos: Produto[] }) {
+export function CarrosselProdutos({
+  id,
+  rubrica: etiqueta,
+  titulo,
+  acao,
+  produtos,
+}: {
+  id: string;
+  rubrica?: string;
+  titulo: string;
+  acao: Acao;
+  produtos: Produto[];
+}) {
   const idTitulo = `titulo-${id}`;
   return (
     <section aria-labelledby={idTitulo} className={cx(modulo, css({ containerType: "inline-size" }))}>
       <div className={cabecalho}>
-        <h2 id={idTitulo} className={cx(tituloSecao, css({ maxW: "[821px]" }))}>
-          {titulo}
-        </h2>
+        <div className={css({ maxW: "[821px]" })}>
+          {etiqueta && <p className={rubrica}>{etiqueta}</p>}
+          <h2 id={idTitulo} className={tituloSecao}>
+            {titulo}
+          </h2>
+        </div>
         <Link href={acao.href} className={cx(botaoPrimario, css({ flexShrink: "0" }))}>
           {acao.rotulo}
         </Link>

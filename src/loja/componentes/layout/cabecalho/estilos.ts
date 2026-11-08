@@ -1,8 +1,8 @@
 import { css } from "styled-system/css";
 
 // Medidas compartilhadas pelo cabeçalho e pelas páginas da loja.
-// Cabeçalho no modelo da shop.lululemon.com (lululemon-referencia.md §1 e §2): faixa promocional,
-// pílula flutuante translúcida a partir de 992 px e barra branca de 56 px que some ao descer no celular.
+// Cabeçalho: pílula flutuante translúcida (sálvia-linho) a partir de 992 px, a 16 px do topo da página,
+// e barra clara de 56 px que some ao descer no celular. Não há faixa promocional acima dele.
 
 // Respiro lateral das páginas internas (listagem, produto, carrinho, conta). Mantido como estava:
 // as páginas internas não fazem parte desta reconstrução. A home usa as margens 12/20/40 da referência.

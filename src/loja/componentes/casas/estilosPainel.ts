@@ -201,7 +201,13 @@ export const linkSeta = css({
   _focusVisible: { outline: "none", boxShadow: "anelFoco" },
 });
 
-export const divisoria = css({ borderTopWidth: "1px", borderColor: "borda", m: "0" });
+// Divisória de pesponto (linha tracejada de costura, src/loja/estilos/pesponto.ts) no lugar da linha reta.
+export const divisoria = css({
+  h: "[1px]",
+  m: "0",
+  border: "none",
+  bgImage: "[repeating-linear-gradient(90deg, token(colors.pesponto) 0 6px, transparent 6px 10px)]",
+});
 
 export const cartoes = css({ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: { base: "3", desktop: "4" }, minW: "0" });
 

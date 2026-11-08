@@ -13,10 +13,10 @@ import type { ItemMenu } from "./menu";
 import { LINKS_UTILITARIOS, type LinkUtilitario } from "./navegacao";
 import { SacolaCabecalho } from "./SacolaCabecalho";
 
-// Cabeçalho da loja no modelo da shop.lululemon.com (lululemon-referencia.md §1 e §2).
-// Desktop (≥ 992): <header> sticky de altura 0; a pílula translúcida de 48 px (desfoque de 40 px)
+// Cabeçalho da loja.
+// Desktop (≥ 992): <header> sticky de altura 0; a pílula sálvia-linho translúcida de 48 px (desfoque de 40 px)
 // fica a 16 px do topo e a 20 px das laterais, por cima do hero, e não some ao rolar. Logo à
-// esquerda, menu centralizado (14/500, sublinhado em fade de 300 ms), busca, conta e sacola à
+// esquerda, menu centralizado (14/500, sublinhado de pesponto em fade de 300 ms), busca, conta e sacola à
 // direita (sem seletor de região: o CEP é pedido onde importa, no frete da PDP e da sacola). O mega
 // menu abre no hover sem atraso, continua a pílula (que fica opaca) e escurece a página com um véu
 // de 50% em 600 ms. Esc fecha e devolve o foco ao botão de expandir do item.
@@ -39,7 +39,7 @@ export function BarraCabecalho({
   const [entrada, setEntrada] = useState(true);
   const expandir = useRef(new Map<string, HTMLButtonElement>());
 
-  // Celular: some ao descer e volta ao subir; perto do topo acompanha a faixa promocional.
+  // Celular: some ao descer e volta ao subir; perto do topo fica sempre visível.
   useEffect(() => {
     let ultimo = window.scrollY;
     let quadro = 0;
@@ -162,7 +162,7 @@ export function BarraCabecalho({
 
           <div className={utilidades}>
             <GavetaBusca termos={termos} />
-            <Link href={LINKS_UTILITARIOS.entrar.href} aria-label="Entrar na sua conta" className={conta}>
+            <Link href={LINKS_UTILITARIOS.conta.href} aria-label={LINKS_UTILITARIOS.conta.rotulo} className={conta}>
               <User size={16} aria-hidden />
             </Link>
             <SacolaCabecalho />
@@ -272,7 +272,8 @@ const linkItem = css({
   _focusVisible: { outline: "none", "& > span": { boxShadow: "anelFoco", borderRadius: "xs" } },
 });
 
-// Sublinhado: ::after de 1 px, 4 px abaixo do texto, na largura do texto; só a opacidade anima.
+// Sublinhado: ::after de 1 px, 4 px abaixo do texto, na largura do texto; só a opacidade anima. É um
+// pesponto (tracejado de costura) na sálvia da marca, e não uma linha cinza contínua.
 const rotuloItem = css({
   position: "relative",
   display: "inline-block",
@@ -284,7 +285,7 @@ const rotuloItem = css({
     right: "0",
     bottom: "[-4px]",
     h: "[1px]",
-    bg: "textoSuave",
+    bgImage: "[repeating-linear-gradient(90deg, token(colors.marca) 0 4px, transparent 4px 7px)]",
     opacity: "0",
     transitionProperty: "opacity",
     transitionDuration: "sublinhado",

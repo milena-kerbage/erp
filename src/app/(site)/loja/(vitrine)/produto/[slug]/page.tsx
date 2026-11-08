@@ -130,8 +130,8 @@ export default async function PaginaProduto({ params }: PageProps<"/loja/produto
 const pdp = css({ overflowX: "clip", bg: "fundo" });
 
 // Desktop: "1fr 440", 16 em cima e embaixo; a galeria ocupa as duas colunas e o painel fica por cima
-// na 2ª. Com os 64 reservados pelo <main>, a área começa 80 px abaixo da faixa promocional, 16 abaixo da
-// pílula do cabeçalho (como a referência: y 113 = 33 + 80), e não encosta nela.
+// na 2ª. Com os 64 reservados pelo <main>, a área começa 80 px abaixo do topo da página, 16 abaixo da
+// pílula do cabeçalho, e não encosta nela.
 // Celular e tablet: 1ª linha com a altura da galeria (reserva 5:6 / 5:3 + 1 px da barra) e o painel
 // na 2ª, subindo por cima da galeria sticky.
 // isolation: isolate prende os z-index de dentro (painel, controles da galeria) num contexto próprio,

@@ -29,6 +29,7 @@
     "meta:deletion": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/meta-deletion.mjs",
     "whatsapp:check": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/check-whatsapp.mjs",
     "whatsapp:maintenance": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/whatsapp-maintenance.mjs",
+    "instagram:renovar-token": "node --env-file-if-exists=.env.local scripts/instagram-renovar-token.mjs",
     "test:loja": "node --experimental-strip-types --test 'tests/loja/**/*.test.mjs'",
     "test:avaliacoes": "node --experimental-strip-types --test tests/avaliacoes.test.mjs",
     "test:avaliacoes:postgres": "AVALIACOES_TEST_POSTGRES=1 node --experimental-strip-types --test tests/avaliacoes.test.mjs"
@@ -43,7 +44,6 @@
     "next": "16.4.3",
     "nodemailer": "^10.2.1",
     "pg": "^8.23.1",
-    "qrcode-generator": "^2.0.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",

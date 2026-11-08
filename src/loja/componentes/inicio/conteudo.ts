@@ -1,5 +1,5 @@
-// Conteúdo da home do Ateliê Milena Kerbage, módulo a módulo, na ordem da shop.lululemon.com
-// (lululemon-referencia.md §3.1). Textos do ateliê; links internos pela URL pública.
+// Conteúdo da home do Ateliê Milena Kerbage, módulo a módulo, na ordem da página. Textos do ateliê;
+// links internos pela URL pública. `rubrica`: a etiqueta curta em caixa alta acima do título da seção.
 // FOTOS: ainda não há. Cada mídia aceita `src` (foto .webp/.jpg ou vídeo .mp4/.webm). Os arquivos
 // entram em public/vitrine/home/<módulo>/… (caminhos sugeridos nos comentários); enquanto `src`
 // estiver vazio, a mídia desenha a composição de espera nos tons da marca (Midia.tsx).
@@ -8,7 +8,6 @@ import { LINKS_UTILITARIOS } from "@/loja/componentes/layout/cabecalho/navegacao
 import { EDICAO_ATUAL, ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
 import { montarUrl } from "@/loja/lib/catalogo/urlsListagem";
 import { EMPRESA, REDES_SOCIAIS } from "@/loja/lib/empresa";
-import { NOME_PROGRAMA } from "@/loja/lib/fastclub/regras";
 import { montarUrlBusca } from "@/loja/lib/seo/urls";
 import type { NomeIcone, TomMidia } from "./Midia";
 
@@ -99,14 +98,15 @@ export const PAR_EDITORIAL: Editorial[] = [
 // Grades de cards com abas (3, 4, 7 e 11).
 export type CardGrade = { rotulo: string; href: string; midia: MidiaConteudo };
 export type Aba = { rotulo: string; cards: CardGrade[] };
-export type Grade = { id: string; titulo: string; colunas: 4 | 6; abas: Aba[] };
+export type Grade = { id: string; rubrica?: string; titulo: string; colunas: 4 | 6; abas: Aba[] };
 
 const card = (rotulo: string, href: string, tom: TomMidia, icone: NomeIcone): CardGrade => ({ rotulo, href, midia: { tom, icone } });
 
 // 3. Novidades (4 cards).
 export const NOVIDADES: Grade = {
   id: "novidades",
-  titulo: "Novidades do ateliê",
+  rubrica: "Feito à mão",
+  titulo: "Recém-saídas da costura",
   colunas: 4,
   abas: [
     {
@@ -153,7 +153,8 @@ const porCor = (chave: string): CardGrade[] =>
 
 export const POR_COR: Grade = {
   id: "por-cor",
-  titulo: "Compre por cor",
+  rubrica: "Paleta do ateliê",
+  titulo: "Escolha pela cor",
   colunas: 6,
   abas: [
     { rotulo: "Kit berço", cards: porCor("kit-berco") },
@@ -165,6 +166,7 @@ export const POR_COR: Grade = {
 // 7. Quarto de bebê (6 cards).
 export const QUARTO: Grade = {
   id: "quarto",
+  rubrica: "Para o quartinho",
   titulo: "Quarto de bebê",
   colunas: 6,
   abas: [
@@ -196,6 +198,7 @@ export const QUARTO: Grade = {
 // 11. Enxoval (6 cards).
 export const ENXOVAL: Grade = {
   id: "enxoval",
+  rubrica: "Primeiros dias",
   titulo: "Monte o enxoval",
   colunas: 6,
   abas: [
@@ -259,78 +262,23 @@ export const FEATURE_BORDADO: Feature = {
 // 6 e 9. Carrosséis de produtos.
 export const CARROSSEL_MAIS_VENDIDOS = {
   id: "mais-vendidos",
-  titulo: "Mais vendidos do ateliê",
+  rubrica: "Mais vendidos",
+  titulo: "As mais pedidas no ateliê",
   acao: { rotulo: "Ver mais vendidos", href: categoria("kit-berco", {}, "mais-vendidos") },
 };
 
 export const CARROSSEL_PRONTA_ENTREGA = {
   id: "pronta-entrega",
-  titulo: "Pronta entrega, sai em até 2 dias úteis",
+  rubrica: "Pronta entrega",
+  titulo: "Sai do ateliê em até 2 dias úteis",
   acao: { rotulo: "Ver tudo", href: LINKS_UTILITARIOS.loja.href },
 };
 
-// 12. Atendimento (no lugar da promoção do app): cartão de vidro central com QR code (desktop) ou
-// botão (celular). A mensagem inicial curta deixa o QR pequeno (menos módulos, leitura mais fácil).
-const MENSAGEM_ATENDIMENTO = "Oi! Vim pela loja.";
-export const ATENDIMENTO = {
-  titulo: "Atendimento pelo WhatsApp",
-  texto: "Tire dúvidas sobre medidas, cores e bordado direto com o ateliê.",
-  whatsapp: { rotulo: "Abrir WhatsApp", href: `${WHATSAPP}?text=${encodeURIComponent(MENSAGEM_ATENDIMENTO)}` },
-  // Foto ou vídeo do ateliê (desfocado e quente) em public/vitrine/home/atendimento.webp|.mp4: basta
-  // preencher `src` (e `alt`, se a imagem informar algo). Sem `src`, a composição "aconchego".
-  midia: { tom: "aconchego", icone: "conversa" } satisfies MidiaConteudo,
-};
-
-// 13. Cards de destaque (3 × 2, 1:1).
-export type Destaque = { id: string; titulo: string; texto: string; acao: Acao; midia: MidiaConteudo };
-export const DESTAQUES: Destaque[] = [
-  {
-    id: "tecidos",
-    titulo: "Tecidos naturais",
-    texto: "Percal 200 fios, linho e tricô de algodão, macios para a pele do bebê.",
-    acao: { rotulo: "Ver kits de percal", href: categoria("kit-berco", { tecido: ["percal-200-fios"] }) },
-    midia: { tom: "linho", icone: "folha" },
-  },
-  {
-    id: "bordado",
-    titulo: "Bordado feito à mão",
-    texto: "O nome do bebê na fralda, na toalha ou no enfeite de porta.",
-    acao: { rotulo: "Peças com bordado", href: montarUrlBusca("bordado") },
-    midia: { tom: "rose", icone: "agulha" },
-  },
-  {
-    id: "entrega",
-    titulo: EMPRESA.entrega,
-    texto: "Pronta entrega sai em até 2 dias úteis; em Fortaleza, dá para retirar no ateliê.",
-    acao: { rotulo: "Ver pronta entrega", href: LINKS_UTILITARIOS.loja.href },
-    midia: { tom: "areia", icone: "caminhao" },
-  },
-  {
-    id: "medidas",
-    titulo: "Medidas do berço",
-    texto: "Berço americano, padrão ou mini berço: confira antes de escolher o kit.",
-    acao: { rotulo: "Guia de medidas", href: "/ajuda/guia-de-medidas" },
-    midia: { tom: "cru", icone: "regua" },
-  },
-  {
-    id: "projeto",
-    titulo: "Peça seu projeto",
-    texto: "O ateliê planeja o quartinho inteiro no tema escolhido, com bordado do nome.",
-    acao: { rotulo: "Pedir meu projeto", href: "/projetos/orcamento" },
-    midia: { tom: "salviaClara", icone: "berco" },
-  },
-  {
-    id: "clube",
-    titulo: NOME_PROGRAMA,
-    texto: "Cada compra rende pontos e cashback para as próximas peças.",
-    acao: { rotulo: `Conhecer o ${NOME_PROGRAMA}`, href: "/conta/clube" },
-    midia: { tom: "azul", icone: "medalha" },
-  },
-];
-
-// 15. Faixa de marca (Scarlett: frase curta e SEM acento).
-export const FAIXA_MARCA = {
-  frase: "Cada detalhe, bem cuidado",
-  texto: "Bastidores do ateliê, lançamentos e quartinhos montados por clientes no nosso Instagram.",
-  acao: { rotulo: "Seguir @milenakerbageatelie", href: REDES_SOCIAIS.instagram, externo: true },
+// 12. Instagram (antes do rodapé): posts reais pela API oficial (src/loja/lib/instagram). Sem token
+// ou com a API fora do ar, só o convite para seguir. Scarlett: frase curta e SEM acento.
+export const INSTAGRAM = {
+  arroba: "@milenakerbageatelie",
+  assinatura: "Cada detalhe, bem cuidado",
+  texto: "Bastidores do ateliê, lançamentos e quartinhos montados por clientes.",
+  acao: { rotulo: "Seguir no Instagram", href: REDES_SOCIAIS.instagram, externo: true },
 };

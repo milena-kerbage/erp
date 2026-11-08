@@ -1,5 +1,5 @@
 import { coresDe, dividirNome, fotosDoProduto } from "@/loja/componentes/produto/dados";
-import type { Produto } from "@/loja/lib/catalogo/exemplos";
+import { type Produto, SOB_ENCOMENDA } from "@/loja/lib/catalogo/exemplos";
 import { CardProdutoCliente } from "./CardProdutoCliente";
 
 // Card de produto dos carrosséis da home e da página de produto (lululemon-referencia.md §3.7). A parte
@@ -17,6 +17,7 @@ export function CardProduto({ produto, sizes }: { produto: Produto; sizes: strin
         nomeVariacao: variacao,
         preco: produto.preco,
         selo: produto.selo,
+        feitoAMao: produto.atributos.entrega?.includes(SOB_ENCOMENDA) ?? false,
         cores: coresDe(produto),
         fotos: fotosDoProduto(produto).slice(0, 4),
       }}

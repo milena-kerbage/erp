@@ -37,7 +37,7 @@ export type Produto = {
   pecas?: string[]; // o que vem no kit
   personalizacao?: string; // bordado com o nome do bebê, quando a peça aceita
   irmaos?: { titulo: string; atual: string; itens: Irmao[] }; // a mesma peça em outras cores
-  variacao?: { titulo: string; guia?: { rotulo: string; href: string }; opcoes: Opcao[] }; // escolha obrigatória (tamanho do berço)
+  variacao?: { titulo: string; opcoes: Opcao[] }; // escolha obrigatória (tamanho do berço)
   descricao: string[];
   ficha: GrupoFicha[]; // agrupada: identificação, tecido, medidas, prazo, cuidados, venda
   documentos: Array<{ rotulo: string; href: string }>;
@@ -75,11 +75,8 @@ export const PRONTA_ENTREGA = "Pronta entrega";
 export const SOB_ENCOMENDA = "Sob encomenda";
 export const BORDADO_NOME = "Bordado com nome";
 
-const GUIA_BERCO = { rotulo: "Qual é o tamanho do meu berço?", href: "/ajuda/guia-de-medidas" };
-
 const TAMANHOS_BERCO = {
   titulo: "Tamanho do berço",
-  guia: GUIA_BERCO,
   opcoes: [
     { rotulo: "Berço americano · 70 × 130 cm", disponivel: true },
     { rotulo: "Berço padrão · 60 × 130 cm", disponivel: true },
@@ -256,7 +253,6 @@ function saida(cor: "Rosê" | "Azul bebê" | "Cru", slug: string, para: string):
     irmaos: { ...SAIDAS, atual: slug },
     variacao: {
       titulo: "Tamanho",
-      guia: { rotulo: "Guia de tamanhos", href: "/ajuda/guia-de-medidas" },
       opcoes: [
         { rotulo: "RN · até 3,5 kg", disponivel: true },
         { rotulo: "P · até 3 meses", disponivel: cor !== "Azul bebê" },
@@ -512,7 +508,6 @@ const BASES: Base[] = [
     atributos: { cor: ["Cru", "Branco"], tecido: ["Linho"], estilo: ["Liso"], entrega: [SOB_ENCOMENDA] },
     variacao: {
       titulo: "Largura",
-      guia: { rotulo: "Como medir a janela", href: "/ajuda/guia-de-medidas" },
       opcoes: [
         { rotulo: "2,00 × 2,50 m", disponivel: true },
         { rotulo: "3,00 × 2,50 m", disponivel: true },
@@ -572,8 +567,7 @@ const BASES: Base[] = [
     atributos: { para: ["Neutro"], cor: ["Verde-sálvia", "Cru"], tamanho: ["Mini cama"], tecido: ["Percal 200 fios"], estilo: ["Liso"], entrega: [SOB_ENCOMENDA] },
     variacao: {
       titulo: "Colchão",
-      guia: GUIA_BERCO,
-      opcoes: [
+          opcoes: [
         { rotulo: "Mini cama · 70 × 150 cm", disponivel: true },
         { rotulo: "Solteiro · 88 × 188 cm", disponivel: true },
       ],

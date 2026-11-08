@@ -102,8 +102,14 @@ const menu = css({
   mt: { base: "4", md: "8" },
   mx: { base: "3", md: "0" },
   px: { base: "0", md: "5", desktop: "10" },
-  borderTopWidth: { base: "1px", md: "0" },
-  borderColor: "divisoriaSobreEscuro",
+  // Celular: pesponto em cima (as divisórias dos acordeões também são de pesponto, ColunaRodape).
+  bgImage: {
+    base: "[repeating-linear-gradient(90deg, token(colors.pespontoSobreEscuro) 0 6px, transparent 6px 10px)]",
+    md: "none",
+  },
+  bgSize: "[100% 1px]",
+  bgRepeat: "no-repeat",
+  bgPosition: "top",
 });
 
 const lista = css({ display: "grid", gap: "2", justifyItems: "start" });

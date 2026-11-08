@@ -39,7 +39,7 @@ export type DadosChamada = {
   tipo: "categoria" | "conteudo" | "padrao";
   titulo: string;
   subtitulo?: string;
-  etiqueta?: string; // "Guia" | "Categoria" | "Calculadora"
+  etiqueta?: string; // "Guia" | "Categoria"
   imagem?: string;
 };
 

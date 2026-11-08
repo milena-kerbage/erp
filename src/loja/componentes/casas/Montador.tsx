@@ -527,10 +527,7 @@ function EtapaPecas({
                     ? `Colchão de ${quartinho.tamanhoBerco.split(" · ")[1]}.`
                     : precisaTamanho
                       ? "Obrigatório para as peças de berço."
-                      : "Para as peças de berço: americano 70 × 130, padrão 60 × 130 ou mini berço 50 × 90 cm."}{" "}
-                  <Link href="/ajuda/guia-de-medidas" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
-                    Guia de medidas
-                  </Link>
+                      : "Para as peças de berço: americano 70 × 130, padrão 60 × 130 ou mini berço 50 × 90 cm."}
                 </p>
               </fieldset>
             )}

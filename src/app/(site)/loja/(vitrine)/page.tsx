@@ -1,10 +1,8 @@
 import { css } from "styled-system/css";
-import { Atendimento } from "@/loja/componentes/inicio/Atendimento";
 import { CarrosselProdutos } from "@/loja/componentes/inicio/CarrosselProdutos";
 import {
   CARROSSEL_MAIS_VENDIDOS,
   CARROSSEL_PRONTA_ENTREGA,
-  DESTAQUES,
   ENXOVAL,
   FEATURE_BORDADO,
   FEATURE_MATERNIDADE,
@@ -15,17 +13,16 @@ import {
   QUARTO,
   SLIDES,
 } from "@/loja/componentes/inicio/conteudo";
-import { FaixaMarca } from "@/loja/componentes/inicio/FaixaMarca";
 import { FeatureTelaCheia } from "@/loja/componentes/inicio/FeatureTelaCheia";
 import { GradeAbas } from "@/loja/componentes/inicio/GradeAbas";
-import { GrupoDestaques } from "@/loja/componentes/inicio/GrupoDestaques";
 import { Hero } from "@/loja/componentes/inicio/Hero";
+import { SecaoInstagram } from "@/loja/componentes/inicio/Instagram";
 import { ParEditorial } from "@/loja/componentes/inicio/ParEditorial";
 import { buscarVarios, listarProdutos, MAIS_VENDIDOS_SLUGS, PRONTA_ENTREGA } from "@/loja/lib/catalogo/exemplos";
 
-// Página inicial no modelo da home da shop.lululemon.com (lululemon-referencia.md §3): alterna mídia
-// de ponta a ponta com módulos contidos e claros ("respiro, impacto, respiro"), com 96 px entre
-// módulos no desktop e 64 no celular. Fotos: ver src/loja/componentes/inicio/conteudo.ts.
+// Página inicial: alterna mídia de ponta a ponta com módulos contidos e claros, com 96 px entre
+// módulos no desktop e 64 no celular, e fecha com o Instagram do ateliê antes do rodapé.
+// Fotos: ver src/loja/componentes/inicio/conteudo.ts.
 export default function PaginaInicial() {
   const maisVendidos = buscarVarios(MAIS_VENDIDOS_SLUGS);
   const prontaEntrega = listarProdutos()
@@ -56,12 +53,8 @@ export default function PaginaInicial() {
       <FeatureTelaCheia feature={FEATURE_BORDADO} />
       {/* 11 */}
       <GradeAbas grade={ENXOVAL} />
-      {/* 12 */}
-      <Atendimento />
-      {/* 13 */}
-      <GrupoDestaques itens={DESTAQUES} />
-      {/* 14 e 15 */}
-      <FaixaMarca />
+      {/* 12: posts reais do Instagram (ou o convite para seguir) */}
+      <SecaoInstagram />
     </>
   );
 }

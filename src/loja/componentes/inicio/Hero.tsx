@@ -12,9 +12,8 @@ import { Midia } from "./Midia";
 const VIDEO = /\.(mp4|webm)$/i;
 const DURACAO_TROCA = 900; // ms, com desaceleração (referência §3.3)
 
-// Hero em tela cheia (lululemon-referencia.md §3.3): trilho com scroll-snap, altura de 100vh menos o
-// topo (faixa promocional; no celular também o cabeçalho), mídia cover com scrim inferior e texto no
-// canto inferior esquerdo. Título revelado letra a letra, subtítulo e botões sobem em seguida.
+// Hero em tela cheia: trilho com scroll-snap, altura de 100vh (no celular, menos o cabeçalho de 56 px,
+// que fica em fluxo), mídia cover com scrim inferior e texto no canto inferior esquerdo. Título revelado letra a letra, subtítulo e botões sobem em seguida.
 // Sem troca automática: setas (grupo escuro) e arraste. Controles no canto inferior direito.
 export function Hero({ slides }: { slides: Slide[] }) {
   const trilho = useRef<HTMLDivElement>(null);
@@ -142,17 +141,16 @@ function Letras({ texto }: { texto: string }) {
   );
 }
 
-// 100vh menos o topo: faixa promocional (33 no desktop) e, no celular, também o cabeçalho (50 + 56).
-// No desktop o hero sobe os 64 px reservados para a pílula (ela flutua por cima).
+// Celular: 100vh menos o cabeçalho (56, em fluxo). Desktop: 100vh inteiro; o hero sobe os 64 px
+// reservados para a pílula (ela flutua por cima).
 const hero = css({
   position: "relative",
   isolation: "isolate",
   w: "full",
-  h: { base: "[calc(100svh - 106px)]", desktop: "[calc(100svh - 33px)]" },
-  mt: { desktop: "-16" },
+  h: { base: "[calc(100svh - token(sizes.cabecalhoCelular))]", desktop: "[100svh]" },
+  mt: { desktop: "[calc(-1 * token(sizes.topoCabecalho))]" },
   bg: "escuro",
   overflow: "hidden",
-  "html:not(:has([data-faixa-promo])) &": { h: { base: "[calc(100svh - 56px)]", desktop: "[100svh]" } },
 });
 
 const slideEstilo = css({ position: "relative", w: "full", minW: "full", h: "full", overflow: "hidden" });

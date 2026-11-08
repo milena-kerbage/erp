@@ -87,7 +87,7 @@ export default defineConfig({
         fontSizes: {
           subtitulo: { value: "1.75rem" }, // 28 px: subtítulo do hero, menu do celular, bloco no celular
           blocoTablet: { value: "2rem" }, // 32 px
-          bloco: { value: "2.5rem" }, // 40 px: par editorial e cartão do WhatsApp
+          bloco: { value: "2.5rem" }, // 40 px: par editorial
           heroCelular: { value: "3.125rem" }, // 50 px
           secaoTablet: { value: "3.5rem" }, // 56 px
           secao: { value: "4rem" }, // 64 px: título de seção e de feature
@@ -102,6 +102,7 @@ export default defineConfig({
         letterSpacings: {
           titulo: { value: "-0.04em" },
           bloco: { value: "-0.02em" },
+          rubrica: { value: "0.14em" }, // etiqueta em caixa alta acima dos títulos de seção
         },
         blurs: {
           botao: { value: "20px" }, // botão claro sobre foto
@@ -110,7 +111,7 @@ export default defineConfig({
           // Variáveis injetadas pelo next/font em src/app/(site)/layout.tsx (as mesmas do ERP).
           corpo: { value: "var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
           titulo: { value: "var(--font-inter), system-ui, -apple-system, sans-serif" },
-          // Fonte da marca: só frases curtas SEM acento (ex.: "Cada detalhe, bem cuidado").
+          // Fonte da marca: só frases curtas SEM acento (ex.: "Cada detalhe, bem cuidado", na seção do Instagram).
           marca: { value: "var(--font-scarlett), Georgia, serif" },
           mono: { value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" },
         },
@@ -123,7 +124,7 @@ export default defineConfig({
           campo: { value: "8px" },
           bloco: { value: "16px" }, // blocos grandes, como o cartão do rodapé
           pilula: { value: "1000px" }, // botões, controles, campo de busca e amostras de cor
-          vidro: { value: "36px" }, // cartão de vidro da home (24 px no celular = 3xl)
+          midia: { value: "12px" }, // fotos dos cards dos carrosséis e posts do Instagram (cantos suaves)
         },
         sizes: {
           conteudo: { value: "1420px" }, // --container-max
@@ -135,17 +136,15 @@ export default defineConfig({
           colunaMenu: { value: "200px" }, // coluna do mega menu
           vitrine: { value: "1180px" }, // banner e cards de categoria da home (Mercado Livre: 1180 px)
           gaveta: { value: "min(320px, 75vw)" }, // menu lateral do celular
-          // Cabeçalho em pílula e home (lululemon-referencia.md §1 e §3)
-          faixaPromo: { value: "33px" },
+          // Cabeçalho em pílula e home
           pilulaCabecalho: { value: "48px" },
           topoCabecalho: { value: "64px" }, // 16 de recuo + 48 da pílula: espaço reservado fora da home
           cabecalhoCelular: { value: "56px" },
           gavetaBusca: { value: "440px" },
           grade: { value: "1360px" }, // largura máxima do conteúdo contido da home
           megaMenu: { value: "60rem" }, // teto do painel do mega menu (960 px)
-          // Atendimento e rodapé (lululemon-referencia.md §3.8 e §4)
+          // Rodapé
           colunaRodape: { value: "210px" }, // 6 colunas de 210 com 20 de vão (1360 em 1440)
-          qrAtendimento: { value: "140px" }, // QR code do cartão de vidro
           // Página de produto e listagem (lululemon-pdp.md §1, §3 e §6)
           painelCompra: { value: "440px" }, // coluna do painel de compra (--pdp-aside-width)
           gavetaDetalhes: { value: "680px" }, // gaveta "Detalhes / Tecido e cuidados" = 240 + 440
@@ -279,17 +278,15 @@ export default defineConfig({
           fundoBannerClaro: { value: "#616D54" }, // sage 600
           fundoBannerEscuro: { value: "#3C4435" }, // sage 800
           linhaSobreBanner: { value: "rgba(255, 255, 255, 0.22)" },
-          // Cabeçalho em pílula e home (lululemon-referencia.md §5.5), nos neutros da marca.
-          vidroCabecalho: { value: "rgba(246, 247, 242, 0.8)" }, // fundoSutil a 80%, com desfoque
+          // Cabeçalho em pílula e home. A pílula é sálvia-linho translúcida (sage 100 a 82%, com desfoque),
+          // e não o cinza neutro de vidro: o texto escuro mantém contraste > 9:1 mesmo sobre o hero escuro.
+          vidroCabecalho: { value: "rgba(230, 234, 223, 0.82)" },
           veuMenu: { value: "rgba(29, 31, 27, 0.5)" }, // véu do mega menu e das gavetas
           controleEscuro: { value: "rgba(29, 31, 27, 0.66)" }, // pausar e setas sobre foto
           controleEscuroHover: { value: "rgba(29, 31, 27, 0.9)" },
           controleClaro: { value: "rgba(255, 255, 255, 0.8)" }, // botão redondo claro sobre foto
-          vidroEscuro: { value: "rgba(29, 31, 27, 0.4)" }, // cartão de vidro do atendimento
-          textoVidro: { value: "rgba(255, 255, 255, 0.8)" }, // texto de apoio no cartão de vidro
-          recorteVidro: { value: "rgba(12, 10, 8, 0.92)" }, // "notch" do cartão em forma de celular
-          // Foto de espera do atendimento: ambiente quente e desfocado (luz âmbar, linho e rosa antigo
-          // sobre marrom profundo), escurecida pelo véu para o vidro se destacar.
+          // Composição de espera "aconchego" (Midia): ambiente quente e desfocado (luz âmbar, linho e rosa
+          // antigo sobre marrom profundo).
           aconchego: {
             profundo: { value: "#221A15" },
             sombra: { value: "#3B2B21" },
@@ -301,6 +298,11 @@ export default defineConfig({
           fundoRodape: { value: "#1E1A16" },
           textoSobreRodape: { value: "#D9D1C6" }, // linha legal (contraste 12:1 sobre o fundo)
           divisoriaSobreEscuro: { value: "rgba(255, 255, 255, 0.18)" },
+          // Identidade de ateliê: linho nos blocos alternados e o "pesponto" (linha tracejada fina, como
+          // costura) em divisórias e bordas de seção.
+          linho: { value: "#F3EFE6" }, // fundo de bloco (marca tem 4,8:1 sobre ele; texto 12:1)
+          pesponto: { value: "rgba(97, 109, 84, 0.45)" }, // marca a 45%, sobre fundos claros
+          pespontoSobreEscuro: { value: "rgba(217, 209, 198, 0.4)" }, // no rodapé escuro
           desabilitado: { value: "#9A9E92" }, // seta sem próximo slide
           contornoAmostra: { value: "rgba(29, 31, 27, 0.5)" }, // borda da amostra de cor
           // Cores dos tecidos (amostras dos cards e "Compre por cor").

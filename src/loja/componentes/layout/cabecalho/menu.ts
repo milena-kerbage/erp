@@ -76,7 +76,7 @@ function destaquesDe(chave: string, rotulo: string): LinkMenu[] {
 }
 
 const SECUNDARIOS: LinkMenu[] = [
-  { rotulo: "Guia de medidas do berço", href: "/ajuda/guia-de-medidas" },
+  { rotulo: "Monte o seu quartinho", href: "/projetos/monte-o-seu" },
   { rotulo: "Projetos de quartinho", href: "/projetos" },
 ];
 
@@ -220,7 +220,7 @@ export function montarMenu(): ItemMenu[] {
           { rotulo: "Maternidade", href: categoria("maternidade", { entrega: [PRONTA] }) },
           EDICAO,
         ],
-        secundarios: [{ rotulo: "Acompanhe seu pedido", href: LINKS_UTILITARIOS.pedido.href }],
+        secundarios: [LINKS_UTILITARIOS.pedido],
         colunas: [
           {
             titulo: "Por cor",

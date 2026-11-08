@@ -53,9 +53,8 @@ export function ConfirmacaoCarrinho({
   aberta: boolean;
   aoFechar: () => void;
   // `preco` (opcional): preço de tabela da peça, para o "a partir de" (sem ele, só o selo do Pix).
-  // `pontos`: legado do Clube Milena, que saiu da loja; aceito e ignorado até a página de produto parar de mandar.
   // `paleta`: projeto de quarto e quartinho personalizado (a foto é a composição nos tons da paleta).
-  item: { nome: string; foto?: Foto; detalhe?: string; quantidade: number; pix: string; pontos?: number; preco?: string; paleta?: readonly string[] };
+  item: { nome: string; foto?: Foto; detalhe?: string; quantidade: number; pix: string; preco?: string; paleta?: readonly string[] };
   sugestoes: Sugestao[];
 }) {
   const quantidade = useQuantidadeNoCarrinho();

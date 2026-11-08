@@ -16,6 +16,8 @@ export const EMPRESA = {
   emailPrivacidade: "milenakerbageatelie@gmail.com",
   // WhatsApp de vendas publicado no Instagram. No ERP, preencher LEGAL_WHATSAPP_PHONE com o mesmo número.
   whatsapp: { exibicao: "(85) 98582-2208", numero: "5585985822208" },
+  // [CONFIRMAR] com o ateliê o horário de atendimento da vendedora pelo WhatsApp (rodapé da loja).
+  horarioAtendimento: "Segunda a sexta, das 9h às 18h",
   // Enxoval e quarto de bebê feitos no ateliê, com entrega para todo o Brasil.
   segmento: "Enxoval e quarto de bebê",
   entrega: "Entrega para todo o Brasil",

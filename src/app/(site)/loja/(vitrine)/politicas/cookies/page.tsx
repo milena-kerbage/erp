@@ -26,7 +26,7 @@ type Linha = { nome: string; finalidade: string; duracao: string };
 // Lista tirada do código (nomes e prazos importados das constantes, para não divergir):
 // cookies do proxy em lib/rastreamento/nucleo.ts, mk_local em lib/localizacao/cep.ts e as chaves de
 // localStorage/sessionStorage dos componentes (carrinho/estado.ts, casas/AreaProjetos.tsx,
-// listagem/AreaListagem.tsx, localizacao/estado.ts, cabecalho/FaixaPromo.tsx, pedidos/historico.ts).
+// listagem/AreaListagem.tsx, localizacao/estado.ts, pedidos/historico.ts).
 // Chave nova no navegador? Acrescente aqui. [CONFIRMAR] o prazo do mk_consentimento quando o aviso de
 // cookies (banner) for implementado: hoje ele ainda não existe, então os opcionais não são gravados.
 const NECESSARIOS: Linha[] = [
@@ -57,7 +57,6 @@ const ARMAZENAMENTO: Linha[] = [
   },
   { nome: "mk_densidade e mk_densidade_listagem", finalidade: "Tamanho das fotos escolhido nas listagens.", duracao: "Até você apagar" },
   { nome: "mk_lembrete_cep", finalidade: "Não mostrar de novo o lembrete do CEP nesta visita.", duracao: "Até fechar o navegador" },
-  { nome: "milena:faixa-promo-fechada", finalidade: "Não mostrar de novo a faixa de avisos que você fechou.", duracao: "Até fechar o navegador" },
 ];
 
 export default function Cookies() {

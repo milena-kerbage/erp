@@ -1,14 +1,11 @@
-import Link from "next/link";
 import { css } from "styled-system/css";
 import { BarraCabecalho } from "./BarraCabecalho";
-import { FaixaPromo } from "./FaixaPromo";
 import { LINKS_GAVETA, LINKS_SERVICO, montarMenu } from "./menu";
-import { LINKS_UTILITARIOS, TERMOS_MAIS_BUSCADOS } from "./navegacao";
+import { TERMOS_MAIS_BUSCADOS } from "./navegacao";
 
-// Cabeçalho da loja no modelo da shop.lululemon.com (lululemon-referencia.md §1 e §2): link para
-// pular ao conteúdo, faixa promocional que rola com a página e a barra (pílula flutuante no desktop,
-// barra branca que some ao descer no celular). Os itens do menu saem do servidor (motor de URLs);
-// só as partes interativas são Client Components.
+// Cabeçalho da loja: link para pular ao conteúdo e a barra (pílula flutuante no desktop, barra clara
+// que some ao descer no celular). Sem faixa promocional acima: a pílula é a primeira coisa da página.
+// Os itens do menu saem do servidor (motor de URLs); só as partes interativas são Client Components.
 // Fora da home, o <main> reserva o topo com `reservaDoCabecalho` (estilos.ts).
 export function Cabecalho() {
   return (
@@ -16,10 +13,6 @@ export function Cabecalho() {
       <a href="#conteudo" className={pularConteudo}>
         Pular para o conteúdo
       </a>
-      <FaixaPromo>
-        Entrega para todo o Brasil. Peças a pronta entrega saem do ateliê em até 2 dias úteis.{" "}
-        <Link href={LINKS_UTILITARIOS.loja.href}>Ver pronta entrega</Link>
-      </FaixaPromo>
       <BarraCabecalho menu={montarMenu()} termos={TERMOS_MAIS_BUSCADOS} servico={LINKS_SERVICO} linksGaveta={LINKS_GAVETA} />
     </>
   );

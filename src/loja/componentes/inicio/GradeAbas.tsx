@@ -2,11 +2,11 @@ import Link from "next/link";
 import { css, cx } from "styled-system/css";
 import { Abas } from "./Abas";
 import type { CardGrade, Grade } from "./conteudo";
-import { largura, margens, modulo, tituloSecao } from "./estilos";
+import { largura, margens, modulo, rubrica, tituloSecao } from "./estilos";
 import { Midia } from "./Midia";
 
-// Grade de cards com abas (lululemon-referencia.md §3.5): título de 64 px à esquerda, abas à
-// direita, 48 abaixo a grade de 12 colunas SEM espaço (4 × col-3 ou 6 × col-2; 2 colunas no
+// Grade de cards com abas: rubrica e título de 64 px à esquerda, abas à direita, 48 abaixo a grade
+// de 12 colunas SEM espaço (4 × col-3 ou 6 × col-2; 2 colunas no
 // celular e no tablet). Card: imagem 5:6 com zoom de 1.01 para 1.1 em 250 ms e rótulo 16/500
 // centralizado com 16 de respiro.
 export function GradeAbas({ grade }: { grade: Grade }) {
@@ -16,9 +16,12 @@ export function GradeAbas({ grade }: { grade: Grade }) {
       <div className={largura}>
         <Abas
           titulo={
-            <h2 id={idTitulo} className={cx(tituloSecao, css({ mr: { md: "6" } }))}>
-              {grade.titulo}
-            </h2>
+            <div className={css({ mr: { md: "6" } })}>
+              {grade.rubrica && <p className={rubrica}>{grade.rubrica}</p>}
+              <h2 id={idTitulo} className={tituloSecao}>
+                {grade.titulo}
+              </h2>
+            </div>
           }
           rotulos={grade.abas.map((aba) => aba.rotulo)}
           paineis={grade.abas.map((aba) => (

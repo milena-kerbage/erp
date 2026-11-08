@@ -31,7 +31,7 @@ export type DadosCompra = {
   valorParcela: string;
   trilha: Array<{ rotulo: string; href: string }>;
   cores: CorProduto[];
-  variacao?: { titulo: string; guia?: { rotulo: string; href: string }; opcoes: Opcao[] };
+  variacao?: { titulo: string; opcoes: Opcao[] };
   personalizacao?: string;
   prontaEntrega: boolean;
   avaliacoes: { nota: number; total: number } | null;
@@ -274,14 +274,8 @@ export function PainelCompra() {
                 ? `${parteEscolhida.curto}: ${parteEscolhida.detalhe}.`
                 : opcoes.some((opcao) => !opcao.disponivel)
                   ? `Opções riscadas estão esgotadas no momento.`
-                  : "Confira as medidas antes de escolher."}
+                  : "Escolha o tamanho para ver as medidas."}
             </p>
-            {dados.variacao.guia && (
-              <Link href={dados.variacao.guia.href} className={linkSeta}>
-                Guia de medidas
-                <CaretRight size={12} aria-hidden />
-              </Link>
-            )}
           </div>
         </fieldset>
       )}
@@ -581,7 +575,13 @@ const linkSeta = css({
   _focusVisible: { outline: "none", boxShadow: "anelFoco" },
 });
 
-const divisoria = css({ borderTopWidth: "1px", borderColor: "borda", m: "0" });
+// Divisória de pesponto (linha tracejada de costura, src/loja/estilos/pesponto.ts) no lugar da linha reta.
+const divisoria = css({
+  h: "[1px]",
+  m: "0",
+  border: "none",
+  bgImage: "[repeating-linear-gradient(90deg, token(colors.pesponto) 0 6px, transparent 6px 10px)]",
+});
 
 const entregas = css({ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: { base: "3", desktop: "4" }, minW: "0" });
 
