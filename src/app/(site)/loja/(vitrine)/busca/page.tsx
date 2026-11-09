@@ -9,8 +9,7 @@ import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
 import { EsqueletoGrade, EsqueletoTopo } from "@/loja/componentes/listagem/Esqueleto";
 import { Resultado } from "@/loja/componentes/listagem/Resultado";
-import { buscarCategoria, categoriasRelacionadas } from "@/loja/lib/catalogo/categorias";
-import { listarProdutos } from "@/loja/lib/catalogo/exemplos";
+import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { buscarTexto, filtrar } from "@/loja/lib/catalogo/listagem";
 import { filtrosDaQuery } from "@/loja/lib/catalogo/urlsListagem";
 import { montarUrlBusca, normalizarBusca, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
@@ -48,7 +47,8 @@ async function ConteudoBusca({ searchParams }: Pick<PageProps<"/loja/busca">, "s
     for (const item of Array.isArray(valor) ? valor : [valor ?? ""]) busca.append(chave, item);
   }
   const termo = normalizarBusca(busca.get("q"));
-  const encontrados = termo ? buscarTexto(listarProdutos(), termo) : [];
+  const [catalogo, { buscarCategoria, categoriasRelacionadas }] = await Promise.all([catalogoDaLoja(), arvoreDaLoja()]);
+  const encontrados = termo ? buscarTexto(catalogo.produtos, termo) : [];
   const filtros = filtrosDaQuery(busca);
   const pagina = Math.max(1, Math.min(500, Number(busca.get("pagina")) || 1));
 

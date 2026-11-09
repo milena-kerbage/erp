@@ -44,8 +44,9 @@ import {
   variacaoProjeto,
 } from "@/loja/lib/casas/catalogo";
 import { filtrarProjetos } from "@/loja/lib/casas/filtragem";
-import { categoriasRelacionadas } from "@/loja/lib/catalogo/categorias";
-import { buscarVarios, condicoesDePagamento } from "@/loja/lib/catalogo/exemplos";
+import { arvoreDaLoja, indiceDaLoja } from "@/lib/loja/catalogo";
+import type { Elo } from "@/loja/lib/catalogo/categorias";
+import { condicoesDePagamento, type Produto } from "@/loja/lib/catalogo/exemplos";
 import { fotoPrincipal } from "@/loja/lib/catalogo/fotos";
 import { EMPRESA } from "@/loja/lib/empresa";
 import { schemaListagemProjetos, schemaProjeto, schemaTrilhaProjetos } from "@/loja/lib/seo/projetos";
@@ -97,10 +98,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PaginaSlugProjetos({ params, searchParams }: Props) {
   const dados = resolver((await params).slug);
   if (!dados) notFound();
-  if ("projeto" in dados) return <PaginaProjeto projeto={dados.projeto} />;
+  if ("projeto" in dados) return <PaginaProjeto projeto={dados.projeto} buscarVarios={(await indiceDaLoja()).buscarVarios} />;
   const { colecao } = dados;
   if (colecao.tipo === "conteudo") return <PaginaConteudo colecao={colecao} />;
-  return <PaginaSelecao colecao={colecao} searchParams={searchParams} />;
+  const relacionadas = (await arvoreDaLoja()).categoriasRelacionadas(["personalizado"]).filter((elo) => !elo.href.startsWith("/personalizado"));
+  return <PaginaSelecao colecao={colecao} searchParams={searchParams} relacionadas={relacionadas} />;
 }
 
 // Página do projeto com a estrutura e as medidas da página de produto: no desktop, grade "1fr 440" com a
@@ -108,7 +110,7 @@ export default async function PaginaSlugProjetos({ params, searchParams }: Props
 // o painel subindo por cima. Abaixo da dobra: "Por que você vai amar", gaveta de detalhes, "O que vem no
 // quarto", "Paleta do quartinho", "Fale com o ateliê", a linha do tempo "Passo a passo", diferenciais
 // e "Outros quartinhos". O quartinho vai para a mesma sacola dos produtos.
-function PaginaProjeto({ projeto }: { projeto: Projeto }) {
+function PaginaProjeto({ projeto, buscarVarios }: { projeto: Projeto; buscarVarios: (slugs: string[]) => Produto[] }) {
   const parecidos = projetosParecidos(projeto, listarProjetos());
   const pecas = pecasDoQuarto(projeto);
   // Só liga à peça avulsa que existe no catálogo.
@@ -206,7 +208,7 @@ function CabecalhoColecao({ colecao }: { colecao: Colecao }) {
   );
 }
 
-function PaginaSelecao({ colecao, searchParams }: { colecao: Extract<Colecao, { tipo: "selecao" }>; searchParams: Props["searchParams"] }) {
+function PaginaSelecao({ colecao, searchParams, relacionadas }: { colecao: Extract<Colecao, { tipo: "selecao" }>; searchParams: Props["searchParams"]; relacionadas: Elo[] }) {
   const projetos = filtrarProjetos(listarProjetos(), colecao.filtros);
   const caminho = `/personalizado/${colecao.slug}`;
   return (
@@ -228,7 +230,7 @@ function PaginaSelecao({ colecao, searchParams }: { colecao: Extract<Colecao, { 
       <Suspense fallback={<EsqueletoGrade />}>
         <ListagemProjetos projetos={projetos} categoria={`personalizado/${colecao.slug}`} searchParams={searchParams} />
       </Suspense>
-      <ContinueExplorando base="Personalizado" categorias={categoriasRelacionadas(["personalizado"]).filter((elo) => !elo.href.startsWith("/personalizado"))} />
+      <ContinueExplorando base="Personalizado" categorias={relacionadas} />
     </>
   );
 }

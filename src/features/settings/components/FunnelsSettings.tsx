@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type DragEvent, type KeyboardEvent } from "react";
+import { useEffect, useState, type DragEvent, type KeyboardEvent } from "react";
 import styled from "@emotion/styled";
 import {
   ArrowDownIcon,
@@ -24,7 +24,7 @@ import { transientOptions } from "@/lib/emotion/transient";
 import { staggerChildren } from "@/styles/animations";
 import type { Tone } from "@/styles/theme";
 import { funnelIcons, type Funnel, type FunnelStage } from "@/features/leads/funnels";
-import { useLeads } from "@/features/leads/store";
+import {erpRequest} from "@/features/erp/client";
 import { useWorkspace } from "../store";
 import { AppearancePicker } from "./pickers";
 import { Card, Page, PageHeader } from "./ui";
@@ -467,7 +467,8 @@ function FunnelEditor({ funnel, index, total, counts, onAskRemove, onBlockedStag
 /** Funis e etapas do quadro de leads: nomes, cores, ícones e ordem. */
 export function FunnelsSettings() {
   const { funnels, addFunnel, removeFunnel, currentUser, loading } = useWorkspace();
-  const { leads } = useLeads();
+  const [counts,setCounts]=useState<{funnelId:string;stage:string;count:number}[]>([]);
+  useEffect(()=>{let active=true;void erpRequest<{byStage:typeof counts}>("/leads?summary=1&limit=1").then(page=>{if(active)setCounts(page.byStage);}).catch(()=>{});return()=>{active=false;};},[funnels]);
   const [removing, setRemoving] = useState<Funnel | null>(null);
   const [blocked, setBlocked] = useState<{ funnel: Funnel; stage: FunnelStage; count: number } | null>(null);
 
@@ -475,11 +476,11 @@ export function FunnelsSettings() {
     Object.fromEntries(
       funnel.stages.map((stage) => [
         stage.id,
-        leads.filter((lead) => lead.funnelId === funnel.id && lead.stage === stage.id).length,
+        counts.find(group=>group.funnelId===funnel.id&&group.stage===stage.id)?.count??0,
       ]),
     );
 
-  const removingCount = removing ? leads.filter((lead) => lead.funnelId === removing.id).length : 0;
+  const removingCount = removing ? counts.filter(group=>group.funnelId===removing.id).reduce((sum,group)=>sum+group.count,0) : 0;
 
   const create = async () => {
     const funnel = await addFunnel({ name: "Novo funil", icon: funnelIcons[0].icon, tone: "blue" });

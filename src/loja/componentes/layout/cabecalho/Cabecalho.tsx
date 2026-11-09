@@ -1,19 +1,21 @@
 import { css } from "styled-system/css";
 import { BarraCabecalho } from "./BarraCabecalho";
-import { LINKS_GAVETA, LINKS_SERVICO, montarMenu } from "./menu";
+import { menuDaLoja } from "@/lib/loja/catalogo";
+import { LINKS_GAVETA, LINKS_SERVICO } from "./menu";
 import { TERMOS_MAIS_BUSCADOS } from "./navegacao";
 
 // Cabeçalho da loja: link para pular ao conteúdo e a barra (pílula flutuante no desktop, barra clara
 // que some ao descer no celular). Sem faixa promocional acima: a pílula é a primeira coisa da página.
-// Os itens do menu saem do servidor (motor de URLs); só as partes interativas são Client Components.
+// Os itens do menu saem do servidor (cadastro do ERP, ou o menu estático de menu.ts no fallback); só as
+// partes interativas são Client Components.
 // Fora da home, o <main> reserva o topo com `reservaDoCabecalho` (estilos.ts).
-export function Cabecalho() {
+export async function Cabecalho() {
   return (
     <>
       <a href="#conteudo" className={pularConteudo}>
         Pular para o conteúdo
       </a>
-      <BarraCabecalho menu={montarMenu()} termos={TERMOS_MAIS_BUSCADOS} servico={LINKS_SERVICO} linksGaveta={LINKS_GAVETA} />
+      <BarraCabecalho menu={await menuDaLoja()} termos={TERMOS_MAIS_BUSCADOS} servico={LINKS_SERVICO} linksGaveta={LINKS_GAVETA} />
     </>
   );
 }

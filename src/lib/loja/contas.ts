@@ -13,6 +13,10 @@ import type { ProdutoCarrinho } from '../../loja/lib/carrinho/catalogo.ts';
 import { calcularTotais, DESCONTO_PIX_PERCENTUAL, type Cupom } from '../../loja/lib/carrinho/totais.ts';
 import { type LinhaPedido, montarMensagemPedido } from '../../loja/lib/checkout/pedido.ts';
 import { gerarNumeroPedido } from '../../loja/lib/pedidos/historico.ts';
+import { campanhasParaPedido, conferirLimitesCupom, registrarUsoCupom } from './gestao/cupons.ts';
+import { marcarCarrinhoConvertido } from './gestao/carrinhos.ts';
+import { leadsDasClientes, registrarPedidoNoLead, vincularLeadDaCliente } from './gestao/leads.ts';
+import type { LeadVinculado } from './gestao/tipos.ts';
 
 // Contas de CLIENTE da loja (www.), separadas das contas da EQUIPE do ERP (erp_auth.users):
 // tabelas próprias em erp_core (migração 009), sessão própria (cookie só do host da loja), cupom de
@@ -163,7 +167,16 @@ export async function cadastrarCliente(campos: Record<string, unknown>, agora = 
     await auditar('loja', 'created', 'loja_clientes', id);
     return abrirSessao(id, agora);
   });
+  // CRM: liga a conta a um lead (existente pelo e-mail/WhatsApp ou novo, origem "Loja online"). Em segundo
+  // plano para a cliente: se falhar, a conta já existe e o vínculo é refeito no primeiro pedido.
+  await emSegundoPlano('lead do cadastro', () => vincularLeadDaCliente({ id, nome: dados.nome, email: dados.email, whatsapp: dados.whatsapp }, agora));
   return { ...(await dadosDaConta(id)), token };
+}
+
+/** Efeitos que não podem derrubar a operação principal (CRM, carrinho sincronizado): registra e segue. */
+async function emSegundoPlano(rotulo: string, operacao: () => Promise<unknown>) {
+  try { await operacao(); }
+  catch (erro) { console.error(`[contas] ${rotulo}:`, erro instanceof Error ? erro.message : 'erro'); }
 }
 
 /** Login por e-mail e senha. Mesmo custo de hash e mesma mensagem para e-mail inexistente e senha errada. */
@@ -305,6 +318,7 @@ function pedidoDe(linha: Linha): PedidoLoja {
 
 export type EntradaPedido = { itens?: unknown; cupom?: unknown; local?: unknown; retirar?: unknown; observacoes?: unknown };
 export type OpcoesPedido = { catalogo: Map<string, ProdutoCarrinho>; agora?: number };
+const reaisCurto = (centavos: number) => `R$ ${(centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Cria o pedido no servidor a partir dos itens da sacola. Os PREÇOS vêm sempre do catálogo do servidor
@@ -348,9 +362,11 @@ export async function criarPedido(clienteId: string, entrada: EntradaPedido, opc
   }
   if (indisponiveis.length) throw new ErroConta(409, 'Algum item da sacola não está mais disponível. Atualize a sacola e tente de novo.', 'ITEM_INDISPONIVEL');
   const subtotal = linhas.reduce((soma, linha) => soma + linha.precoCentavos * linha.quantidade, 0);
+  // Cupons de campanha do cadastro do ERP (ou os de código, se não houver), lidos antes da transação.
+  const campanhas = await campanhasParaPedido();
 
   const database = contasDb();
-  return database.transaction(async () => {
+  const resultado = await database.transaction(async () => {
     await travar(`loja-pedido-cliente:${clienteId}`);
     const linhaConta = await linhaCliente(clienteId);
     if (!linhaConta) throw new ErroConta(401, 'Entre na sua conta para continuar.', 'SESSAO_ENCERRADA');
@@ -360,12 +376,18 @@ export async function criarPedido(clienteId: string, entrada: EntradaPedido, opc
 
     let cupom: Cupom | undefined, boasVindas = false;
     if (typeof entrada.cupom === 'string' && entrada.cupom.trim()) {
-      const escolha = escolherCupom(entrada.cupom, subtotal, { logada: true, cupom: cupomConta });
+      const escolha = escolherCupom(entrada.cupom, subtotal, { logada: true, cupom: cupomConta }, campanhas.cupons, agora);
       if (escolha.tipo !== 'ok') {
         const usado = escolha.tipo === 'invalido' && cupomConta?.usado && (entrada.cupom.trim().toUpperCase() === cupomConta.codigo || entrada.cupom.trim().toUpperCase() === 'BEMVINDO5');
         throw new ErroConta(usado ? 409 : 400, escolha.mensagem, usado ? 'CUPOM_USADO' : 'CUPOM_INVALIDO', { cupom: escolha.mensagem });
       }
       cupom = escolha.cupom; boasVindas = escolha.boasVindas;
+    }
+    // Cupom de campanha do ERP: limites (total, por cliente, só primeira compra) conferidos com a trava do código.
+    const campanha = cupom && !boasVindas ? campanhas.porCodigo.get(cupom.codigo) : undefined;
+    if (campanha) {
+      const recusa = await conferirLimitesCupom(campanha, clienteId);
+      if (recusa) throw new ErroConta(409, recusa, 'CUPOM_ESGOTADO', { cupom: recusa });
     }
     const totais = calcularTotais(linhas.map((linha) => ({ preco: decimalDe(linha.precoCentavos), quantidade: linha.quantidade })), cupom);
 
@@ -381,7 +403,7 @@ export async function criarPedido(clienteId: string, entrada: EntradaPedido, opc
       linhas,
       cliente: { nome: conta.nome, whatsapp: conta.whatsappFormatado, email: conta.email, local, retirar, observacoes },
       cupom: cupom && totais.descontoCupom > 0
-        ? { codigo: cupom.codigo, descontoCentavos: totais.descontoCupom, rotulo: boasVindas ? `Cupom de primeira compra ${cupom.codigo} (${cupom.percentual}% OFF)` : `Cupom ${cupom.codigo} (${cupom.percentual}% OFF)` }
+        ? { codigo: cupom.codigo, descontoCentavos: totais.descontoCupom, rotulo: boasVindas ? `Cupom de primeira compra ${cupom.codigo} (${cupom.percentual}% OFF)` : `Cupom ${cupom.codigo} (${cupom.valorCentavos ? `${reaisCurto(cupom.valorCentavos)} OFF` : `${cupom.percentual}% OFF`})` }
         : undefined,
       descontoPixPercentual: DESCONTO_PIX_PERCENTUAL,
     });
@@ -397,9 +419,15 @@ export async function criarPedido(clienteId: string, entrada: EntradaPedido, opc
       const consumo = await database.prepare("UPDATE loja_cupons SET usado_em = ?, pedido_numero = ? WHERE cliente_id = ? AND tipo = 'boas_vindas' AND usado_em IS NULL").run(agora, numero, clienteId);
       if (!Number(consumo.changes)) throw new ErroConta(409, 'Você já usou o cupom de primeira compra.', 'CUPOM_USADO', { cupom: 'Você já usou o cupom de primeira compra.' });
     }
+    if (campanha && totais.descontoCupom > 0) await registrarUsoCupom(campanha, clienteId, numero, totais.descontoCupom, agora);
     await auditar('loja', 'created', 'loja_pedidos', numero);
-    return { pedido: pedidoDe(await database.prepare('SELECT * FROM loja_pedidos WHERE numero = ?').get(numero) as Linha) };
+    return { pedido: pedidoDe(await database.prepare('SELECT * FROM loja_pedidos WHERE numero = ?').get(numero) as Linha), conta };
   });
+  // Depois do pedido gravado: o carrinho sincronizado vira "convertido" e o lead do CRM ganha a nota.
+  const { pedido, conta } = resultado;
+  await emSegundoPlano('carrinho convertido', () => marcarCarrinhoConvertido(clienteId, pedido.numero, agora));
+  await emSegundoPlano('nota no lead', () => registrarPedidoNoLead({ id: clienteId, nome: conta.nome, email: conta.email, whatsapp: conta.whatsapp }, pedido));
+  return { pedido };
 }
 
 const decimalDe = (valor: number) => `${Math.floor(valor / 100)}.${String(valor % 100).padStart(2, '0')}`;
@@ -433,7 +461,7 @@ function busca(url: URL) {
 
 export type ClienteErp = {
   id: string; nome: string; email: string; whatsapp: string; whatsappFormatado: string; criadaEm: string; ultimoAcesso: string | null;
-  pedidos: number; cupom: CupomConta | null; avatar?: string;
+  pedidos: number; ultimoPedidoEm: string | null; cupom: CupomConta | null; avatar?: string; lead: LeadVinculado;
 };
 
 export async function listarClientesLoja(url: URL) {
@@ -448,11 +476,13 @@ export async function listarClientesLoja(url: URL) {
   }
   const onde = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '', database = contasDb();
   const total = Number((await database.prepare(`SELECT COUNT(*) AS total FROM loja_clientes c ${onde}`).get(...parametros) as { total: number }).total);
-  const linhas = await database.prepare(`SELECT c.*, (SELECT COUNT(*) FROM loja_pedidos p WHERE p.cliente_id = c.id) AS total_pedidos, k.codigo, k.percentual, k.usado_em, k.pedido_numero
+  const linhas = await database.prepare(`SELECT c.*, (SELECT COUNT(*) FROM loja_pedidos p WHERE p.cliente_id = c.id) AS total_pedidos, (SELECT MAX(p.criado) FROM loja_pedidos p WHERE p.cliente_id = c.id) AS ultimo_pedido, k.codigo, k.percentual, k.usado_em, k.pedido_numero
     FROM loja_clientes c LEFT JOIN loja_cupons k ON k.cliente_id = c.id AND k.tipo = 'boas_vindas' ${onde} ORDER BY c.criado DESC, c.id LIMIT ? OFFSET ?`).all(...parametros, limite, offset);
+  const leads = await leadsDasClientes(linhas.map((linha) => texto(linha.id)));
   const clientes: ClienteErp[] = linhas.map((linha) => ({
     id: texto(linha.id), nome: texto(linha.nome), email: texto(linha.email), whatsapp: texto(linha.whatsapp), whatsappFormatado: mascararWhatsapp(texto(linha.whatsapp)),
-    criadaEm: iso(linha.criado), ultimoAcesso: linha.ultimo_acesso ? iso(linha.ultimo_acesso) : null, pedidos: Number(linha.total_pedidos), cupom: linha.codigo ? cupomDe(linha) : null,
+    criadaEm: iso(linha.criado), ultimoAcesso: linha.ultimo_acesso ? iso(linha.ultimo_acesso) : null, pedidos: Number(linha.total_pedidos), ultimoPedidoEm: linha.ultimo_pedido ? iso(linha.ultimo_pedido) : null, cupom: linha.codigo ? cupomDe(linha) : null,
+    lead: leads.get(texto(linha.id)) ?? null,
   }));
   return { clientes, pagination: { limit: limite, offset, total, hasMore: offset + clientes.length < total } };
 }
@@ -468,10 +498,11 @@ export async function detalheClienteLoja(id: string) {
     cupom: cupomDe(await linhaCupom(id)),
     pedidos: await pedidosDaCliente(id, 100),
     redefinicao: redefinicao ? { criadaEm: iso(redefinicao.criada), expiraEm: iso(redefinicao.expira), usadaEm: redefinicao.usada_em ? iso(redefinicao.usada_em) : null } : null,
+    lead: (await leadsDasClientes([id])).get(id) ?? null,
   };
 }
 
-export type PedidoErp = PedidoLoja & { clienteId: string | null; nome: string; email: string; whatsapp: string; whatsappFormatado: string; anonimizado: boolean; revisao: number };
+export type PedidoErp = PedidoLoja & { clienteId: string | null; nome: string; email: string; whatsapp: string; whatsappFormatado: string; anonimizado: boolean; revisao: number; atualizadoEm: string };
 
 export async function listarPedidosLoja(url: URL) {
   const { limite, offset } = paginacao(url);
@@ -481,16 +512,31 @@ export async function listarPedidosLoja(url: URL) {
   const condicoes: string[] = [], parametros: (string | number)[] = [];
   if (status !== 'todos') { condicoes.push('status = ?'); parametros.push(status); }
   if (termo) { condicoes.push("(LOWER(numero) LIKE ? ESCAPE '\\' OR LOWER(nome) LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\')"); parametros.push(...Array(3).fill(`%${escaparLike(termo)}%`)); }
+  // Período opcional (?desde=AAAA-MM-DD&ate=AAAA-MM-DD, dias inteiros no horário de Brasília).
+  const desde = dataDoFiltro(url, 'desde'), ate = dataDoFiltro(url, 'ate');
+  if (desde !== null) { condicoes.push('criado >= ?'); parametros.push(desde); }
+  if (ate !== null) { condicoes.push('criado < ?'); parametros.push(ate + 24 * 60 * 60 * 1000); }
+  // A contagem por situação (abas) segue a busca e o período, mas não a situação escolhida.
+  const semSituacao = status !== 'todos' ? 1 : 0;
+  const ondeContagem = condicoes.length > semSituacao ? `WHERE ${condicoes.slice(semSituacao).join(' AND ')}` : '';
   const onde = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '', database = contasDb();
   const total = Number((await database.prepare(`SELECT COUNT(*) AS total FROM loja_pedidos ${onde}`).get(...parametros) as { total: number }).total);
   const linhas = await database.prepare(`SELECT * FROM loja_pedidos ${onde} ORDER BY criado DESC, numero DESC LIMIT ? OFFSET ?`).all(...parametros, limite, offset);
   const contagem: Record<string, number> = Object.fromEntries(Object.keys(STATUS_PEDIDO).map((chave) => [chave, 0]));
-  for (const linha of await database.prepare('SELECT status, COUNT(*) AS total FROM loja_pedidos GROUP BY status').all()) contagem[texto(linha.status)] = Number(linha.total);
+  for (const linha of await database.prepare(`SELECT status, COUNT(*) AS total FROM loja_pedidos ${ondeContagem} GROUP BY status`).all(...parametros.slice(semSituacao))) contagem[texto(linha.status)] = Number(linha.total);
   return { pedidos: linhas.map(pedidoErp), contagem, pagination: { limit: limite, offset, total, hasMore: offset + linhas.length < total } };
 }
 
+function dataDoFiltro(url: URL, campo: 'desde' | 'ate'): number | null {
+  const valor = url.searchParams.get(campo);
+  if (!valor) return null;
+  const ms = /^\d{4}-\d\d-\d\d$/.test(valor) ? Date.parse(`${valor}T00:00:00-03:00`) : Number.NaN;
+  if (!Number.isFinite(ms)) throw new ApiError(400, 'Período: use datas no formato AAAA-MM-DD.', 'INVALID_FILTER');
+  return ms;
+}
+
 function pedidoErp(linha: Linha): PedidoErp {
-  return { ...pedidoDe(linha), clienteId: linha.cliente_id ? texto(linha.cliente_id) : null, nome: texto(linha.nome), email: texto(linha.email), whatsapp: texto(linha.whatsapp), whatsappFormatado: mascararWhatsapp(texto(linha.whatsapp)), anonimizado: Number(linha.anonimizado) === 1, revisao: Number(linha.revisao) };
+  return { ...pedidoDe(linha), clienteId: linha.cliente_id ? texto(linha.cliente_id) : null, nome: texto(linha.nome), email: texto(linha.email), whatsapp: texto(linha.whatsapp), whatsappFormatado: mascararWhatsapp(texto(linha.whatsapp)), anonimizado: Number(linha.anonimizado) === 1, revisao: Number(linha.revisao), atualizadoEm: iso(linha.atualizado) };
 }
 
 /** A equipe acompanha o pedido: em atendimento, confirmado ou cancelado (a cliente vê a situação em Minha conta). */

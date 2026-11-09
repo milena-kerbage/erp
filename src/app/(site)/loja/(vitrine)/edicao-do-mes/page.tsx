@@ -4,9 +4,8 @@ import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
 import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { Resultado } from "@/loja/componentes/listagem/Resultado";
-import { categoriasRelacionadas } from "@/loja/lib/catalogo/categorias";
+import { arvoreDaLoja, indiceDaLoja } from "@/lib/loja/catalogo";
 import { EDICAO_ATUAL, ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
-import { buscarVarios } from "@/loja/lib/catalogo/exemplos";
 import { filtrosDaQuery } from "@/loja/lib/catalogo/urlsListagem";
 import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 
@@ -18,8 +17,8 @@ import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 
 const CHAVE = ROTA_EDICAO.slice(1);
 
-function pecasDaEdicao() {
-  return buscarVarios(EDICAO_ATUAL.produtos);
+async function pecasDaEdicao() {
+  return (await indiceDaLoja()).buscarVarios(EDICAO_ATUAL.produtos);
 }
 
 export const metadata: Metadata = {
@@ -30,8 +29,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function PaginaEdicaoDoMes({ searchParams }: PageProps<"/loja/edicao-do-mes">) {
-  const pecas = pecasDaEdicao();
+export default async function PaginaEdicaoDoMes({ searchParams }: PageProps<"/loja/edicao-do-mes">) {
+  const [pecas, { categoriasRelacionadas }] = await Promise.all([pecasDaEdicao(), arvoreDaLoja()]);
   const categorias = [...new Set(pecas.map((peca) => peca.caminho.split("/")[1]))].filter(Boolean);
   return (
     <>
@@ -61,7 +60,7 @@ async function Grade({ searchParams }: Pick<PageProps<"/loja/edicao-do-mes">, "s
   return (
     <Resultado
       contexto={{ tipo: "categoria", categoria: CHAVE }}
-      itensBase={pecasDaEdicao()}
+      itensBase={await pecasDaEdicao()}
       filtros={filtrosDaQuery(busca)}
       ordem={busca.get("ordem") ?? ORDEM_PADRAO}
       pagina={Math.max(1, Math.min(500, Number(busca.get("pagina")) || 1))}

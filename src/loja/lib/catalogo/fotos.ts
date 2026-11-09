@@ -6,11 +6,13 @@
 // Basta registrar o slug e a descrição em ALTS abaixo. Quando a API de catálogo existir, as fotos
 // vêm do cadastro do produto no ERP e este arquivo sai.
 
+import { origemDaMidia } from '../midia';
+
 export type TipoImagem = "principal" | "aplicacao" | "detalhe";
 export type ImagemProduto = { src: string; alt: string; tipo: TipoImagem };
 export type Foto = Pick<ImagemProduto, "src" | "alt">; // o que cards e miniaturas precisam
 
-const PASTA = "/vitrine/produtos";
+const PASTA = `${origemDaMidia()}/vitrine/produtos`;
 
 const principal = (slug: string, alt: string): ImagemProduto => ({ src: `${PASTA}/${slug}/principal.webp`, alt, tipo: "principal" });
 const detalhe = (slug: string, alt: string): ImagemProduto => ({
@@ -24,6 +26,11 @@ const detalhe = (slug: string, alt: string): ImagemProduto => ({
 const ALTS: Record<string, string> = {};
 
 const IMAGENS = new Map(Object.entries(ALTS).map(([slug, alt]) => [slug, [principal(slug, alt), detalhe(slug, alt)]]));
+
+// Foto cadastrada no ERP, servida pela rota da loja já em WebP recomprimido (1600 px, sem metadados) e
+// com cache longo: vai direto ao navegador, sem o otimizador do next/image (que busca o arquivo por uma
+// requisição interna, fora do host da loja).
+export const ehFotoDoCatalogo = (src: unknown) => typeof src === "string" && src.startsWith("/api/catalogo/imagem/");
 
 export function imagensDe(slug: string): ImagemProduto[] | undefined {
   return IMAGENS.get(slug);

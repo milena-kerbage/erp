@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { caminhosParaPreGerar } from "@/loja/lib/catalogo/categorias";
+import { arvoreDaLoja } from "@/lib/loja/catalogo";
 import { ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
 import { ORIGEM } from "@/loja/lib/seo/config";
 import { PAGINAS_INSTITUCIONAIS } from "@/loja/lib/seo/institucional";
@@ -11,8 +11,10 @@ import { PAGINAS_INSTITUCIONAIS } from "@/loja/lib/seo/institucional";
 // Quando o catálogo existir, usar generateSitemaps (um arquivo por tipo: categorias, facetas,
 // produtos, conteúdo; ≤ 50.000 URLs cada), buscando da API com a tag "sitemap" e lastmod real.
 // Nunca priority/changefreq (ignorados por Google e Bing). Regras em publicacao.md §3.
-export default function sitemap(): MetadataRoute.Sitemap {
-  const categorias = caminhosParaPreGerar()
+// As categorias vêm do cadastro do ERP (ou do menu estático, no fallback): src/lib/loja/catalogo.ts.
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const categorias = (await arvoreDaLoja())
+    .caminhosParaPreGerar()
     .filter((partes) => partes[0] !== "personalizado")
     .map((partes) => `/${partes.join("/")}`)
     .sort();

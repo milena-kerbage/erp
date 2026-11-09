@@ -1,6 +1,6 @@
 import { fotosDoCatalogo, MolduraConta } from "@/loja/componentes/conta/MolduraConta";
 import { VisaoGeralConta } from "@/loja/componentes/conta/VisaoGeralConta";
-import { catalogoParaCarrinho } from "@/loja/lib/carrinho/catalogo";
+import { catalogoDaSacola } from "@/lib/loja/catalogo";
 import { metadataPagina } from "@/loja/lib/seo/institucional";
 
 export const metadata = metadataPagina({
@@ -10,10 +10,10 @@ export const metadata = metadataPagina({
   indexar: false,
 });
 
-export default function MinhaConta() {
+export default async function MinhaConta() {
   return (
     <MolduraConta>
-      <VisaoGeralConta catalogo={catalogoParaCarrinho()} fotos={fotosDoCatalogo()} />
+      <VisaoGeralConta catalogo={await catalogoDaSacola()} fotos={await fotosDoCatalogo()} />
     </MolduraConta>
   );
 }

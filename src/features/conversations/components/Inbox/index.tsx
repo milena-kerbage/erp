@@ -1,4 +1,5 @@
 "use client";
+import {useLeadList,LeadPagination} from "@/features/leads/useLeadList";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -32,8 +33,6 @@ const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, ""
  */
 export function Inbox({ selectedId }: { selectedId?: string }) {
   const theme = useTheme();
-  const { leads, details, messages, unread, statuses, markRead, sendMessage, setConversationStatus, updateDetails } =
-    useLeads();
   const composerRef = useRef<ComposerHandle>(null);
   const router = useRouter();
   const backToList = useCallback(() => {
@@ -50,6 +49,10 @@ export function Inbox({ selectedId }: { selectedId?: string }) {
   );
   const [query, setQuery] = useState("");
 
+  const {leads:pageLeads,unread,statuses,markRead,sendMessage,setConversationStatus,updateDetails}=useLeadList({q:query,searchNotes:true,conversations:true,funnels:filters.funnel==='all'?[]:[filters.funnel],owners:filters.mine?[teamMember.seed]:[],statuses:filters.status==='all'?[]:[filters.status],unread:filters.unread,sort:'activity',direction:filters.sort==='oldest'?'asc':'desc'});
+  const {leads:allLeads,details,messages,hydrate}=useLeads();
+  const leads=selectedId&&!pageLeads.some(lead=>lead.id===selectedId)?[...pageLeads,...allLeads.filter(lead=>lead.id===selectedId)]:pageLeads;
+  useEffect(()=>{if(selectedId)void hydrate(selectedId);},[selectedId,hydrate]);
   // Toda conversa com mensagens (e a aberta, mesmo sem mensagens ainda).
   const conversations = useMemo<Conversation[]>(
     () =>
@@ -129,6 +132,7 @@ export function Inbox({ selectedId }: { selectedId?: string }) {
           query={query}
           onQueryChange={setQuery}
         />
+        <LeadPagination />
       </ListColumn>
 
       <ChatColumn aria-label={lead ? `Conversa com ${lead.name}` : "Conversa"} data-pane="chat">

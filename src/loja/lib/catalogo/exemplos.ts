@@ -4,10 +4,14 @@
 // buscarProduto() passa a chamar o backend (tag "produto:<sku>") e este arquivo sai.
 // As páginas geradas daqui saem com noindex (ver produto/[slug]/page.tsx).
 
+import { BORDADO_NOME, PRONTA_ENTREGA, SOB_ENCOMENDA } from "./constantes";
 import { fichaTecnica, type GrupoFicha } from "./fichas";
 import { type Foto, fotoPrincipal, type ImagemProduto, imagensDe } from "./fotos";
 
-export type Opcao = { rotulo: string; disponivel: boolean };
+export { BORDADO_NOME, PRONTA_ENTREGA, SOB_ENCOMENDA };
+
+// `acrescimoCentavos`: quanto a opção soma ao preço "a partir de" (cadastro do ERP; ausente = 0).
+export type Opcao = { rotulo: string; disponivel: boolean; acrescimoCentavos?: number };
 // Irmão: a mesma peça em outra cor. Nome, preço, selo, caminho e fotos vêm preenchidos (ver o fim do
 // arquivo) para os cards trocarem de cor sem sair da página.
 export type Irmao = {
@@ -44,6 +48,13 @@ export type Produto = {
   avaliacoes: { nota: number; total: number } | null;
   complementos: string[]; // "Complete o enxoval"
   semelhantes: string[]; // "Você também poderá gostar"
+  // Campos que só o catálogo do banco (cadastro do ERP) preenche; o de exemplo não tem.
+  precoDe?: string; // preço "de" (riscado), maior que o preço
+  caminhosExtras?: string[]; // categorias extras (o produto aparece também nessas listagens)
+  personalizacaoAcrescimoCentavos?: number; // acréscimo quando a cliente escolhe "com bordado"
+  prazo?: { min: number; max: number }; // prazo de produção próprio, em dias úteis
+  destaque?: boolean;
+  seo?: { titulo?: string; descricao?: string };
 };
 
 // Preço à vista no Pix e parcelamento: no real quem calcula é o backend; aqui, só para o exemplo.
@@ -69,11 +80,6 @@ export function condicoesDePagamento(preco: string): { pix: string; parcelas: nu
   if (parcelas < 2) return { pix, parcelas: 1, valorParcela: preco };
   return { pix, parcelas, valorParcela: deCentavos(Math.ceil(centavos / parcelas)) };
 }
-
-// Disponibilidade (faceta "entrega"): pronta entrega sai em até 2 dias úteis; o resto é feito no ateliê.
-export const PRONTA_ENTREGA = "Pronta entrega";
-export const SOB_ENCOMENDA = "Sob encomenda";
-export const BORDADO_NOME = "Bordado com nome";
 
 const TAMANHOS_BERCO = {
   titulo: "Tamanho do berço",

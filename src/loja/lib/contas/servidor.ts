@@ -1,10 +1,12 @@
 import "server-only";
+import {StorageError} from "@/lib/storage/r2";
 import { createHmac } from "node:crypto";
 import { digest, limited } from "@/lib/auth/core";
-import { DatabaseConfigurationError, DatabaseOperationError, storageConfiguration } from "@/lib/database";
+import { DatabaseConfigurationError, DatabaseOperationError } from "@/lib/database";
 import { ApiError } from "@/lib/erp/access";
 import { ehHostDaLoja, nomeDoHost, ORIGEM_LOJA } from "@/lib/hosts";
 import { avatarDaCliente } from "@/lib/loja/avatar";
+import { gravacaoLojaPermitida } from "@/lib/loja/gestao/esquema";
 import { clienteDaSessao, type ContaCliente, ErroConta } from "@/lib/loja/contas";
 
 // Peças das rotas de conta da loja (/api/conta/* e /api/pedidos, no host da loja): cookie próprio,
@@ -32,6 +34,7 @@ export function respostaDeErro(status: number, codigo: string, mensagem: string,
 
 /** Converte os erros do servidor em {erro:{codigo,mensagem,campos?}}, sem detalhes internos. */
 export function erroDaApi(erro: unknown): Response {
+  if(erro instanceof StorageError)return respostaDeErro(503,erro.code,erro.message);
   if (erro instanceof ErroConta) return respostaDeErro(erro.status, erro.code, erro.message, erro.erros, erro.status === 429 ? { "Retry-After": "900" } : {});
   if (erro instanceof ApiError) return respostaDeErro(erro.status, erro.code, erro.message);
   if (erro instanceof DatabaseConfigurationError || erro instanceof DatabaseOperationError)
@@ -61,15 +64,12 @@ export function conferirOrigem(request: Request) {
 
 /**
  * Desenvolvimento ligado a um DATABASE_URL remoto (que pode ser o de PRODUÇÃO): as rotas de escrita das
- * contas recusam (503 GRAVACAO_DESLIGADA) para nada ser criado no banco real por engano. Para gravar de
- * propósito nesse cenário: CONTAS_GRAVAR_EM_DESENVOLVIMENTO=true. Teste o fluxo com SQLite local
- * (DATABASE_URL vazio e ALLOW_LOCAL_SQLITE=true).
+ * contas e do carrinho sincronizado recusam (503 GRAVACAO_DESLIGADA) para nada ser criado no banco real
+ * por engano. Para gravar de propósito nesse cenário: LOJA_GRAVAR_EM_DESENVOLVIMENTO=true (ou o antigo
+ * CONTAS_GRAVAR_EM_DESENVOLVIMENTO=true). Teste o fluxo com SQLite local (DATABASE_URL vazio e
+ * ALLOW_LOCAL_SQLITE=true). A mesma regra vale para a gestão do e-commerce no ERP (gestao/esquema.ts).
  */
-export function gravacaoPermitida(): boolean {
-  if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test") return true;
-  if (storageConfiguration().backend !== "postgres") return true;
-  return process.env.CONTAS_GRAVAR_EM_DESENVOLVIMENTO === "true";
-}
+export const gravacaoPermitida = gravacaoLojaPermitida;
 export function exigirGravacao() {
   if (!gravacaoPermitida())
     throw new ErroConta(

@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 // PostgreSQL em WASM + protocolo pg. Não conecta ao Supabase nem usa credenciais reais.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -26,7 +27,7 @@ process.env.ERP_WEBHOOK_ALLOWED_HOSTS = 'hooks.example.com';
 const storage = await import('../src/lib/database.ts');
 try {
   await engine.exec('CREATE ROLE anon; CREATE ROLE authenticated;');
-  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql', '008_loja_avaliacoes.sql', '009_loja_clientes.sql']) {
+  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql', '008_loja_avaliacoes.sql', '009_loja_clientes.sql', '010_loja_gestao.sql', '011_performance.sql', '012_storage.sql', '014_image_compression.sql']) {
     await engine.exec(readFileSync(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
   }
   const privileges = await engine.query("SELECT has_schema_privilege('anon', 'erp_auth', 'USAGE') AS auth_access, has_schema_privilege('authenticated', 'erp_whatsapp', 'USAGE') AS whatsapp_access, has_schema_privilege('anon', 'erp_meta', 'USAGE') AS meta_access");
@@ -34,7 +35,7 @@ try {
   assert.equal((await engine.query("SELECT has_schema_privilege('anon','erp_core','USAGE') AS exposed")).rows[0].exposed,false);
   const tables = await engine.query("SELECT COUNT(*)::integer AS count FROM pg_tables WHERE schemaname IN ('erp_auth','erp_whatsapp','erp_meta','erp_core') AND rowsecurity = false");
   assert.equal(tables.rows[0].count, 0, 'Tabelas privadas devem ter RLS habilitado');
-  console.log('OK: nove migrações PostgreSQL aplicadas, schemas privados e RLS habilitado');
+  console.log('OK: dez migrações PostgreSQL aplicadas, schemas privados e RLS habilitado');
   await socket.start();
   const auth = await import('../src/lib/auth/core.ts');
   const wa = await import('../src/lib/whatsapp/core.ts');
@@ -95,8 +96,8 @@ try {
   const secondFile = await erpFiles.storeAttachment(lead.id,'ajustes.txt','text/plain',Buffer.from('ajustes confirmados'));
   assert.deepEqual(Buffer.from((await erpFiles.getAttachment(lead.id,firstFile.attachment.id)).content),Buffer.from('medidas conferidas'));
   assert.equal((await erp.leadsSnapshot()).details[lead.id].attachments.length,2);
-  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1foAAAAASUVORK5CYII=','base64');
-  await erpFiles.storePhoto(png,actor);assert.deepEqual(Buffer.from((await erpFiles.getPhoto(actor.id)).content),png);
+  const png=await sharp({create:{width:10,height:10,channels:3,background:'white'}}).png().toBuffer();
+  await erpFiles.storePhoto(png,actor);assert.equal((await erpFiles.getPhoto(actor.id)).mime_type,'image/webp');assert.equal((await erpFiles.getPhoto(actor.id,'avif')).mime_type,'image/avif');
   await access.updateMember(actor.id,{phone:'85999999999'},actor,true);
   await access.recordMemberLogin(actor.id);
   const savedProfile=(await access.listTeam(actor)).currentUser;

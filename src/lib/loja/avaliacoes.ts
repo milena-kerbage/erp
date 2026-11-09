@@ -1,5 +1,7 @@
+import {storeBinary,readBinary,discardBinaries} from '../storage/r2.ts';
 import { createHmac, randomUUID } from 'node:crypto';
-import sharp from 'sharp';
+import {compressImage,ImageCompressionError,type CompressedImage} from '../storage/images.ts';
+import {prepareImageVariants,saveImageVariants,imageVariant,deleteImageVariants,variantsDb} from '../storage/variants.ts';
 import { erpDB } from '../erp/core.ts';
 import { ApiError, type Actor } from '../erp/access.ts';
 import { imageMime, MAX_FILE_BYTES } from '../erp/files.ts';
@@ -17,7 +19,7 @@ export const avaliacoesSchema = `CREATE TABLE IF NOT EXISTS loja_avaliacoes (id 
 CREATE INDEX IF NOT EXISTS loja_avaliacoes_produto_status ON loja_avaliacoes(produto, status, criada);
 CREATE INDEX IF NOT EXISTS loja_avaliacoes_status_criada ON loja_avaliacoes(status, criada);
 CREATE INDEX IF NOT EXISTS loja_avaliacoes_ip ON loja_avaliacoes(ip_hash, criada);
-CREATE TABLE IF NOT EXISTS loja_avaliacao_fotos (id TEXT PRIMARY KEY, avaliacao_id TEXT NOT NULL REFERENCES loja_avaliacoes(id) ON DELETE CASCADE, posicao INTEGER NOT NULL CHECK (posicao BETWEEN 0 AND 3), largura INTEGER NOT NULL CHECK (largura > 0 AND largura <= 1600), altura INTEGER NOT NULL CHECK (altura > 0 AND altura <= 1600), tipo TEXT NOT NULL CHECK (tipo = 'image/webp'), tamanho INTEGER NOT NULL CHECK (tamanho > 0 AND tamanho <= 3145728), grande BLOB NOT NULL, mini BLOB NOT NULL, criada INTEGER NOT NULL, UNIQUE (avaliacao_id, posicao));
+CREATE TABLE IF NOT EXISTS loja_avaliacao_fotos (id TEXT PRIMARY KEY, avaliacao_id TEXT NOT NULL REFERENCES loja_avaliacoes(id) ON DELETE CASCADE, posicao INTEGER NOT NULL CHECK (posicao BETWEEN 0 AND 3), largura INTEGER NOT NULL CHECK (largura > 0 AND largura <= 1600), altura INTEGER NOT NULL CHECK (altura > 0 AND altura <= 1600), tipo TEXT NOT NULL CHECK (tipo = 'image/webp'), tamanho INTEGER NOT NULL CHECK (tamanho > 0 AND tamanho <= 3145728), grande BLOB NOT NULL, mini BLOB NOT NULL, criada INTEGER NOT NULL, grande_key TEXT, mini_key TEXT, UNIQUE (avaliacao_id, posicao));
 CREATE INDEX IF NOT EXISTS loja_avaliacao_fotos_avaliacao ON loja_avaliacao_fotos(avaliacao_id, posicao);`;
 
 export function avaliacoesDb() { const database = erpDB(); database.registerSqliteSchema(avaliacoesSchema); return database; }
@@ -32,7 +34,7 @@ export class ErroAvaliacao extends ApiError {
 export const tagAvaliacoes = (produto: string) => `avaliacoes:${produto}`;
 
 type Linha = Record<string, unknown>;
-type FotoProcessada = { grande: Buffer; mini: Buffer; largura: number; altura: number };
+type FotoProcessada = { grande: Buffer; mini: Buffer; largura: number; altura: number; compressed:CompressedImage };
 const iso = (valor: unknown) => new Date(Number(valor)).toISOString();
 const bytes = (valor: unknown) => Buffer.isBuffer(valor) ? valor : Buffer.from(valor as Uint8Array);
 
@@ -60,12 +62,10 @@ export async function processarFoto(conteudo: Buffer, posicao = 0): Promise<Foto
   if (conteudo.length > MAX_FILE_BYTES) throw new ErroAvaliacao(413, `A foto ${numero} tem mais de 3 MB. Envie fotos de até 3 MB cada.`, 'FOTO_GRANDE', {fotos: `A foto ${numero} tem mais de 3 MB.`});
   try { imageMime(conteudo); } catch { throw new ErroAvaliacao(415, `A foto ${numero} não é JPEG, PNG ou WebP.`, 'FOTO_TIPO', {fotos: `A foto ${numero} não é JPEG, PNG ou WebP.`}); }
   try {
-    // rotate() sem ângulo aplica a orientação do EXIF antes de descartar os metadados.
-    const entrada = () => sharp(conteudo, {limitInputPixels: 50_000_000, failOn: 'error'}).rotate();
-    const grande = await entrada().resize({width: LIMITES_AVALIACAO.ladoGrande, height: LIMITES_AVALIACAO.ladoGrande, fit: 'inside', withoutEnlargement: true}).webp({quality: 80}).toBuffer({resolveWithObject: true});
-    const mini = await entrada().resize({width: LIMITES_AVALIACAO.ladoMini, height: LIMITES_AVALIACAO.ladoMini, fit: 'inside', withoutEnlargement: true}).webp({quality: 75}).toBuffer();
-    return {grande: grande.data, mini, largura: grande.info.width, altura: grande.info.height};
-  } catch {
+    const compressed=await compressImage(conteudo,'review');
+    return {grande:compressed.webp.large,mini:compressed.webp.small,largura:compressed.width,altura:compressed.height,compressed};
+  } catch (error) {
+    if(error instanceof ImageCompressionError&&error.status===429)throw new ErroAvaliacao(429,error.message,error.code);
     throw new ErroAvaliacao(415, `Não foi possível ler a foto ${numero}. Envie outra imagem.`, 'FOTO_INVALIDA', {fotos: `Não foi possível ler a foto ${numero}.`});
   }
 }
@@ -93,6 +93,9 @@ export async function criarAvaliacao(entrada: EntradaAvaliacao, opcoes: OpcoesAv
   if (opcoes.gravar === false) return {situacao: 'simulada'};
 
   const database = avaliacoesDb(), id = randomUUID(), ip = hashDoIp(entrada.ip || 'desconhecido');
+  variantsDb(database);
+  const photoIds=fotos.map(()=>randomUUID());
+  const objects=await Promise.all(fotos.map((foto,index)=>prepareImageVariants('review',photoIds[index],foto.compressed)));
   await database.transaction(async () => {
     await travar();
     await database.prepare("UPDATE loja_avaliacoes SET ip_hash = '' WHERE ip_hash <> '' AND criada < ?").run(agora - 24 * 60 * 60 * 1000);
@@ -101,8 +104,9 @@ export async function criarAvaliacao(entrada: EntradaAvaliacao, opcoes: OpcoesAv
     await database.prepare('INSERT INTO loja_avaliacoes (id, produto, nota, titulo, texto, nome, cidade, para_quem, status, texto_busca, fotos, ip_hash, consentimento_em, revisao, criada, atualizada) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)')
       .run(id, dados.produto, dados.nota, dados.titulo, dados.texto, dados.nome, dados.cidade, dados.paraQuem, 'pendente', normalizarBusca(`${dados.titulo} ${dados.texto}`), fotos.length, ip, agora, agora, agora);
     for (const [posicao, foto] of fotos.entries()) {
-      await database.prepare('INSERT INTO loja_avaliacao_fotos (id, avaliacao_id, posicao, largura, altura, tipo, tamanho, grande, mini, criada) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(randomUUID(), id, posicao, foto.largura, foto.altura, 'image/webp', foto.grande.length, foto.grande, foto.mini, agora);
+      await database.prepare('INSERT INTO loja_avaliacao_fotos (id, avaliacao_id, posicao, largura, altura, tipo, tamanho, grande, mini, criada, grande_key, mini_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(photoIds[posicao], id, posicao, foto.largura, foto.altura, 'image/webp', foto.grande.length, objects[posicao].find(v=>v.format==='webp'&&v.variant==='large')!.key?Buffer.alloc(0):foto.grande, objects[posicao].find(v=>v.format==='webp'&&v.variant==='small')!.key?Buffer.alloc(0):foto.mini, agora,objects[posicao].find(v=>v.format==='webp'&&v.variant==='large')!.key,objects[posicao].find(v=>v.format==='webp'&&v.variant==='small')!.key);
+      await saveImageVariants(database,objects[posicao]);
     }
     await auditar('loja', 'created', id);
   });
@@ -133,16 +137,15 @@ function publica(linha: Linha, fotos: FotoAvaliacao[]): AvaliacaoPublica {
 export async function resumoDoProduto(produto: string): Promise<ResumoAvaliacoes> {
   if (!slugValido(produto)) return structuredClone(RESUMO_VAZIO);
   const database = avaliacoesDb();
-  const porNota = await database.prepare("SELECT nota, COUNT(*) AS total, SUM(CASE WHEN fotos > 0 THEN 1 ELSE 0 END) AS com_fotos FROM loja_avaliacoes WHERE produto = ? AND status = 'aprovada' GROUP BY nota").all(produto);
-  const porPara = await database.prepare("SELECT para_quem, COUNT(*) AS total FROM loja_avaliacoes WHERE produto = ? AND status = 'aprovada' AND para_quem <> '' GROUP BY para_quem").all(produto);
+  const grupos = await database.prepare("SELECT nota, para_quem, COUNT(*) AS total, SUM(CASE WHEN fotos > 0 THEN 1 ELSE 0 END) AS com_fotos FROM loja_avaliacoes WHERE produto = ? AND status = 'aprovada' GROUP BY nota, para_quem").all(produto);
   const resumo = structuredClone(RESUMO_VAZIO);
   let soma = 0;
-  for (const linha of porNota) {
+  for (const linha of grupos) {
     const nota = Number(linha.nota), total = Number(linha.total);
-    resumo.porNota[String(nota) as keyof ResumoAvaliacoes['porNota']] = total;
+    resumo.porNota[String(nota) as keyof ResumoAvaliacoes['porNota']] += total;
     resumo.total += total; soma += nota * total; resumo.comFotos += Number(linha.com_fotos ?? 0);
+    if (String(linha.para_quem) in PARA_QUEM) resumo.paraQuem[String(linha.para_quem) as ParaQuem] += total;
   }
-  for (const linha of porPara) if (String(linha.para_quem) in PARA_QUEM) resumo.paraQuem[String(linha.para_quem) as ParaQuem] = Number(linha.total);
   resumo.media = resumo.total ? Math.round((soma / resumo.total) * 10) / 10 : 0;
   return resumo;
 }
@@ -175,11 +178,13 @@ export async function listarAprovadas(produto: string, filtros: FiltrosAvaliacao
 }
 
 /** Binário da foto. Na loja, só de avaliação aprovada; no ERP (moderação), de qualquer situação. */
-export async function fotoDaAvaliacao(id: string, tamanho: 'mini' | 'grande', somenteAprovadas: boolean) {
+export async function fotoDaAvaliacao(id: string, tamanho: 'mini' | 'grande', somenteAprovadas: boolean,formato:'webp'|'avif'='webp') {
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new ApiError(404, 'Foto não encontrada.', 'NOT_FOUND');
   const coluna = tamanho === 'mini' ? 'mini' : 'grande';
-  const linha = await avaliacoesDb().prepare(`SELECT f.${coluna} AS conteudo, f.tipo FROM loja_avaliacao_fotos f JOIN loja_avaliacoes a ON a.id = f.avaliacao_id WHERE f.id = ?${somenteAprovadas ? " AND a.status = 'aprovada'" : ''}`).get(id);
+  const linha = await avaliacoesDb().prepare(`SELECT f.${coluna} AS conteudo, f.${coluna}_key AS object_key, f.tipo FROM loja_avaliacao_fotos f JOIN loja_avaliacoes a ON a.id = f.avaliacao_id WHERE f.id = ?${somenteAprovadas ? " AND a.status = 'aprovada'" : ''}`).get(id);
   if (!linha) throw new ApiError(404, 'Foto não encontrada.', 'NOT_FOUND');
+  if(formato==='avif'){const variant=await imageVariant(avaliacoesDb(),'review',id,tamanho==='mini'?'small':'large','avif');if(variant)return{conteudo:variant.content,tipo:variant.type};}
+  if(linha.object_key)linha.conteudo=await readBinary(String(linha.object_key));
   return {conteudo: bytes(linha.conteudo), tipo: String(linha.tipo)};
 }
 
@@ -264,13 +269,16 @@ export async function moderarAvaliacao(id: string, entrada: Record<string, unkno
 export async function excluirAvaliacao(id: string, revisao: number, actor: Actor) {
   if (!Number.isSafeInteger(revisao) || revisao < 1) throw new ApiError(400, 'Informe a versão atual da avaliação.', 'REVISION_REQUIRED');
   const database = avaliacoesDb();
-  return database.transaction(async () => {
+  let keys:string[]=[];
+  const result=await database.transaction(async () => {
     await travar();
     const linha = await linhaDaAvaliacao(id);
     if (Number(linha.revisao) !== revisao) throw new ApiError(409, 'Esta avaliação foi alterada por outra pessoa. Atualize a lista e tente novamente.', 'REVISION_CONFLICT');
-    await database.prepare('DELETE FROM loja_avaliacao_fotos WHERE avaliacao_id = ?').run(id);
+    const removed=await database.prepare('DELETE FROM loja_avaliacao_fotos WHERE avaliacao_id = ? RETURNING id,grande_key,mini_key').all(id);
+    keys=removed.flatMap(row=>[row.grande_key,row.mini_key].filter(Boolean).map(String));for(const row of removed)keys.push(...await deleteImageVariants(database,'review',String(row.id)));
     await database.prepare('DELETE FROM loja_avaliacoes WHERE id = ?').run(id);
     await auditar(actor.id, 'removed', id);
     return {deleted: true, produto: String(linha.produto), estavaPublicada: linha.status === 'aprovada'};
   });
+  await discardBinaries(keys);return result;
 }

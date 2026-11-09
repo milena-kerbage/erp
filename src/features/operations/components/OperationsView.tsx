@@ -48,7 +48,7 @@ export function OperationsView({ resource, section }: { resource: Resource; sect
     const keys = [...needed] as (keyof RelationOptions)[];
     const results = await Promise.allSettled(keys.map(async (key) => {
       if (key === "leads") {
-        const result = await erpRequest<{ leads: { id: string; name: string; phone?: string }[] }>("leads", { signal });
+        const result = await erpRequest<{ leads: { id: string; name: string; phone?: string }[] }>("leads?options=1", { signal });
         return [key, result.leads.map((lead) => ({ id: lead.id, label: `${lead.name}${lead.phone ? ` · ${lead.phone}` : ""}` }))] as const;
       }
       const result = await erpRequest<{ records: OperationRecord[] }>(`records/${key}`, { signal });

@@ -1,0 +1,9 @@
+[
+  {
+    "AllowedOrigins": ["https://www.ateliemilenakerbage.com.br", "https://ateliemilenakerbage.com.br"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["Range"],
+    "ExposeHeaders": ["ETag", "Content-Length", "Content-Range", "Accept-Ranges"],
+    "MaxAgeSeconds": 3600
+  }
+]

@@ -1,15 +1,25 @@
 import "server-only";
+import {StorageError} from "@/lib/storage/r2";
 import { unstable_cache } from "next/cache";
 import { DatabaseConfigurationError, DatabaseOperationError, storageConfiguration } from "@/lib/database";
 import { ApiError } from "@/lib/erp/access";
 import { ErroAvaliacao, listarAprovadas, tagAvaliacoes } from "@/lib/loja/avaliacoes";
-import { filtrosDaUrl, type RespostaAvaliacoes } from "./regras";
+import { filtrosDaUrl, type FiltrosAvaliacao, type RespostaAvaliacoes } from "./regras";
 
 // Servidor da loja para as avaliações: carga inicial da PDP com cache por produto (revalidada pela
 // moderação do ERP via revalidateTag), respostas de erro da API pública e a trava de gravação em
 // desenvolvimento.
 
 let avisou = false;
+
+/** Uma chave por produto; buscas/filtros livres não multiplicam o cache persistente. */
+export function avaliacoesPublicas(slug: string, filtros: FiltrosAvaliacao): Promise<RespostaAvaliacoes> {
+  const padrao = filtrosDaUrl(new URLSearchParams());
+  if (JSON.stringify(filtros) !== JSON.stringify(padrao)) return listarAprovadas(slug, filtros);
+  return unstable_cache(() => listarAprovadas(slug, padrao), ["loja-avaliacoes", slug], {
+    tags: [tagAvaliacoes(slug)], revalidate: 600,
+  })();
+}
 
 /**
  * Primeira página das aprovadas + resumo, para renderizar no servidor. Cache de 10 min por produto,
@@ -18,10 +28,7 @@ let avisou = false;
  */
 export async function avaliacoesIniciais(slug: string): Promise<RespostaAvaliacoes | null> {
   try {
-    return await unstable_cache(() => listarAprovadas(slug, filtrosDaUrl(new URLSearchParams())), ["loja-avaliacoes", slug], {
-      tags: [tagAvaliacoes(slug)],
-      revalidate: 600,
-    })();
+    return await avaliacoesPublicas(slug, filtrosDaUrl(new URLSearchParams()));
   } catch (erro) {
     if (!avisou) {
       avisou = true;
@@ -56,6 +63,7 @@ export function respostaDeErro(status: number, codigo: string, mensagem: string,
 
 /** Converte os erros do servidor em {erro:{codigo,mensagem,campos?}} sem detalhes internos. */
 export function erroDaApi(erro: unknown): Response {
+  if(erro instanceof StorageError)return respostaDeErro(503,erro.code,erro.message);
   if (erro instanceof ErroAvaliacao) return respostaDeErro(erro.status, erro.code, erro.message, erro.erros as Record<string, string>);
   if (erro instanceof ApiError) return respostaDeErro(erro.status, erro.code, erro.message);
   if (erro instanceof DatabaseConfigurationError || erro instanceof DatabaseOperationError)

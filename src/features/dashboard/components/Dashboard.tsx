@@ -27,7 +27,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { downloadCsv } from "@/lib/csv";
 import type { Tone } from "@/styles/theme";
 import { staggerChildren } from "@/styles/animations";
-import { useLeads } from "@/features/leads/store";
+import {erpRequest,errorMessage} from "@/features/erp/client";
+import type {dashboardSummary} from "@/lib/erp/dashboard";
 import { useCurrentUser, useFunnels } from "@/features/settings/store";
 import {
   attentionRows,
@@ -415,7 +416,10 @@ function DashboardSkeleton() {
 export function Dashboard() {
   const theme = useTheme();
   const user = useCurrentUser();
-  const { leads, details, messages, statuses, loading, error, refresh } = useLeads();
+  const [report,setReport]=useState<Awaited<ReturnType<typeof dashboardSummary>>|null>(null);
+  const [loading,setLoading]=useState(true),[error,setError]=useState("");
+  const refresh=async()=>{setLoading(true);setError("");try{setReport(await erpRequest(`/dashboard?offset=${new Date().getTimezoneOffset()}`));}catch(cause){setError(errorMessage(cause));}finally{setLoading(false);}};
+  useEffect(()=>{void refresh();},[]);
   const { funnels, findFunnel } = useFunnels();
   const [funnelId, setFunnelId] = useState<string | undefined>(undefined);
   // Datas dependem do fuso de quem vê: calcula só no navegador
@@ -427,78 +431,9 @@ export function Dashboard() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const data = useMemo(() => {
-    if (!now || loading || error) return null;
-
-    /* Mês (cartão principal) */
-    const month = intakeOfMonth(leads, now);
-    const past = month.filter((day) => !day.future);
-    const monthTotal = past.reduce((total, day) => total + day.value, 0);
-    const pace = past.length ? monthTotal / past.length : 0;
-
-    /* Indicadores do mês */
-    const span = scopeWindow(now, "month");
-    const fresh = leadsIn(leads, span);
-    const attended = fresh.filter((lead) => isAttended(lead, funnels)).length;
-    const won = fresh.filter((lead) => isClient(lead, funnels));
-    const wonValue = won.reduce((total, lead) => total + lead.budget, 0);
-    const ticket = fresh.length ? monthTotal / fresh.length : 0;
-    const sources = sourcesOfMonth(leads, details, funnels, now);
-    const ticketBySource = sources
-      .map((row) => ({ source: row.source, average: row.value / row.count }))
-      .sort((a, b) => b.average - a.average)
-      .slice(0, 2);
-    const answers = repliesIn(messages, span);
-    const response = answers.length
-      ? answers.reduce((total, reply) => total + reply.minutes, 0) / answers.length
-      : null;
-    const fast = answers.filter((reply) => reply.minutes <= 60).length;
-
-    /* Situação atual */
-    const conversations = attentionRows(leads, details, messages, statuses);
-    const waiting = conversations.filter((row) => row.waitingSince);
-    const resolved = conversations.filter((row) => row.status === "resolved").length;
-    const sales = salesFunnel(funnels);
-    const salesLeads = sales ? leads.filter((lead) => lead.funnelId === sales.id) : [];
-    const stageIndex = (lead: (typeof leads)[number]) =>
-      sales?.stages.findIndex((stage) => stage.id === lead.stage) ?? -1;
-    const proposals = salesLeads.filter(
-      (lead) => stageIndex(lead) >= 2 && stageIndex(lead) < (sales?.stages.length ?? 0) - 1,
-    );
-    const stale = staleLeads(leads, details, funnels, now);
-
-    return {
-      month,
-      monthTotal,
-      pace,
-      projection: pace * month.length,
-      previous: previousMonthToDate(leads, now),
-      pipeline: pipelineKpi(leads, funnels, now, 7).value,
-      days: span.days,
-      fresh: fresh.length,
-      attended,
-      won: won.length,
-      wonValue,
-      ticket,
-      ticketBySource,
-      response,
-      answers: answers.length,
-      fast,
-      conversations: conversations.length,
-      open: conversations.length - resolved,
-      resolved,
-      waiting,
-      proposals: proposals.length,
-      proposalsValue: proposals.reduce((total, lead) => total + lead.budget, 0),
-      salesLeads: salesLeads.length,
-      stale,
-      active: leads.filter((lead) => !isClient(lead, funnels)).length,
-      sources,
-    };
-  }, [now, leads, details, messages, statuses, funnels, loading, error]);
-
-  const funnel = funnelId ? findFunnel(funnelId) : salesFunnel(funnels);
-  const stages = funnel ? valueByStage(leads, funnel) : [];
+  const data=useMemo(()=>report?{...report,month:report.month.map(day=>({...day,date:new Date(day.date)})),previous:{...report.previous,until:new Date(report.previous.until)}}:null,[report]);
+  const funnel=funnelId?findFunnel(funnelId):salesFunnel(funnels);
+  const stages=funnel?data?.stages[funnel.id]??[]:[];
 
   const exportCsv = () => {
     if (!data || !now) return;
@@ -547,7 +482,7 @@ export function Dashboard() {
         </Banner>
       )}
 
-      {!loading && !error && leads.length === 0 && <p role="status">O ateliê ainda não tem oportunidades cadastradas. Use Novo lead para começar; os indicadores serão calculados com os registros salvos.</p>}
+      {!loading && !error && data?.total === 0 && <p role="status">O ateliê ainda não tem oportunidades cadastradas. Use Novo lead para começar; os indicadores serão calculados com os registros salvos.</p>}
 
       {error ? <div role="alert"><p>Não foi possível carregar os dados do ateliê.</p><Button variant="secondary" onClick={() => void refresh()}>Tentar novamente</Button></div> : !data || !now ? (
         <DashboardSkeleton />
@@ -704,10 +639,10 @@ export function Dashboard() {
                 help="Leads (que ainda não são clientes) sem contato há uma semana ou mais."
                 icon={ClockCounterClockwiseIcon}
                 tone="neutral"
-                value={data.stale.length}
+                value={data.staleCount}
                 unit={`de ${data.active}`}
                 note="há 7 dias ou mais"
-                ratio={data.active ? data.stale.length / data.active : 0}
+                ratio={data.active ? data.staleCount / data.active : 0}
                 footer={data.stale.length ? "retome antes que esfriem" : "nenhum lead esquecido"}
               />
             </Metrics>

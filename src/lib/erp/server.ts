@@ -1,4 +1,5 @@
 import 'server-only';
+import {StorageError} from '../storage/r2';
 import { getSession } from '../auth/server';
 import { trustedOrigin, HttpError } from '../auth/http';
 import { limited } from '../auth/core';
@@ -9,7 +10,7 @@ import { queueApplicationEvent } from './dispatch';
 export { ApiError } from './access.ts';
 export const erpNoStore = {'Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
 export function erpErrorResponse(error: unknown) {
-  if (error instanceof ApiError || error instanceof HttpError || error instanceof DatabaseConfigurationError || error instanceof DatabaseOperationError) return Response.json({error:error.message,...('code' in error?{code:error.code}:{})},{status:error.status,headers:erpNoStore});
+  if (error instanceof StorageError || error instanceof ApiError || error instanceof HttpError || error instanceof DatabaseConfigurationError || error instanceof DatabaseOperationError) return Response.json({error:error.message,...('code' in error?{code:error.code}:{})},{status:error.status,headers:erpNoStore});
   if (error instanceof Error && 'status' in error && typeof error.status==='number' && error.status>=400 && error.status<500) return Response.json({error:error.message,...('code' in error?{code:error.code}:{})},{status:error.status,headers:erpNoStore});
   return Response.json({error:'A operação não pôde ser concluída. Confira os dados e a configuração do banco.',code:'ERP_UNAVAILABLE'},{status:500,headers:erpNoStore});
 }

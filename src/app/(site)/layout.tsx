@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { SincronizarCarrinho } from "@/loja/componentes/carrinho/SincronizarCarrinho";
 import { ORIGEM } from "@/loja/lib/seo/config";
 import { fontVariables } from "@/styles/fonts";
 import "./globals.css";
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         <link rel="search" type="application/opensearchdescription+xml" title="Ateliê Milena Kerbage" href="/opensearch.xml" />
         {children}
+        <SincronizarCarrinho />
       </body>
     </html>
   );

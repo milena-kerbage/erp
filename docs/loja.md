@@ -136,7 +136,97 @@ As contas de cliente são **separadas das contas da equipe** do ERP: tabelas pr�
 
 **Produção:** a migração `009_loja_clientes.sql` precisa ser aplicada no Supabase (`npm run db:migrate -- --confirm=APLICAR-MIGRACOES --allow-existing` e `npm run db:check`, com autorização do responsável). Antes disso, `/api/conta/eu` responde 503 e a tela de pedido cai no envio direto pelo WhatsApp (sem conta nem cupom).
 
-Testes: `npm run test:contas` (SQLite) e `npm run test:contas:postgres` (PGlite com as migrações 001, 006 e 009).
+Testes: `npm run test:contas` (SQLite) e `npm run test:contas:postgres` (PGlite com as migrações 001, 006, 009 e 010).
+
+## Gestão do e-commerce no ERP
+
+Base do módulo "E-commerce" do ERP (telas em `src/features/ecommerce/`: vendas em `vendas/` — visão geral, pedidos, cupons, clientes, carrinhos — e o catálogo em `catalogo/`; avaliações em `src/features/reviews/`, na rota `/ecommerce/avaliacoes`): o catálogo, o menu do cabeçalho, os cupons de campanha, os carrinhos abandonados e o painel passam a ser cadastrados no banco e editados pelo ERP. As regras de venda não mudam: catálogo com preço "a partir de", pedido sempre pelo WhatsApp (sem pagamento online), frete a consultar, "5% OFF no Pix", conta obrigatória no pedido e o cupom de 5% da primeira compra.
+
+### Banco (migração `010_loja_gestao.sql`, 15 tabelas em `erp_core`)
+
+| Tabela | Conteúdo |
+|---|---|
+| `loja_categorias` | Árvore (pai, slug, `caminho` = URL e chave do motor de URLs, nome, descrição, imagem, ordem, ativa, SEO) |
+| `loja_produtos` | Slug, SKU, nome, marca, resumo, descrição em parágrafos (JSON), preço e preço "de" em centavos, unidade, selo, peças do kit, personalização, ficha agrupada (JSON), atributos/facetas (JSON), disponibilidade (pronta entrega / sob encomenda), prazo, status (rascunho/ativo/arquivado), destaque, categoria principal, linha de cores + cor (a mesma peça em outras cores), ordem, SEO, revisão |
+| `loja_produto_categorias` | Categorias extras (o produto aparece também nessas listagens) |
+| `loja_produto_relacionados` | "Complete o enxoval" (complemento) e "Você também poderá gostar" (semelhante), em ordem; sem semelhantes cadastrados, a loja calcula pela categoria |
+| `loja_produto_imagens` | Fotos em BYTEA, recomprimidas com sharp (WebP, lado maior 1600 px, miniatura 400 px, sem metadados; até 3 MiB e 12 por produto), alt, tipo, cor, posição e hash (ETag) |
+| `loja_grupos_opcoes`, `loja_opcoes`, `loja_produto_grupos` | Grupos reaproveitáveis: `escolha` (o seletor obrigatório, ex.: "Tamanho do berço") e `personalizacao` (o "com/sem bordado", com o acréscimo da sua opção). Cada opção: rótulo, acréscimo em centavos, disponível, ordem |
+| `loja_colecoes`, `loja_colecao_produtos` | Coleções com slug, onde aparecem (home/listagem/ambos), ordem e produtos em ordem. A home usa `mais-vendidos` e, se existir, `pronta-entrega` |
+| `loja_menu_itens` | Menu do cabeçalho como árvore: `item` (1º nível, painel `colunas` ou `cards`) → `destaque`, `secundario`, `coluna` (→ `link`), `card` (tom, ícone, imagem) e `promo` (bloco editorial) |
+| `loja_cupons_campanha`, `loja_cupom_usos` | Cupons de campanha (percentual 1–50% ou valor fixo, mínimo, validade, limite total e por cliente, só primeira compra, exibir na sacola, ativo) e cada uso (pedido, cliente, desconto) |
+| `loja_carrinhos` | Carrinho sincronizado da cliente **logada** (itens com o retrato de nome e preço, total, criado/atualizado, convertido em pedido, lembrete) |
+| `loja_cliente_leads` | Conta da loja → lead do CRM (`erp_core.leads`) |
+
+Todas com RLS, sem concessões a `anon`/`authenticated`, CHECKs de tamanho/enum e revisão otimista. O espelho SQLite (desenvolvimento e testes) fica em `src/lib/loja/gestao/esquema.ts`.
+
+### Como a loja lê o catálogo
+
+- `src/lib/loja/gestao/catalogoBanco.ts` lê os produtos **ativos**, as categorias ativas, coleções, menu e cupons numa transação só e converte para as **mesmas estruturas** do catálogo de exemplo (`Produto`, `ItemMenu`, `Cupom`): a loja não muda de cara (o teste confere campo a campo que o banco importado é idêntico ao exemplo).
+- `src/lib/loja/catalogo.ts` (só servidor) guarda esse retrato com `unstable_cache` por 1 h e as tags `loja:catalogo`, `loja:menu` e `loja:cupons`; cada escrita do ERP chama `revalidateTag(tag, {expire: 0})` (a próxima visita já vê a mudança). Helpers: `catalogoDaLoja()`, `indiceDaLoja()` (buscarProduto, buscarVarios, listarSlugs, coleções), `arvoreDaLoja()` (categorias, facetas, relacionadas), `menuDaLoja()` e `catalogoDaSacola()`.
+- **Fallback:** sem produto ativo no banco, sem a migração 010 ou com o banco fora do ar, a loja usa o catálogo estático de sempre (`src/loja/lib/catalogo/*`, `menu.ts`); o erro não entra no cache. Sem cupons cadastrados, valem os de código (`CUPONS`).
+- Usam a camada: página de produto, listagens (categoria, pronta entrega, edição do mês, busca e sugestões), home, menu do cabeçalho, sitemap, sacola, checkout, Minha conta, montador, avaliações e o recálculo de `POST /api/pedidos`. Os componentes cliente recebem o catálogo e os cupons por props do servidor. O proxy (redirecionamento canônico de listagem) continua com a árvore estática: categoria raiz nova criada no ERP abre normalmente, mas sem o 308 de forma canônica no proxy (a própria página redireciona).
+- **Acréscimos:** `resolverItem` (`src/loja/lib/carrinho/linhas.ts`) soma ao preço da linha o acréscimo da opção escolhida e o do bordado ("com"); vale na sacola, no pedido e no recálculo do servidor. Trocar o rótulo de uma opção invalida a linha nas sacolas que já a tinham (a sacola pede para editar).
+- **Fotos:** `GET /api/catalogo/imagem/:id?v=<hash>[&tamanho=mini]` (host da loja), só de produto ativo, `Cache-Control: immutable` e ETag (304). Vão direto ao navegador (`unoptimized`, já são WebP otimizados). Imagens de categoria e de menu: só arquivos da loja (`/vitrine/…`).
+
+### Carrinho sincronizado e carrinhos abandonados
+
+Com a cliente logada, `SincronizarCarrinho` (no layout da loja) manda a sacola a `PUT /api/carrinho/sincronizar` com debounce de 2 s; sem login nada sai do aparelho. O servidor valida os itens, recalcula o total "a partir de", não regrava se nada mudou e marca o carrinho como convertido ao criar o pedido (itens novos depois abrem outro carrinho). Abandonado = com itens, não convertido e parado há X horas (`?horas=`, padrão 24). O ERP só **monta** a mensagem e o link `wa.me` (a vendedora envia); `lembrete_em` registra quando. A política de privacidade (`#conta`) e a de cookies avisam; excluir a conta apaga o carrinho.
+
+### Lead no CRM
+
+No cadastro da conta, a loja liga a cliente a um lead existente com o mesmo e-mail ou WhatsApp ou cria um no funil Vendas, etapa "Novo lead", origem e etiqueta "Loja online". A cada pedido, o lead ganha uma nota com número, peças, valor e cupom. Tudo em segundo plano: falhar no CRM nunca impede o cadastro nem o pedido (o vínculo é refeito no pedido). A exclusão da conta não apaga o lead (a política explica como pedir).
+
+### APIs do ERP (`/api/erp/loja/**`)
+
+Sessão da equipe (sem chave de API). **Leitura** do catálogo (categorias, produtos, opções, coleções, menu): admin, gestão e membro. **Escrita** e dados de clientes (cupons e usos, carrinhos, painel, clientes, pedidos): admin e gestão; escrita só com origem confiável e limite de 60/min. Toda escrita grava em `erp_audit` (aparece nas notificações) e invalida o cache da loja. Corpo JSON até 256 KiB; campos desconhecidos → 400 `UNKNOWN_FIELD`; `revisao` desatualizada → 409 `REVISION_CONFLICT`; `npm run dev` com banco remoto → 503 `GRAVACAO_DESLIGADA` (libere com `LOJA_GRAVAR_EM_DESENVOLVIMENTO=true`). Erros: `{error, code}`. Tipos do contrato: `src/lib/loja/gestao/tipos.ts` (reexportados em `src/features/ecommerce/types.ts`).
+
+| Rota | Métodos e corpo | Resposta |
+|---|---|---|
+| `categorias` | `GET`; `POST EntradaCategoria` | `RespostaCategorias` (lista + árvore); `{categoria}` |
+| `categorias/:id` | `GET`; `PATCH {revisao,…}` (slug/mãe novos atualizam o caminho das filhas); `DELETE ?revisao=` (sem filhas nem produtos) | `{categoria}`; `{removida}` |
+| `categorias/ordem` | `PUT {paiId, ids}` | `RespostaCategorias` |
+| `produtos` | `GET ?status&categoria&disponibilidade&busca&limit&offset`; `POST EntradaProduto` (nasce rascunho) | `RespostaProdutos`; `{produto}` |
+| `produtos/:id` | `GET`; `PATCH {revisao,…}`; `DELETE ?revisao=` (só rascunho/arquivado) | `{produto: ProdutoGestao}`; `{removido}` |
+| `produtos/:id/duplicar` | `POST {slug?, sku?, nome?}` (cópia em rascunho, com fotos e opções) | `{produto}` |
+| `produtos/:id/arquivar` | `POST {revisao}` | `{produto}` |
+| `produtos/:id/imagens` | `GET`; `POST multipart` (`arquivo`, `revisao`, `alt?`, `cor?`, `tipo?`) | `{imagens}` |
+| `produtos/:id/imagens/ordem` | `PUT {revisao, ids}` | `{imagens}` |
+| `produtos/:id/imagens/:imagemId` | `GET ?tamanho=mini\|grande` (prévia); `PATCH {revisao, alt?, cor?, tipo?}`; `DELETE ?revisao=` | binário; `{imagens}` |
+| `opcoes` | `GET`; `POST EntradaGrupoOpcoes` | `{grupos}`; `{grupo}` |
+| `opcoes/:id` | `GET`; `PATCH {revisao,…, opcoes?}` (substitui a lista); `DELETE ?revisao=` (fora de produtos) | `{grupo}`; `{removido}` |
+| `colecoes` | `GET`; `POST EntradaColecao` | `{colecoes}`; `{colecao}` |
+| `colecoes/:id` | `GET`; `PATCH {revisao,…, produtos?}` (a lista na nova ordem); `DELETE ?revisao=` | `{colecao}`; `{removida}` |
+| `menu` | `GET`; `POST EntradaItemMenu` | `RespostaMenu` (árvore, tons, ícones); `{item}` |
+| `menu/:id` | `PATCH {revisao,…}`; `DELETE ?revisao=` (com o que está dentro) | `{item}`; `{removido}` |
+| `menu/ordem` | `PUT {paiId, ids}` | `RespostaMenu` |
+| `cupons` | `GET ?busca`; `POST EntradaCupom` | `RespostaCupons` (`{cupons, primeiraCompra}`: o resumo só leitura do cupom de 1ª compra); `{cupom}` |
+| `cupons/:id` | `GET`; `PATCH {revisao,…}` (ativar/desativar com `ativo`) | `{cupom}` |
+| `cupons/:id/usos` | `GET ?limit&offset` | `RespostaUsosCupom` |
+| `carrinhos` | `GET ?horas=24&busca&minimoCentavos&lembrete=todos\|sem\|com&limit&offset` | `RespostaCarrinhos` |
+| `carrinhos/:clienteId/mensagem` | `POST` (só monta o link; nada é enviado) | `RespostaMensagemCarrinho` |
+| `painel` | `GET ?periodo=7d\|30d\|90d&horas=24` | `PainelLoja` |
+| `clientes`, `clientes/:id` | (existentes) agora com `lead: LeadVinculado`; a lista traz `ultimoPedidoEm` e o detalhe, `carrinho` (`CarrinhoDaCliente`, a sacola aberta) | |
+| `pedidos` | (existente) `GET ?status&busca&desde=AAAA-MM-DD&ate=AAAA-MM-DD&limit&offset`; a contagem por situação segue a busca e o período; cada pedido traz `atualizadoEm` | |
+
+Os cupons `BEMVINDO5` e `BEMVINDA-…` são reservados (o de primeira compra continua por conta). Cupom já usado não troca de código; o esgotado sai da sacola.
+
+### Importar o catálogo de exemplo
+
+`npm run loja:importar-catalogo` (`src/lib/loja/gestao/semente.ts`) insere categorias, grupos de opções, produtos, a coleção "Mais vendidos", o menu e o `ENXOVAL10` **só onde falta** (idempotente: nunca sobrescreve edição feita no ERP; o menu só entra com a tabela vazia). Com `DATABASE_URL` definido (em `.env.local` é PRODUÇÃO) exige `--confirm=IMPORTAR-CATALOGO`. Local: `DATABASE_URL= ALLOW_LOCAL_SQLITE=true ERP_DB_PATH=/tmp/erp.sqlite npm run loja:importar-catalogo`.
+
+**Produção (com autorização do responsável), nesta ordem:**
+
+```bash
+npm run db:check
+npm run db:migrate -- --confirm=APLICAR-MIGRACOES --allow-existing
+npm run loja:importar-catalogo -- --confirm=IMPORTAR-CATALOGO
+npm run db:check
+```
+
+Antes da migração, a loja segue no catálogo estático e os pedidos funcionam (sem registrar uso de cupom de campanha, carrinho nem lead).
+
+Testes: `npm run test:loja-gestao` (SQLite) e `npm run test:loja-gestao:postgres` (PGlite com 001, 006, 009 e 010).
 
 ## Instagram (seção da home)
 
@@ -224,6 +314,7 @@ A área de quartinhos completos se chama **Personalizado** (era "Projetos", e an
 | `LOJA_HOSTS` | Hosts extras que abrem a loja (ex.: prévia da Vercel) |
 | `INDEXNOW_CHAVE` | Opcional. Chave do IndexNow servida em `/<chave>.txt` |
 | `CONTAS_GRAVAR_EM_DESENVOLVIMENTO` | Opcional. `true` libera as escritas das contas e dos pedidos com `npm run dev` ligado a um banco remoto (padrão: recusa com 503) |
+| `LOJA_GRAVAR_EM_DESENVOLVIMENTO` | Opcional. O mesmo para a gestão do e-commerce no ERP e o carrinho sincronizado (também aceita `CONTAS_GRAVAR_EM_DESENVOLVIMENTO`) |
 | `LOJA_ORIGEM` | Opcional. Origem da loja nos links de redefinição gerados no ERP (padrão: `https://www.ateliemilenakerbage.com.br`) |
 | `LOJA_EMAIL_REDEFINICAO` | Opcional, desligada. `true` (com `SMTP_*`) também envia por e-mail o link de redefinição gerado no ERP |
 | `AVALIACOES_GRAVAR_EM_DESENVOLVIMENTO` | Opcional. `true` libera gravar avaliações com `npm run dev` ligado a um banco remoto (padrão: simula) |
@@ -242,8 +333,8 @@ Os testes ficam em `tests/loja/` e cobrem o motor de URLs, o carrinho (com os qu
 
 - **Conteúdo provisório:** produtos, preços, quartinhos do ateliê e pedidos são fictícios, e não há fotos. Cada página mostra um placeholder no lugar da foto. As fotos entram em `public/vitrine/produtos/<slug>/` e `public/vitrine/projetos/<slug>/`.
 - **Personalizado:** ver a seção "Personalizado (quartinhos)" acima.
-- **Catálogo:** ligar ao catálogo do ERP (`erp_core.records`, recurso `catalogo`) e criar pedidos e clientes da loja no ERP.
-- **Contas:** aplicar a migração `009_loja_clientes.sql` em produção (até lá, o pedido cai no envio direto pelo WhatsApp). Integração dos pedidos da loja com o CRM/pedidos do ERP (lead por pedido) e o envio do link de redefinição por e-mail (preparado) ficam para depois. Quem exclui a conta e cria outra com o mesmo e-mail ganha um novo cupom de primeira compra (nada do e-mail antigo é guardado).
+- **Catálogo:** a base da gestão está pronta (seção "Gestão do e-commerce no ERP"); faltam as telas do ERP, aplicar a 010 + importação em produção, decidir a indexação das páginas de produto (seguem `noindex`), mostrar o preço "de" e o acréscimo das opções na página de produto e uma página por coleção.
+- **Contas:** aplicar a migração `009_loja_clientes.sql` em produção (até lá, o pedido cai no envio direto pelo WhatsApp). O lead do CRM já é criado/ligado no cadastro e recebe uma nota por pedido; o envio do link de redefinição por e-mail (preparado) fica para depois. Quem exclui a conta e cria outra com o mesmo e-mail ganha um novo cupom de primeira compra (nada do e-mail antigo é guardado).
 - **WhatsApp no ERP:** o WhatsApp de vendas, (85) 98582-2208, vem do Instagram e já está em `src/loja/lib/empresa.ts`. Falta preencher `LEGAL_WHATSAPP_PHONE` no ERP com o mesmo número.
 - **Instagram:** gerar o token (passo a passo em "Instagram") e combinar quem renova a cada 60 dias. Uma renovação automática (cron da Vercel gravando o token num cofre) fica para depois: hoje a variável é trocada à mão.
 - **Atendimento:** confirmar o horário da vendedora (`EMPRESA.horarioAtendimento`, `[CONFIRMAR]`).

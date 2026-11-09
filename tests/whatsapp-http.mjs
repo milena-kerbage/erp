@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 // Instância local de produção isolada. Nunca usa tokens reais nem bases do ateliê.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -146,10 +147,10 @@ try {
   const attachment=(await attachmentResponse.json()).attachment;
   const downloaded=await request(attachment.url);assert.equal(downloaded.status,200);assert.match(downloaded.headers.get('content-disposition'),/^attachment/);assert.equal(await downloaded.text(),'medidas de teste');
   assert.equal((await request(attachment.url,{},false)).status,401);
-  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1foAAAAASUVORK5CYII=','base64');
+  const png=await sharp({create:{width:10,height:10,channels:3,background:'white'}}).png().toBuffer();
   const photoForm=new FormData();photoForm.set('file',new Blob([png],{type:'image/png'}),'foto.png');
   const photoSaved=await request(erp+'/profile/photo',{method:'POST',headers:{origin:publicOrigin},body:photoForm});assert.equal(photoSaved.status,200);
-  const photo=await request((await photoSaved.json()).currentUser.avatarUrl);assert.equal(photo.status,200);assert.equal(photo.headers.get('content-type'),'image/png');assert.deepEqual(Buffer.from(await photo.arrayBuffer()),png);
+  const photo=await request((await photoSaved.json()).currentUser.avatarUrl);assert.equal(photo.status,200);assert.equal(photo.headers.get('content-type'),'image/webp');assert.equal((await sharp(Buffer.from(await photo.arrayBuffer())).metadata()).format,'webp');
   assert.equal((await post(erp+'/profile',{phone:'85999999999'},publicOrigin,'PATCH')).status,200);
   assert.ok((await (await request(erp+'/profile')).json()).currentUser.avatarUrl,'Salvar telefone preserva foto de perfil');
   const keyCreated=await (await post(erp+'/api-keys',{name:'Leitura HTTP isolada',scope:'read'})).json();assert.ok(keyCreated.key);

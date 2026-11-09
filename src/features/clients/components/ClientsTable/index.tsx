@@ -1,4 +1,5 @@
 "use client";
+import {useLeadList,LeadPagination} from "@/features/leads/useLeadList";
 
 import { useMemo, useState, type MouseEvent, type ReactNode, type UIEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -181,7 +182,7 @@ type ClientsTableProps = {
 export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: ClientsTableProps = {}) {
   const theme = useTheme();
   const router = useRouter();
-  const { leads, details, unread, moveLead, loading, error, refresh } = useLeads();
+
   const { funnels, findFunnel } = useFunnels();
   const { currentUser } = useWorkspace();
   const team = useTeam();
@@ -207,6 +208,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
   const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
+  const {leads,details,unread,moveLead,loading,error,refresh,pagination}=useLeadList({q:query,funnels:funnelId?[funnelId]:funnelFilter,stages:stageFilter,sources:sourceFilter,owners:ownerFilter,createdDays:createdFilter==='any'?undefined:Number(createdFilter),eventDays:eventFilter==='any'?undefined:eventFilter==='none'?'none':Number(eventFilter),unread:unreadOnly,stale:staleOnly,sort:sort.key,direction:sort.direction});
   const onScroll = (event: UIEvent<HTMLDivElement>) => {
     const next = event.currentTarget.scrollLeft > 0;
     if (next !== scrolled) setScrolled(next);
@@ -239,27 +241,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
   const stale = (row: Row) =>
     !row.details.lastContactAt || now - new Date(row.details.lastContactAt).getTime() >= 7 * DAY;
 
-  const visible = rows
-    .filter((row) => funnelFilter.length === 0 || funnelFilter.includes(row.funnel.id))
-    .filter((row) => stageFilter.length === 0 || stageFilter.includes(`${row.funnel.id}:${row.lead.stage}`))
-    .filter((row) => sourceFilter.length === 0 || sourceFilter.includes(row.details.source))
-    .filter((row) => ownerFilter.length === 0 || ownerFilter.includes(row.details.owner.seed))
-    .filter(createdWithin)
-    .filter(eventWithin)
-    .filter((row) => !unreadOnly || (unread[row.lead.id] ?? 0) > 0)
-    .filter((row) => !staleOnly || stale(row))
-    .filter(
-      (row) =>
-        !search ||
-        normalize(`${row.lead.name} ${row.details.email ?? ""} ${row.lead.tags.join(" ")}`).includes(search) ||
-        (digits.length >= 3 && row.lead.phone.includes(digits)),
-    )
-    .sort((a, b) => {
-      const x = sortValue(funnels)[sort.key](a);
-      const y = sortValue(funnels)[sort.key](b);
-      const order = typeof x === "number" && typeof y === "number" ? x - y : collator.compare(String(x), String(y));
-      return sort.direction === "asc" ? order : -order;
-    });
+  const visible = rows;
 
   /** Vazio de verdade (banco sem clientes), carregando ou com erro: nunca "ajuste os filtros" sem motivo. */
   const emptyState = loading
@@ -319,7 +301,6 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
               value: funnel.id,
               label: funnel.name,
               leading: <IconTile icon={funnel.icon} tone={funnel.tone} size="sm" />,
-              count: countBy((row) => row.funnel.id === funnel.id),
             })),
           },
         ]
@@ -336,7 +317,6 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
               value: `${stageFunnel.id}:${stage.id}`,
               label: stage.label,
               leading: <CircleDashedIcon size={16} weight="bold" color={theme.tones[stage.tone].fg} />,
-              count: countBy((row) => row.funnel.id === stageFunnel.id && row.lead.stage === stage.id),
             })),
           },
         ]
@@ -351,7 +331,6 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
         value: option.value,
         label: option.value,
         leading: <option.icon size={16} color={theme.tones[option.tone].fg} />,
-        count: countBy((row) => row.details.source === option.value),
       })),
     },
     {
@@ -365,7 +344,6 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
         label: member.name,
         keywords: member.email,
         leading: <Avatar name={member.name} seed={member.seed} src={member.avatarUrl} size="xs" shape="circle" />,
-        count: countBy((row) => row.details.owner.seed === member.seed),
       })),
     },
     {
@@ -873,9 +851,10 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
         )}
       </TableScroll>
 
+      <LeadPagination />
       <Footer>
         <span>
-          Mostrando {visible.length} de {rows.length}{" "}
+          Mostrando {visible.length} de {pagination.total}{" "}
           {funnelId ? (rows.length === 1 ? "lead" : "leads") : rows.length === 1 ? "cliente" : "clientes"}
         </span>
         <span>

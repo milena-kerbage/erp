@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { startPolling } from '@/lib/polling';
 import { useRouter } from "next/navigation";
 import styled from "@emotion/styled";
 import { ArrowClockwiseIcon, CaretLeftIcon, CheckCircleIcon, CheckIcon, ChecksIcon, GearSixIcon, PlusIcon, TrashIcon, WhatsappLogoIcon } from "@phosphor-icons/react";
@@ -137,14 +138,14 @@ export function WhatsAppInbox({ selectedPhone, invalidPhone = false }: { selecte
         setError("");
       } catch (cause) {
         if (!controller.signal.aborted) setError(errorMessage(cause));
+        throw cause;
       } finally {
         busy = false;
         if (!controller.signal.aborted) setLoading(false);
       }
     }
-    void poll();
-    const timer = window.setInterval(() => void poll(), 10000);
-    return () => { controller.abort(); window.clearInterval(timer); };
+    const stop = startPolling(poll, 10_000);
+    return () => { stop(); controller.abort(); };
   }, [revision, offset]);
 
   useEffect(() => {
@@ -180,15 +181,15 @@ export function WhatsAppInbox({ selectedPhone, invalidPhone = false }: { selecte
         setMessageError("");
       } catch (cause) {
         if (!controller.signal.aborted) setMessageError(errorMessage(cause));
+        throw cause;
       } finally {
         busy = false;
         first = false;
         if (!controller.signal.aborted) setMessagesLoading(false);
       }
     }
-    void poll();
-    const timer = window.setInterval(() => void poll(), 5000);
-    return () => { controller.abort(); window.clearInterval(timer); };
+    const stop = startPolling(poll, 5000);
+    return () => { stop(); controller.abort(); };
   }, [selectedPhone, revision]);
 
   const lastMessageId = messages[messages.length - 1]?.id;

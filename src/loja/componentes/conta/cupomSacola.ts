@@ -1,7 +1,7 @@
 "use client";
 
 import type { PreferenciasCompra } from "@/loja/componentes/carrinho/estado";
-import type { Cupom } from "@/loja/lib/carrinho/totais";
+import { CUPONS, type Cupom } from "@/loja/lib/carrinho/totais";
 import { type CupomConta, cupomEfetivo, escolherCupom } from "@/loja/lib/contas/regras";
 import { useConta } from "./estadoConta";
 
@@ -19,10 +19,11 @@ export function useContaDoCupom(): ContaDoCupom {
 
 export type CupomDaSacola = { cupom?: Cupom; codigo?: string; automatico: boolean; boasVindas: boolean };
 
-export function cupomDaSacola(preferencias: PreferenciasCompra, conta: ContaDoCupom, subtotalCentavos: number): CupomDaSacola {
+// `cupons`: os cupons de campanha da loja (cadastro do ERP, ou os de código no fallback), vindos do servidor.
+export function cupomDaSacola(preferencias: PreferenciasCompra, conta: ContaDoCupom, subtotalCentavos: number, cupons: Cupom[] = CUPONS): CupomDaSacola {
   const codigo = cupomEfetivo(preferencias.cupom, preferencias.semCupomAutomatico === true, conta);
   if (!codigo) return { automatico: false, boasVindas: false };
-  const escolha = escolherCupom(codigo, subtotalCentavos, conta);
+  const escolha = escolherCupom(codigo, subtotalCentavos, conta, cupons);
   if (escolha.tipo === "invalido") return { automatico: false, boasVindas: false };
   return {
     cupom: escolha.cupom,

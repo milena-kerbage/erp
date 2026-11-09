@@ -1,3 +1,5 @@
+import { requestOnce } from '@/lib/request';
+
 export class ErpRequestError extends Error {
   constructor(message: string, readonly status: number, readonly code?: string) {
     super(message);
@@ -6,7 +8,7 @@ export class ErpRequestError extends Error {
 }
 
 export async function erpRequest<T>(path: string, options: { method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
-  const response = await fetch(`/api/erp/${path}`, {
+  const response = await requestOnce(`/api/erp/${path}`, {
     method: options.method ?? (options.body === undefined ? "GET" : "POST"),
     credentials: "same-origin",
     cache: "no-store",

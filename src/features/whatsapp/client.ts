@@ -1,3 +1,5 @@
+import { requestOnce } from '@/lib/request';
+
 export class WhatsAppRequestError extends Error {
   readonly status: number;
   readonly code?: string;
@@ -11,7 +13,7 @@ export class WhatsAppRequestError extends Error {
 
 /** Auth uses the same-origin HttpOnly session; Meta credentials stay on the server. */
 export async function whatsappRequest<T>(path: string, options: { body?: unknown; signal?: AbortSignal; method?: "GET" | "POST" | "PUT" | "DELETE" } = {}): Promise<T> {
-  const response = await fetch(`/api/whatsapp/${path}`, {
+  const response = await requestOnce(`/api/whatsapp/${path}`, {
     method: options.method ?? (options.body === undefined ? "GET" : "POST"),
     credentials: "same-origin",
     cache: "no-store",

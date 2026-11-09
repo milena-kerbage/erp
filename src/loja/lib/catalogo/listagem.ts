@@ -7,6 +7,7 @@ export type ItemListavel = {
   nome: string;
   marca: string;
   caminho: string;
+  caminhosExtras?: string[]; // categorias extras (cadastro do ERP)
   preco: string; // decimal em string
   atributos: Record<string, string[]>; // rótulos legíveis
   selo?: string;
@@ -151,7 +152,8 @@ export function buscarTexto<T extends ItemListavel>(itens: T[], termo: string): 
 }
 
 export function noCaminho<T extends ItemListavel>(itens: T[], caminho: string): T[] {
-  return itens.filter((item) => item.caminho === caminho || item.caminho.startsWith(`${caminho}/`));
+  const dentro = (atual: string) => atual === caminho || atual.startsWith(`${caminho}/`);
+  return itens.filter((item) => dentro(item.caminho) || (item.caminhosExtras?.some(dentro) ?? false));
 }
 
 // Célula da grade: produto ou propaganda (com o estilo visual sorteado).

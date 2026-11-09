@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import test,{beforeEach,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync} from 'node:fs';
@@ -59,8 +60,8 @@ test('desativação revoga sessões e bloqueia conta; role change não aceita se
  await assert.rejects(access.updateMember(admin.id,{permission:'admin'},member),{status:403});
 });
 test('foto e anexos são persistidos, restritos à ficha e servidos por URL de backend',async()=>{
- const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1foAAAAASUVORK5CYII=','base64');
- const result=await files.storePhoto(png,admin);assert.equal(result.currentUser.avatarUrl,'/api/erp/profile/photo?userId='+admin.id);assert.deepEqual(Buffer.from((await files.getPhoto(admin.id)).content),png);
+ const png=await sharp({create:{width:10,height:10,channels:3,background:'white'}}).png().toBuffer();
+ const result=await files.storePhoto(png,admin);assert.ok(result.currentUser.avatarUrl.startsWith('/api/erp/profile/photo?userId='+admin.id+'&v='));assert.equal((await files.getPhoto(admin.id)).mime_type,'image/webp');assert.equal((await files.getPhoto(admin.id,'avif')).mime_type,'image/avif');
  await assert.rejects(files.storePhoto(Buffer.from('<svg onload=evil>'),admin),{code:'INVALID_IMAGE'});
  const lead=(await core.createLead({lead:{name:'Teste',phone:'85999999999',budget:0,tags:[],funnelId:'vendas',stage:'novo'}},admin)).lead;
  const saved=await files.storeAttachment(lead.id,'../medidas.txt','text/plain',Buffer.from('medidas conferidas'));

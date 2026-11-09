@@ -4,8 +4,7 @@ import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
 import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { Resultado } from "@/loja/componentes/listagem/Resultado";
-import { categoriasRelacionadas } from "@/loja/lib/catalogo/categorias";
-import { listarProdutos } from "@/loja/lib/catalogo/exemplos";
+import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { filtrar, slugificar } from "@/loja/lib/catalogo/listagem";
 import { filtrosDaQuery } from "@/loja/lib/catalogo/urlsListagem";
 import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
@@ -17,8 +16,8 @@ import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 const CHAVE = "pronta-entrega";
 const TITULO = "Pronta entrega";
 
-function pecasProntas() {
-  return filtrar(listarProdutos(), { entrega: [slugificar(TITULO)] });
+async function pecasProntas() {
+  return filtrar((await catalogoDaLoja()).produtos, { entrega: [slugificar(TITULO)] });
 }
 
 export const metadata: Metadata = {
@@ -29,8 +28,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function PaginaProntaEntrega({ searchParams }: PageProps<"/loja/pronta-entrega">) {
-  const pecas = pecasProntas();
+export default async function PaginaProntaEntrega({ searchParams }: PageProps<"/loja/pronta-entrega">) {
+  const [pecas, { categoriasRelacionadas }] = await Promise.all([pecasProntas(), arvoreDaLoja()]);
   const categorias = [...new Set(pecas.map((peca) => peca.caminho.split("/")[1]))].filter(Boolean);
   return (
     <>
@@ -58,7 +57,7 @@ async function Grade({ searchParams }: Pick<PageProps<"/loja/pronta-entrega">, "
   return (
     <Resultado
       contexto={{ tipo: "categoria", categoria: CHAVE }}
-      itensBase={pecasProntas()}
+      itensBase={await pecasProntas()}
       filtros={filtros}
       ordem={busca.get("ordem") ?? ORDEM_PADRAO}
       pagina={Math.max(1, Math.min(500, Number(busca.get("pagina")) || 1))}

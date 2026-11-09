@@ -24,7 +24,7 @@ import { CheckCircle, WhatsappLogo } from "@/loja/componentes/icones";
 import { useLocal } from "@/loja/componentes/localizacao/estado";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
 import { linhaDoPedido, resolverItem } from "@/loja/lib/carrinho/linhas";
-import { calcularTotais, centavos, DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
+import { type Cupom, calcularTotais, centavos, DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
 import { LIMITE_LOCAL, LIMITE_OBSERVACOES, linkWhatsApp, montarMensagemPedido } from "@/loja/lib/checkout/pedido";
 import { PERCENTUAL_BOAS_VINDAS } from "@/loja/lib/contas/regras";
 import { EMPRESA } from "@/loja/lib/empresa";
@@ -40,7 +40,7 @@ type Enviado = { numero: string; link: string };
 // consumido aí), devolve o número e a mensagem, e o site abre o WhatsApp do ateliê. Uma vendedora
 // confirma valores, bordado, frete e prazo e combina o pagamento por lá. Nada é cobrado no site.
 // Se as contas estiverem fora do ar, o pedido ainda pode seguir direto pelo WhatsApp (sem cupom).
-export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
+export function PaginaPedido({ catalogo, cupons }: { catalogo: ProdutoCarrinho[]; cupons: Cupom[] }) {
   const itens = useItensCarrinho();
   const preferencias = usePreferenciasCompra();
   const local = useLocal();
@@ -74,7 +74,7 @@ export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
 
   const precos = linhas.map(({ item, produto }) => ({ preco: produto.preco, quantidade: item.quantidade }));
   const subtotal = calcularTotais(precos).subtotal;
-  const escolhido = cupomDaSacola(preferencias, contaCupom, subtotal);
+  const escolhido = cupomDaSacola(preferencias, contaCupom, subtotal, cupons);
   const totais = calcularTotais(precos, escolhido.cupom);
   const cliente = conta.situacao === "pronta" ? conta.cliente : null;
   const indisponivel = conta.situacao === "indisponivel" || semRegistro;
@@ -144,7 +144,7 @@ export function PaginaPedido({ catalogo }: { catalogo: ProdutoCarrinho[] }) {
 
   // Conta criada ou login feito no próprio passo: o pedido segue em seguida, com o cupom da conta nova.
   async function aposConta(resposta: RespostaConta) {
-    const cupom = cupomDaSacola(preferencias, { pronta: true, logada: true, cupom: resposta.cupom }, subtotal);
+    const cupom = cupomDaSacola(preferencias, { pronta: true, logada: true, cupom: resposta.cupom }, subtotal, cupons);
     await registrar(cupom.codigo);
   }
 

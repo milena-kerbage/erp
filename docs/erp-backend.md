@@ -10,7 +10,7 @@ O guia de operação da interface está em [erp-operacao.md](erp-operacao.md), e
 
 ## 1. Preparação e banco
 
-Aplicar, em ordem, as nove migrações de `supabase/migrations` (todas idempotentes: `IF NOT EXISTS`, sem `DROP`/`DELETE`; a aplicação no projeto real exige autorização do responsável):
+Aplicar, em ordem, as migrações de `supabase/migrations` (todas idempotentes: `IF NOT EXISTS`, sem `DROP`/`DELETE`; a aplicação no projeto real exige autorização do responsável):
 
 | Migração | Conteúdo |
 | --- | --- |
@@ -23,6 +23,11 @@ Aplicar, em ordem, as nove migrações de `supabase/migrations` (todas idempoten
 | `007_workspace_access.sql` | Papéis, convites, chaves, fotos, webhooks e notificações |
 | `008_loja_avaliacoes.sql` | Avaliações de produto da loja e suas fotos (em `erp_core`), moderadas pelo ERP |
 | `009_loja_clientes.sql` | Contas de cliente da loja (separadas da equipe), sessões, links de redefinição, cupom de primeira compra e pedidos feitos no site (5 tabelas em `erp_core`) |
+| `010_loja_gestao.sql` | Gestão do e-commerce: categorias, produtos (fotos BYTEA, opções com acréscimo, relacionados), coleções, menu do cabeçalho, cupons de campanha e usos, carrinhos sincronizados e o vínculo cliente → lead (15 tabelas em `erp_core`; ver `docs/loja.md`) |
+| `011_performance.sql` | Índices para sessões, expiração, WhatsApp e vínculo de funil |
+| `012_storage.sql` | Referências ao R2 para arquivos e biblioteca de uploads de mídia |
+| `013_crm_reporting_indexes.sql` | Índices para paginação por cursor, funil, relatórios e auditoria recente |
+| `014_image_compression.sql` | Variantes WebP/AVIF e miniaturas, dimensões e tamanhos; metadados de tamanho/data em BIGINT |
 
 Os esquemas privados são `erp_auth`, `erp_whatsapp`, `erp_meta` e `erp_core`. As tabelas têm RLS habilitada; `PUBLIC`, `anon` e `authenticated` não recebem acesso público. Os esquemas devem permanecer fora da Data API pública do Supabase. O servidor utiliza uma conexão privilegiada autorizada aos esquemas. O papel da conexão e seus privilégios precisam ser conferidos no projeto real.
 

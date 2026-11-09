@@ -1,7 +1,8 @@
 import "server-only";
 import type { Sugestao } from "@/loja/componentes/carrinho/ConfirmacaoCarrinho";
 import { MODULOS } from "@/loja/lib/casas/modulos";
-import { buscarProduto, buscarVarios, condicoesDePagamento, listarProdutos, type Produto } from "@/loja/lib/catalogo/exemplos";
+import { indiceDaLoja } from "@/lib/loja/catalogo";
+import { condicoesDePagamento, type Produto } from "@/loja/lib/catalogo/exemplos";
 import { type Foto, fotoPrincipal } from "@/loja/lib/catalogo/fotos";
 
 // Dados do catálogo que o montador ("Monte o seu quartinho") recebe do servidor: as peças parecidas
@@ -24,8 +25,9 @@ function paraPeca(produto: Produto): PecaParecida {
 
 // Pela categoria da peça do módulo: a própria peça, as da mesma categoria, as "Você também poderá
 // gostar" dela e, para completar, as da mesma seção do catálogo (ex.: /quarto).
-export function pecasParecidas(): Record<string, PecaParecida[]> {
-  const todos = listarProdutos();
+export async function pecasParecidas(): Promise<Record<string, PecaParecida[]>> {
+  const { catalogo, buscarProduto, buscarVarios } = await indiceDaLoja();
+  const todos = catalogo.produtos;
   return Object.fromEntries(
     MODULOS.map((modulo) => {
       const base = modulo.produto ? buscarProduto(modulo.produto) : null;
@@ -44,7 +46,8 @@ export function pecasParecidas(): Record<string, PecaParecida[]> {
 }
 
 // Confirmação "Adicionado ao seu enxoval": peças avulsas do catálogo que completam o quarto.
-export function sugestoesDoMontador(): Sugestao[] {
+export async function sugestoesDoMontador(): Promise<Sugestao[]> {
+  const { buscarVarios } = await indiceDaLoja();
   return buscarVarios(MODULOS.flatMap((modulo) => modulo.produto ?? []))
     .slice(0, 8)
     .map((produto) => ({

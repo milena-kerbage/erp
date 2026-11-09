@@ -1,8 +1,9 @@
 "use client";
+import { requestOnce } from '@/lib/request';
 
 /** Requests always wait for the server's persisted result. */
 export async function erpRequest<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/erp${path}`, {
+  const response = await requestOnce(`/api/erp${path}`, {
     method,
     credentials: "same-origin",
     cache: "no-store",

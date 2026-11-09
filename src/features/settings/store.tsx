@@ -62,9 +62,11 @@ export function WorkspaceProvider({ children, authenticatedUser }: { children: R
   const revision = useRef(0);
 
   const loadWorkspace = useCallback(async () => {
-    const snapshot = await erpRequest<WorkspaceSnapshot>("/workspace");
+    const snapshot = await erpRequest<WorkspaceSnapshot & {members: Member[]; currentUser: Member}>("/workspace");
     if (!snapshot.funnels?.length) throw new Error("O servidor não retornou os funis do ateliê.");
     setFunnels(snapshot.funnels.map(deserializeFunnel)); setPreferences(snapshot.preferences); revision.current = snapshot.revision;
+    setMembers(snapshot.members); setCurrentUser(snapshot.currentUser);
+    return snapshot.currentUser;
   }, []);
   const loadTeam = useCallback(async () => {
     const snapshot = await erpRequest<{ members: Member[]; currentUser: Member }>("/team");
@@ -81,10 +83,8 @@ export function WorkspaceProvider({ children, authenticatedUser }: { children: R
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const results = await Promise.allSettled([loadWorkspace(), loadTeam()]);
-      const failed = results.find(result => result.status === "rejected");
-      if (failed?.status === "rejected") throw failed.reason;
-      if (results[1].status === "fulfilled" && results[1].value.permission === "admin") await loadTools();
+      const member = await loadWorkspace();
+      if (member.permission === "admin") await loadTools();
       const response = await fetch("/api/whatsapp/status", { cache: "no-store" });
       if (response.ok) {
         const status = await response.json();
@@ -92,7 +92,7 @@ export function WorkspaceProvider({ children, authenticatedUser }: { children: R
       }
     } catch (cause) { setError(errorMessage(cause)); }
     finally { setLoading(false); }
-  }, [loadWorkspace, loadTeam, loadTools]);
+  }, [loadWorkspace, loadTools]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const mutate = useCallback(async <T,>(action: () => Promise<T>): Promise<T | null> => {

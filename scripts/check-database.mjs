@@ -16,12 +16,12 @@ const writeTest = args.includes('--write-test');
 const persist = args.includes('--persist');
 const confirmed = args.includes('--confirm=ESCREVER-DADOS-DE-TESTE');
 
-// Tabelas esperadas após as nove migrações em supabase/migrations.
+// Tabelas esperadas após as dez migrações em supabase/migrations.
 const expected = {
   erp_auth: ['users', 'sessions', 'resets', 'attempts', 'members', 'invitations', 'api_keys', 'profile_photos', 'app_webhooks', 'webhook_deliveries', 'notification_states', 'access_audit'],
   erp_whatsapp: ['contacts', 'messages', 'consent_audit', 'webhook_events', 'send_requests', 'pending_statuses', 'suppression', 'deletion_audit', 'metadata', 'rate_limits', 'integration_settings', 'integration_audit', 'management_checklist', 'management_tests', 'management_oauth_states'],
   erp_meta: ['deletion_requests'],
-  erp_core: ['workspace_settings', 'funnels', 'leads', 'lead_notes', 'lead_attachments', 'records', 'erp_audit', 'loja_avaliacoes', 'loja_avaliacao_fotos', 'loja_clientes', 'loja_sessoes', 'loja_redefinicoes', 'loja_cupons', 'loja_pedidos'],
+  erp_core: ['workspace_settings', 'funnels', 'leads', 'lead_notes', 'lead_attachments', 'records', 'erp_audit', 'loja_avaliacoes', 'loja_avaliacao_fotos', 'loja_clientes', 'loja_sessoes', 'loja_redefinicoes', 'loja_cupons', 'loja_pedidos', 'loja_categorias', 'loja_produtos', 'loja_produto_categorias', 'loja_produto_relacionados', 'loja_produto_imagens', 'loja_grupos_opcoes', 'loja_opcoes', 'loja_produto_grupos', 'loja_colecoes', 'loja_colecao_produtos', 'loja_menu_itens', 'loja_cupons_campanha', 'loja_cupom_usos', 'loja_carrinhos', 'loja_cliente_leads', 'media_uploads', 'image_variants'],
 };
 const counted = ['erp_auth.users', 'erp_core.workspace_settings', 'erp_core.funnels', 'erp_core.leads', 'erp_core.records', 'erp_whatsapp.contacts'];
 
@@ -73,7 +73,7 @@ try {
   const server = (await client.query("SELECT current_user AS role, current_setting('server_version') AS version, current_database() AS database")).rows[0];
   ok(`conectado ao banco ${server.database} (PostgreSQL ${server.version}) como papel ${server.role}`);
 
-  line('\nEsquemas e tabelas (migrações 001–007)');
+  line('\nEsquemas e tabelas (migrações 001–014)');
   const tables = (await client.query("SELECT schemaname, tablename, rowsecurity, (SELECT count(*)::int FROM pg_policies p WHERE p.schemaname = t.schemaname AND p.tablename = t.tablename) AS policies FROM pg_tables t WHERE schemaname LIKE 'erp\\_%'")).rows;
   const present = new Map(tables.map(row => [`${row.schemaname}.${row.tablename}`, row]));
   let missing = 0;

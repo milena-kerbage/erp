@@ -8,7 +8,7 @@ import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExploran
 import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { JsonLd } from "@/loja/componentes/seo/JsonLd";
 import { listarProjetos, PRAZO_PRODUCAO } from "@/loja/lib/casas/catalogo";
-import { categoriasRelacionadas } from "@/loja/lib/catalogo/categorias";
+import { arvoreDaLoja } from "@/lib/loja/catalogo";
 import { schemaListagemProjetos, schemaTrilhaProjetos } from "@/loja/lib/seo/projetos";
 
 // Projetos (item "Projetos" do menu, como o SNKRS na Nike): quartos de bebê completos no mesmo padrão
@@ -25,7 +25,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function PaginaProjetos({ searchParams }: PageProps<"/loja/personalizado">) {
+export default async function PaginaProjetos({ searchParams }: PageProps<"/loja/personalizado">) {
+  const { categoriasRelacionadas } = await arvoreDaLoja();
   const projetos = listarProjetos();
   return (
     <>

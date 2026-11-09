@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
-import { ReviewsModeration } from "@/features/reviews/components/ReviewsModeration";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Avaliações" };
+/** A moderação de avaliações mudou para o módulo E-commerce. */
 export default function Page() {
-  return <ReviewsModeration />;
+  redirect("/ecommerce/avaliacoes");
 }

@@ -12,7 +12,7 @@ import {
   SealCheckIcon,
   SparkleIcon,
   SquaresFourIcon,
-  StarIcon,
+  StorefrontIcon,
   ToggleLeftIcon,
   UserFocusIcon,
   UsersIcon,
@@ -64,7 +64,6 @@ export const navigation = {
       label: "Clientes",
       href: "/clientes",
       icon: UsersThreeIcon,
-      tabs: [{ label: "Loja online", href: "/clientes/loja" }],
     },
     {
       label: "Agenda",
@@ -83,7 +82,6 @@ export const navigation = {
       tabs: [
         { label: "Em andamento", href: "/pedidos/em-andamento" },
         { label: "Finalizados", href: "/pedidos/finalizados" },
-        { label: "Da loja online", href: "/pedidos/loja" },
       ],
     },
     {
@@ -91,7 +89,24 @@ export const navigation = {
       href: "/catalogo",
       icon: BookOpenTextIcon,
     },
-    { label: "Avaliações", href: "/avaliacoes", icon: StarIcon },
+    {
+      label: "E-commerce",
+      href: "/ecommerce",
+      icon: StorefrontIcon,
+      // "Visão geral" (/ecommerce) entra sozinha antes das seções.
+      tabs: [
+        { label: "Pedidos", href: "/ecommerce/pedidos" },
+        { label: "Produtos", href: "/ecommerce/produtos" },
+        { label: "Categorias", href: "/ecommerce/categorias" },
+        { label: "Opções", href: "/ecommerce/opcoes" },
+        { label: "Coleções", href: "/ecommerce/colecoes" },
+        { label: "Menu do site", href: "/ecommerce/menu" },
+        { label: "Cupons", href: "/ecommerce/cupons" },
+        { label: "Clientes", href: "/ecommerce/clientes" },
+        { label: "Carrinhos abandonados", href: "/ecommerce/carrinhos" },
+        { label: "Avaliações", href: "/ecommerce/avaliacoes" },
+      ],
+    },
     {
       label: "Produção",
       href: "/producao",
@@ -135,6 +150,7 @@ export const navigation = {
         { label: "Perfil", href: "/configuracoes/perfil" },
         { label: "Acessibilidade", href: "/configuracoes/acessibilidade" },
         { label: "Integrações", href: "/configuracoes/integracoes" },
+        { label: "Fotos e vídeos", href: "/configuracoes/midia" },
         { label: "API e webhooks", href: "/configuracoes/api" },
       ],
     },

@@ -1,10 +1,12 @@
 import 'server-only';
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { sessionUser } from './core';
 import { COOKIE_NAME } from './cookies';
 import { DatabaseConfigurationError, DatabaseOperationError } from '../database';
-export async function getSession(touch = true) { return await sessionUser((await cookies()).get(COOKIE_NAME)?.value, touch); }
+// Somente no render atual: nunca compartilha sessões entre requisições/usuários.
+export const getSession = cache(async (touch = true) => sessionUser((await cookies()).get(COOKIE_NAME)?.value, touch));
 export async function requireSession() {
   const user = await getSession();
   if (!user) redirect('/login');

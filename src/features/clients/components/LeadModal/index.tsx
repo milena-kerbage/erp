@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
@@ -194,6 +194,8 @@ export function LeadModal({ leadId, onClose }: { leadId: string | null; onClose:
   const theme = useTheme();
   const { leads, details, messages, updateLead, updateDetails, moveLead, addAttachments, removeAttachment } =
     useLeads();
+  const {hydrate}=useLeads();
+  useEffect(()=>{if(leadId)void hydrate(leadId);},[leadId,hydrate]);
   const { findFunnel } = useFunnels();
   const { currentUser } = useWorkspace();
   const [tab, setTab] = useState<Tab>("details");

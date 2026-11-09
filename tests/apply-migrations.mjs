@@ -33,18 +33,18 @@ try {
 
   const applied = await run(['--confirm=APLICAR-MIGRACOES']);
   assert.equal(applied.status, 0, applied.output);
-  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql', '008_loja_avaliacoes.sql', '009_loja_clientes.sql']) assert.ok(applied.output.includes(`✓ ${file}`), applied.output);
-  assert.equal(await count(), 42);
-  assert.match(applied.output, /erp_core: 14 tabela\(s\), RLS em 14/);
+  for (const file of ['001_auth.sql', '002_whatsapp.sql', '003_meta_deletion.sql', '004_integration_settings.sql', '005_integration_manager.sql', '006_erp.sql', '007_workspace_access.sql', '008_loja_avaliacoes.sql', '009_loja_clientes.sql', '010_loja_gestao.sql', '011_performance.sql', '012_storage.sql', '013_crm_reporting_indexes.sql', '014_image_compression.sql']) assert.ok(applied.output.includes(`✓ ${file}`), applied.output);
+  assert.equal(await count(), 59);
+  assert.match(applied.output, /erp_core: 31 tabela\(s\), RLS em 31/);
   assert.equal((await engine.query("SELECT count(*)::int AS total FROM pg_tables WHERE schemaname LIKE 'erp\\_%' AND NOT rowsecurity")).rows[0].total, 0);
-  console.log('OK: nove migrações aplicadas em ordem, 42 tabelas, RLS em todas');
+  console.log('OK: quatorze migrações aplicadas em ordem, 59 tabelas, RLS em todas');
 
   const again = await run(['--confirm=APLICAR-MIGRACOES']);
   assert.equal(again.status, 1);
-  assert.match(again.output, /Já existem 42 tabela/);
+  assert.match(again.output, /Já existem 59 tabela/);
   const idempotent = await run(['--confirm=APLICAR-MIGRACOES', '--allow-existing']);
   assert.equal(idempotent.status, 0, idempotent.output);
-  assert.equal(await count(), 42);
+  assert.equal(await count(), 59);
   console.log('OK: reaplicar exige --allow-existing e é idempotente');
 } finally {
   await socket.stop().catch(() => {});

@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
-import { StoreOrders } from "@/features/store/components/StoreOrders";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Pedidos da loja" };
+/** Os pedidos da loja online mudaram para o módulo E-commerce. */
 export default function Page() {
-  return <StoreOrders />;
+  redirect("/ecommerce/pedidos");
 }

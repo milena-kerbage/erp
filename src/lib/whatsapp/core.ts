@@ -1,4 +1,5 @@
 import { databaseFor, type Database } from '../database.ts';
+import { databaseLimited } from '../rate-limit.ts';
 import { effectiveConfiguration, environmentConfiguration, integrationSettingsSchema } from './config.ts';
 export { effectiveConfiguration } from './config.ts';
 import { createHash, createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
@@ -51,12 +52,7 @@ let database: Database | undefined;
 export function db() { database = databaseFor('whatsapp', process.env.WHATSAPP_DB_PATH || '.data/whatsapp.sqlite', sqliteSchema); return database; }
 export async function closeDatabase() { await database?.close(); database = undefined; }
 export async function limited(key: string, max = 60, window = 60_000) {
-  const database = db(), now = Date.now();
-  return database.transaction(async () => {
-    await database.prepare('DELETE FROM rate_limits WHERE until < ?').run(now);
-    await database.prepare('INSERT INTO rate_limits VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = rate_limits.count + 1').run(digest(key), now + window);
-    return (await database.prepare('SELECT count FROM rate_limits WHERE key = ?').get(digest(key)) as {count: number}).count > max;
-  });
+  return databaseLimited(db(), 'rate_limits', digest(key), max, window);
 }
 async function suppressionHash(phone: string, suppliedSecret?: string) {
   const secret = suppliedSecret === undefined ? (await effectiveConfiguration()).suppressionSecret : suppliedSecret;
@@ -89,8 +85,7 @@ export async function deleteContact(phoneInput: unknown, evidence?: {actor: stri
   const phone = phoneNumber(phoneInput), database = db(), hash = await suppressionHash(phone);
   return database.transaction(async () => {
     await lockContact(phone);
-    const messages = await database.prepare('SELECT id FROM messages WHERE phone = ?').all(phone) as {id: string}[];
-    for (const message of messages) await database.prepare('DELETE FROM pending_statuses WHERE message_id = ?').run(message.id);
+    await database.prepare('DELETE FROM pending_statuses WHERE message_id IN (SELECT id FROM messages WHERE phone = ?)').run(phone);
     const deleted = (await database.prepare('DELETE FROM contacts WHERE phone = ?').run(phone)).changes;
     await database.prepare('INSERT INTO suppression VALUES (?, ?) ON CONFLICT(phone_hash) DO UPDATE SET created = excluded.created').run(hash, Date.now());
     if (evidence) await database.prepare('INSERT INTO deletion_audit VALUES (?, ?, ?, ?)').run(randomUUID(), evidence.actor, digest(evidence.verification), Date.now());
@@ -112,9 +107,16 @@ export async function pruneRetention(now = Date.now()) {
     return { messages: Number(messages), retentionDays: days };
   });
 }
+const maintenanceChecks = new WeakMap<Database, {until: number; task: Promise<void>}>();
 async function maintenance() {
-  const row = await db().prepare("SELECT value FROM metadata WHERE key = 'lastRetentionAt'").get() as {value: string} | undefined;
-  if (!row || Date.now() - Date.parse(row.value) > 60 * 60 * 1000) await pruneRetention();
+  const database = db(), now = Date.now(), previous = maintenanceChecks.get(database);
+  if (previous && previous.until > now) return previous.task;
+  const task = (async () => {
+    const row = await database.prepare("SELECT value FROM metadata WHERE key = 'lastRetentionAt'").get() as {value: string} | undefined;
+    if (!row || !Number.isFinite(Date.parse(row.value)) || now - Date.parse(row.value) > 60 * 60 * 1000) await pruneRetention();
+  })().catch(error => { maintenanceChecks.delete(database); throw error; });
+  maintenanceChecks.set(database, {until: now + 60_000, task});
+  return task;
 }
 function messageFromRow(row: MessageRow): Message { return { id: row.id, phone: row.phone, direction: row.direction, type: row.type, text: row.text, status: row.status, createdAt: iso(row.created)!, isRead: Boolean(row.is_read), ...(row.error ? { error: row.error } : {}), ...(row.media_id ? {mediaId: row.media_id} : {}), ...(row.mime_type ? {mimeType: row.mime_type} : {}), ...(row.filename ? {filename: row.filename} : {}) }; }
 type ConversationRow = ContactRow & {last_text: string | null; last_created: number | null; unread_count: number};

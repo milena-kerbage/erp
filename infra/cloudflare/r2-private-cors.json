@@ -1,0 +1,9 @@
+[
+  {
+    "AllowedOrigins": ["https://erp.ateliemilenakerbage.com.br"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 300
+  }
+]

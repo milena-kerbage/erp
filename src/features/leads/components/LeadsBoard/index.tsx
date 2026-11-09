@@ -23,7 +23,7 @@ import { formatMoneyShort } from "@/features/dashboard/metrics";
 import { leadSources } from "../../options";
 import { sortLeads } from "../../format";
 import { useFunnels, useTeam, useWorkspace } from "@/features/settings/store";
-import { useLeads } from "../../store";
+import {useLeadList,LeadPagination} from "../../useLeadList";
 import { NewLeadForm } from "../NewLeadForm";
 import { LeadCard } from "../LeadCard";
 
@@ -68,7 +68,6 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
   const { currentUser: teamMember } = useWorkspace();
   const team = useTeam();
   const funnel = findFunnel(funnelId);
-  const { leads: allLeads, details, unread, moveLead: move, loading, error, refresh } = useLeads();
   const [creatingStage, setCreatingStage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [sources, setSources] = useState<string[]>([]);
@@ -76,26 +75,14 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [staleOnly, setStaleOnly] = useState(false);
 
+  const {leads:allLeads,details,unread,moveLead:move,loading,error,refresh,byStage}=useLeadList({q:query,funnels:[funnel.id],sources,owners,unread:unreadOnly,stale:staleOnly,sort:'created',direction:'desc'});
   /* Busca e filtros da barra do topo */
   const inFunnel = allLeads.filter((lead) => lead.funnelId === funnel.id);
   const search = normalize(query.trim());
   const digits = query.replace(/\D/g, "");
   const now = Date.now();
-  const leads = inFunnel.filter((lead) => {
-    const info = details[lead.id];
-    if (sources.length && !sources.includes(info?.source ?? "")) return false;
-    if (owners.length && !owners.includes(info?.owner.seed ?? "")) return false;
-    if (unreadOnly && !(unread[lead.id] > 0)) return false;
-    if (staleOnly) {
-      const last = info?.lastContactAt ?? lead.createdAt;
-      if (now - new Date(last).getTime() < 7 * DAY) return false;
-    }
-    if (!search) return true;
-    return (
-      normalize(`${lead.name} ${lead.tags.join(" ")} ${info?.email ?? ""} ${info?.city ?? ""}`).includes(search) ||
-      (digits.length >= 3 && lead.phone.includes(digits))
-    );
-  });
+  const leads = inFunnel;
+
   const filtering = Boolean(search) || sources.length > 0 || owners.length > 0 || unreadOnly || staleOnly;
   const clearAll = () => {
     setQuery("");
@@ -117,7 +104,6 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
         value: option.value,
         label: option.value,
         leading: <option.icon size={16} color={theme.tones[option.tone].fg} />,
-        count: countOf((lead) => details[lead.id]?.source === option.value),
       })),
     },
     {
@@ -131,7 +117,6 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
         label: member.name,
         keywords: member.email,
         leading: <Avatar name={member.name} seed={member.seed} src={member.avatarUrl} size="xs" shape="circle" />,
-        count: countOf((lead) => details[lead.id]?.owner.seed === member.seed),
       })),
     },
     {
@@ -173,10 +158,10 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
         return {
           stage,
           leads: stageLeads,
-          total: stageLeads.reduce((sum, lead) => sum + lead.budget, 0),
+          total: byStage.find(group=>group.funnelId===funnel.id&&group.stage===stage.id)?.budget??0,
         };
       }),
-    [funnel, leads],
+    [funnel, leads,byStage],
   );
 
   /* Etapa à vista: a coluna mais perto do centro da faixa */
@@ -284,7 +269,7 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
               key={`${funnel.id}:${stage.id}`}
               title={stage.label}
               tone={stage.tone}
-              count={stageLeads.length}
+              count={byStage.find(group=>group.funnelId===funnel.id&&group.stage===stage.id)?.count??0}
               meta={total > 0 ? formatMoneyShort(total) : undefined}
               addLabel="Adicionar lead"
               onAdd={() => addLead(stage.id)}
@@ -322,6 +307,7 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
       <VisuallyHidden role="status" aria-live="polite">
         {announcement}
       </VisuallyHidden>
+      <LeadPagination />
     </Screen>
   );
 }

@@ -10,7 +10,8 @@ import { type Look, Looks } from "@/loja/componentes/produto/Looks";
 import { CompraProvider, PainelCompra, PilulaCompra } from "@/loja/componentes/produto/PainelCompra";
 import { FaleComAtelie, HeroLinha, PensadoPara, PorQueVaiAmar, recuo, VoceTambem } from "@/loja/componentes/produto/secoes";
 import { JsonLd } from "@/loja/componentes/seo/JsonLd";
-import { buscarProduto, buscarVarios, condicoesDePagamento, listarSlugs, PRONTA_ENTREGA, type Produto } from "@/loja/lib/catalogo/exemplos";
+import { indiceDaLoja } from "@/lib/loja/catalogo";
+import { condicoesDePagamento, PRONTA_ENTREGA, type Produto } from "@/loja/lib/catalogo/exemplos";
 import { fotoPrincipal } from "@/loja/lib/catalogo/fotos";
 import { schemaProduto, schemaTrilha } from "@/loja/lib/seo/produto";
 import { avaliacoesIniciais } from "@/loja/lib/avaliacoes/servidor";
@@ -27,16 +28,18 @@ import { avaliacoesIniciais } from "@/loja/lib/avaliacoes/servidor";
 // hora quando o ERP modera (revalidateTag "avaliacoes:<slug>").
 export const revalidate = 600;
 
-export function generateStaticParams() {
-  return listarSlugs().map((slug) => ({ slug }));
+// Catálogo do cadastro do ERP (ou o de exemplo, no fallback): src/lib/loja/catalogo.ts. Produto novo
+// depois do build é gerado na primeira visita.
+export async function generateStaticParams() {
+  return (await indiceDaLoja()).listarSlugs().map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/loja/produto/[slug]">): Promise<Metadata> {
-  const produto = buscarProduto((await params).slug);
+  const produto = (await indiceDaLoja()).buscarProduto((await params).slug);
   if (!produto) return {};
   return {
-    title: produto.nome,
-    description: `${produto.resumo} Enxoval feito à mão no Ateliê Milena Kerbage, com entrega para todo o Brasil.`,
+    title: produto.seo?.titulo ?? produto.nome,
+    description: produto.seo?.descricao ?? `${produto.resumo} Enxoval feito à mão no Ateliê Milena Kerbage, com entrega para todo o Brasil.`,
     alternates: { canonical: `/produto/${produto.slug}` },
     // Catálogo de exemplo (preços fictícios): fora do índice até a API de catálogo existir.
     robots: { index: false, follow: true },
@@ -44,6 +47,7 @@ export async function generateMetadata({ params }: PageProps<"/loja/produto/[slu
 }
 
 export default async function PaginaProduto({ params }: PageProps<"/loja/produto/[slug]">) {
+  const { buscarProduto, buscarVarios } = await indiceDaLoja();
   const produto = buscarProduto((await params).slug);
   if (!produto) notFound();
   const complementos = buscarVarios(produto.complementos).slice(0, 4);

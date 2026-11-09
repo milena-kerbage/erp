@@ -10,10 +10,10 @@ export const metadata = metadataPagina({
 });
 
 // Logada: os pedidos da conta (servidor). Deslogada: os enviados deste aparelho (localStorage).
-export default function Pedidos() {
+export default async function Pedidos() {
   return (
     <MolduraConta trilha={[{ rotulo: "Pedidos", href: "/conta/pedidos" }]}>
-      <PedidosEnviados fotos={fotosDoCatalogo()} />
+      <PedidosEnviados fotos={await fotosDoCatalogo()} />
     </MolduraConta>
   );
 }

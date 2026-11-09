@@ -1,11 +1,23 @@
 import type { NextConfig } from "next";
 import { regexHostsDaLoja } from "./src/lib/hosts";
+import { origemDaMidia } from "./src/loja/lib/midia";
 
 // Loja (www./domínio principal) e ERP (erp.) no mesmo deploy: cabeçalhos por host (src/lib/hosts.ts).
 const hostsDaLoja = [{ type: "host" as const, value: regexHostsDaLoja() }];
+const origemMidia = origemDaMidia();
 
 const nextConfig: NextConfig = {
+  // Build de validação sem tocar no .next do `next dev` em andamento: NEXT_DIST_DIR=.next-validacao next build.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   poweredByHeader: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    // Permite apenas o domínio configurado e a pasta de mídia pública da loja.
+    remotePatterns: origemMidia ? [new URL(`${origemMidia}/vitrine/**`)] : [],
+    // Fotos dos produtos cadastradas no ERP (rota /api/catalogo/imagem/:id?v=<hash>): o `v` muda quando a
+    // foto muda. Os demais arquivos locais seguem sem query string (padrão do Next 16).
+    localPatterns: [{ pathname: "/**", search: "" }, { pathname: "/api/catalogo/imagem/**" }],
+  },
   outputFileTracingExcludes: { "/*": ["./.data/**/*", "./.env*", "./.vercel/**/*"] },
   outputFileTracingIncludes: {
     "/api/whatsapp/management/guide": ["./docs/painel-gestor-whatsapp.md", "./docs/whatsapp-meta.md", "./docs/pendencias-implantacao-whatsapp.md"],

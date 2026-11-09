@@ -34,7 +34,7 @@ export default async function Pedido({ params }: PageProps<"/loja/conta/pedidos/
         { rotulo: numero, href: `/conta/pedidos/${numero}` },
       ]}
     >
-      <DetalhePedidoEnviado numero={numero} fotos={fotosDoCatalogo()} />
+      <DetalhePedidoEnviado numero={numero} fotos={await fotosDoCatalogo()} />
     </MolduraConta>
   );
 }

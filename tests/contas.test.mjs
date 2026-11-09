@@ -2,7 +2,7 @@
 // (uso único, concorrência, sem acumular), pedido com recálculo de preço no servidor, redefinição por
 // token, exclusão (LGPD) e isolamento das sessões da equipe do ERP.
 // SQLite temporário por padrão; com CONTAS_TEST_POSTGRES=1, PostgreSQL em WASM (PGlite) com as migrações
-// 001, 006 e 009 aplicadas. Não conecta ao Supabase nem usa credenciais reais.
+// 001, 006, 009 e 010 aplicadas. Não conecta ao Supabase nem usa credenciais reais.
 import test, { after, afterEach, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -47,7 +47,7 @@ beforeEach(async () => {
   if (!postgres) { delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true'; }
   else {
     await engine.exec('DROP SCHEMA IF EXISTS erp_core CASCADE; DROP SCHEMA IF EXISTS erp_auth CASCADE;');
-    for (const file of ['001_auth.sql', '006_erp.sql', '009_loja_clientes.sql']) await engine.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
+    for (const file of ['001_auth.sql', '006_erp.sql', '009_loja_clientes.sql', '010_loja_gestao.sql']) await engine.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
   }
 });
 afterEach(async () => { await closeDatabases(); await rm(directory, {recursive: true, force: true}); });

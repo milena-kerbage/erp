@@ -46,3 +46,8 @@ next-env.d.ts
 
 # Panda CSS (gerado por `panda codegen`)
 /styled-system
+
+# Builds isolados de validação
+/.next-performance/
+/.next-catalogo/
+/.next-validacao/

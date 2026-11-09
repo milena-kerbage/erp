@@ -5,16 +5,8 @@ import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
 import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { Resultado } from "@/loja/componentes/listagem/Resultado";
-import {
-  buscarCategoria,
-  CATEGORIAS_EXISTENTES,
-  caminhosParaPreGerar,
-  categoriasRelacionadas,
-  irmas,
-  rotuloFaceta,
-} from "@/loja/lib/catalogo/categorias";
+import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { blocosDaCategoria, LINHA_BLOCOS_CATEGORIA } from "@/loja/lib/catalogo/edicoes";
-import { listarProdutos } from "@/loja/lib/catalogo/exemplos";
 import { filtrar, noCaminho } from "@/loja/lib/catalogo/listagem";
 import { REGRAS_SEO } from "@/loja/lib/seo/config";
 import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
@@ -27,20 +19,24 @@ import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 type Props = PageProps<"/loja/[...categoria]">;
 
 // /personalizado e /personalizado/<página> têm rota própria (src/app/(site)/loja/(vitrine)/personalizado): a área Personalizado fica fora daqui.
-export function generateStaticParams() {
-  return caminhosParaPreGerar()
+// Categorias do cadastro do ERP (ou as do menu estático, no fallback): src/lib/loja/catalogo.ts.
+export async function generateStaticParams() {
+  return (await arvoreDaLoja())
+    .caminhosParaPreGerar()
     .filter((categoria) => categoria[0] !== "personalizado")
     .map((categoria) => ({ categoria }));
 }
 
-function resolver(segmentos: string[]) {
+async function resolver(segmentos: string[]) {
+  const [arvore, catalogo] = await Promise.all([arvoreDaLoja(), catalogoDaLoja()]);
+  const { buscarCategoria, irmas, rotuloFaceta } = arvore;
   const caminho = `/${segmentos.join("/")}`;
-  const resultado = interpretarUrlListagem(caminho, new URLSearchParams(), CATEGORIAS_EXISTENTES, REGRAS_SEO);
+  const resultado = interpretarUrlListagem(caminho, new URLSearchParams(), arvore.existentes, REGRAS_SEO);
   if (resultado.tipo !== "ok") return null;
   const categoria = buscarCategoria(resultado.listagem.categoria);
   if (!categoria) return null;
   const faceta = rotuloFaceta(categoria.chave, caminho);
-  const produtos = noCaminho(listarProdutos(), `/${categoria.chave}`);
+  const produtos = noCaminho(catalogo.produtos, `/${categoria.chave}`);
   return {
     categoria,
     titulo: faceta ?? categoria.rotulo,
@@ -49,11 +45,12 @@ function resolver(segmentos: string[]) {
     total: filtrar(produtos, resultado.listagem.filtros).length,
     canonical: resultado.decisao.canonical,
     atalhos: categoria.filhos.length ? categoria.filhos : categoria.facetas.length ? categoria.facetas : irmas(categoria.chave),
+    relacionadas: arvore.categoriasRelacionadas([categoria.chave]),
   };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const dados = resolver((await params).categoria);
+  const dados = await resolver((await params).categoria);
   if (!dados) return {};
   return {
     title: dados.titulo,
@@ -68,7 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // do streaming (dentro do Suspense o Next já teria mandado 200). As categorias do build são
 // pré-geradas; só a grade filtrada (searchParams) fica dentro do Suspense.
 export default async function PaginaCategoria({ params, searchParams }: Props) {
-  const dados = resolver((await params).categoria);
+  const dados = await resolver((await params).categoria);
   if (!dados) notFound();
   return (
     <>
@@ -76,7 +73,7 @@ export default async function PaginaCategoria({ params, searchParams }: Props) {
       <Suspense fallback={<EsqueletoGrade />}>
         <Grade params={params} searchParams={searchParams} />
       </Suspense>
-      <ContinueExplorando base={dados.titulo} categorias={categoriasRelacionadas([dados.categoria.chave])} />
+      <ContinueExplorando base={dados.titulo} categorias={dados.relacionadas} />
     </>
   );
 }
@@ -87,14 +84,15 @@ async function Grade({ params, searchParams }: Props) {
   for (const [chave, valor] of Object.entries(await searchParams)) {
     for (const item of Array.isArray(valor) ? valor : [valor ?? ""]) busca.append(chave, item);
   }
-  const resultado = interpretarUrlListagem(`/${segmentos.join("/")}`, busca, CATEGORIAS_EXISTENTES, REGRAS_SEO);
+  const [arvore, catalogo] = await Promise.all([arvoreDaLoja(), catalogoDaLoja()]);
+  const resultado = interpretarUrlListagem(`/${segmentos.join("/")}`, busca, arvore.existentes, REGRAS_SEO);
   if (resultado.tipo === "nao-encontrado") notFound();
   if (resultado.tipo === "redirecionar") redirect(resultado.destino); // o proxy já cuida disso com 308; aqui é a rede de segurança
   const categoria = resultado.listagem.categoria;
   return (
     <Resultado
       contexto={{ tipo: "categoria", categoria }}
-      itensBase={noCaminho(listarProdutos(), `/${categoria}`)}
+      itensBase={noCaminho(catalogo.produtos, `/${categoria}`)}
       filtros={resultado.listagem.filtros}
       ordem={resultado.listagem.ordem ?? ORDEM_PADRAO}
       pagina={resultado.listagem.pagina ?? 1}

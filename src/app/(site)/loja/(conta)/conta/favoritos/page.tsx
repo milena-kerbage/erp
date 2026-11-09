@@ -1,7 +1,7 @@
 import { css } from "styled-system/css";
 import { FavoritosAparelho } from "@/loja/componentes/conta/FavoritosAparelho";
 import { MolduraConta } from "@/loja/componentes/conta/MolduraConta";
-import { catalogoParaCarrinho } from "@/loja/lib/carrinho/catalogo";
+import { catalogoDaSacola } from "@/lib/loja/catalogo";
 import { metadataPagina } from "@/loja/lib/seo/institucional";
 
 export const metadata = metadataPagina({
@@ -11,11 +11,11 @@ export const metadata = metadataPagina({
   indexar: false,
 });
 
-export default function Favoritos() {
+export default async function Favoritos() {
   return (
     <MolduraConta trilha={[{ rotulo: "Favoritos", href: "/conta/favoritos" }]}>
       <div className={css({ mt: { base: "8", desktop: "12" } })}>
-        <FavoritosAparelho catalogo={catalogoParaCarrinho()} />
+        <FavoritosAparelho catalogo={await catalogoDaSacola()} />
       </div>
     </MolduraConta>
   );

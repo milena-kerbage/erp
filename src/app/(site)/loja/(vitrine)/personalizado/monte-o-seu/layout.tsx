@@ -7,7 +7,7 @@ import { schemaTrilhaProjetos } from "@/loja/lib/seo/projetos";
 // (/personalizado/monte-o-seu/<etapa>, ver lib/casas/etapas.ts). O layout guarda o montador (estado do
 // quartinho, progresso, resumo lateral, barra do celular, modais) e não remonta entre as etapas; cada
 // página só diz qual etapa mostrar. Regras em lib/casas/modulos.ts; componentes em casas/Montador.tsx.
-export default function LayoutMonteOSeu({ children }: LayoutProps<"/loja/personalizado/monte-o-seu">) {
+export default async function LayoutMonteOSeu({ children }: LayoutProps<"/loja/personalizado/monte-o-seu">) {
   return (
     <>
       <JsonLd
@@ -16,7 +16,7 @@ export default function LayoutMonteOSeu({ children }: LayoutProps<"/loja/persona
           { rotulo: "Monte o seu quartinho", href: "/personalizado/monte-o-seu" },
         ])}
       />
-      <Montador sugestoes={sugestoesDoMontador()} parecidas={pecasParecidas()}>
+      <Montador sugestoes={await sugestoesDoMontador()} parecidas={await pecasParecidas()}>
         {children}
       </Montador>
     </>

@@ -5,11 +5,12 @@ import { ArrowClockwiseIcon, ArrowCounterClockwiseIcon, ChatCircleTextIcon, Chec
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Lightbox, type LightboxImage } from "@/components/ui/Lightbox";
+import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { TextField } from "@/components/ui/TextField";
 import { useCurrentUser } from "@/features/settings/store";
 import { ErpRequestError, erpRequest, requestError } from "@/features/operations/client";
-import { Actions, Card, Empty, Label, NativeSelect, Notice, Page, PageHeader, Pill, Stack, Toolbar } from "@/features/operations/components/ui";
+import { Actions, Card, Empty, Notice, Page, PageHeader, Pill, Stack, Toolbar } from "@/features/operations/components/ui";
 import { LIMITES_AVALIACAO, PARA_QUEM, STATUS_AVALIACAO, type StatusAvaliacao } from "@/loja/lib/avaliacoes/regras";
 
 type Photo = { id: string; largura: number; altura: number };
@@ -103,7 +104,7 @@ export function ReviewsModeration() {
       {notice && <Notice role="status">{notice}</Notice>}
       <Card>
         <Toolbar>
-          <Label>Produto<NativeSelect value={product} onChange={(event) => setProduct(event.target.value)}><option value="">Todos os produtos</option>{data?.produtos.map((item) => <option key={item.slug} value={item.slug}>{item.nome} ({item.total})</option>)}</NativeSelect></Label>
+          <ProductFilter><Select label="Produto" options={[{ value: "", label: "Todos os produtos" }, ...(data?.produtos ?? []).map((item) => ({ value: item.slug, label: item.nome, meta: String(item.total) }))]} value={product} onChange={setProduct} /></ProductFilter>
         </Toolbar>
         <Tabs items={tabs} value={status} onChange={setStatus} label="Situação das avaliações">
           {loading && !data ? <Empty role="status">Carregando avaliações…</Empty> : !reviews.length ? <Empty><strong>{error ? "A lista não pôde ser carregada." : status === "pendente" ? "Nenhuma avaliação esperando moderação." : "Nenhuma avaliação neste filtro."}</strong><span>As avaliações chegam pelo botão “Escrever uma avaliação” da página de produto.</span></Empty> :
@@ -153,6 +154,7 @@ export function ReviewsModeration() {
   </Page>;
 }
 
+const ProductFilter = styled.div`flex: 0 1 22rem; min-width: min(100%, 14rem);`;
 const List = styled.div`display: flex; flex-direction: column; margin-top: ${({ theme }) => theme.spacing(2)};`;
 const Item = styled.article`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(3)}; padding: ${({ theme }) => theme.spacing(5, 0)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle}; min-width: 0; &:last-of-type { border-bottom: 0; } h3 { font-size: 0.9375rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary}; margin-top: ${({ theme }) => theme.spacing(1.5)}; overflow-wrap: anywhere; }`;
 const Head = styled.div`display: flex; align-items: flex-start; justify-content: space-between; gap: ${({ theme }) => theme.spacing(3)}; > div { min-width: 0; }`;

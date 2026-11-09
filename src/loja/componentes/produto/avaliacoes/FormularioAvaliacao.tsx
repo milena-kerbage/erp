@@ -1,4 +1,5 @@
 "use client";
+import {prepareImageUpload} from "@/lib/images/browser";
 
 import { type ChangeEvent, type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
@@ -19,7 +20,7 @@ import {
 
 const ROTULOS_NOTA = ["Ruim", "Regular", "Boa", "Muito boa", "Excelente"] as const;
 // A Vercel recusa corpos acima de 4,5 MB antes de chegar à API: acima disto, as fotos são reduzidas
-// no navegador (2048 px, JPEG 85%) antes do envio. O servidor recomprime tudo de qualquer forma.
+// no navegador em WebP antes do envio. O servidor valida e gera WebP/AVIF.
 const ENVIO_CONFORTAVEL = 3.8 * 1024 * 1024;
 
 type FotoEscolhida = { id: string; arquivo: File; url: string };
@@ -39,33 +40,11 @@ const ID_DO_CAMPO: Record<CampoAvaliacao, string> = {
   consentimento: "avaliacao-consentimento",
 };
 
-async function reduzirFoto(arquivo: File): Promise<File> {
-  try {
-    const imagem = await createImageBitmap(arquivo, { imageOrientation: "from-image" });
-    const escala = Math.min(1, 2048 / Math.max(imagem.width, imagem.height));
-    const largura = Math.round(imagem.width * escala);
-    const altura = Math.round(imagem.height * escala);
-    const tela = document.createElement("canvas");
-    tela.width = largura;
-    tela.height = altura;
-    const contexto = tela.getContext("2d");
-    if (!contexto) return arquivo;
-    contexto.fillStyle = "#FFFFFF"; // PNG transparente vira JPEG com fundo branco (canvas, não estilo)
-    contexto.fillRect(0, 0, largura, altura);
-    contexto.drawImage(imagem, 0, 0, largura, altura);
-    imagem.close();
-    const blob = await new Promise<Blob | null>((resolver) => tela.toBlob(resolver, "image/jpeg", 0.85));
-    if (!blob || blob.size >= arquivo.size) return arquivo;
-    return new File([blob], `${arquivo.name.replace(/\.[^.]+$/, "") || "foto"}.jpg`, { type: "image/jpeg" });
-  } catch {
-    return arquivo;
-  }
-}
-
 async function prepararFotos(fotos: FotoEscolhida[]): Promise<File[]> {
-  const arquivos = fotos.map((foto) => foto.arquivo);
-  if (arquivos.reduce((soma, arquivo) => soma + arquivo.size, 0) <= ENVIO_CONFORTAVEL) return arquivos;
-  return Promise.all(arquivos.map((arquivo) => (arquivo.size > 600 * 1024 ? reduzirFoto(arquivo) : arquivo)));
+  const arquivos:File[]=[];
+  for(const foto of fotos)arquivos.push(await prepareImageUpload(foto.arquivo,'review'));
+  if(arquivos.reduce((total,file)=>total+file.size,0)>ENVIO_CONFORTAVEL)throw new Error('As fotos ainda ficaram grandes para o envio. Envie menos fotos de cada vez.');
+  return arquivos;
 }
 
 function enviar(dados: FormData, aoProgredir: (fracao: number) => void): Promise<{ status: number; corpo: Resposta | null }> {

@@ -37,7 +37,7 @@ beforeEach(async () => {
   if (!postgres) { delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true'; }
   else {
     await engine.exec('DROP SCHEMA IF EXISTS erp_core CASCADE;');
-    for (const file of ['006_erp.sql', '008_loja_avaliacoes.sql']) await engine.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
+    for (const file of ['006_erp.sql', '008_loja_avaliacoes.sql', '012_storage.sql', '014_image_compression.sql']) await engine.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
   }
 });
 afterEach(async () => { await closeDatabases(); await rm(directory, {recursive: true, force: true}); });
@@ -88,14 +88,14 @@ test('fotos: rejeita mais de 3 MiB (413), tipo falso pelos bytes (415) e mais de
   assert.equal((await listarParaModeracao(new URL('http://erp.test/?status=todas'))).pagination.total, 0);
 });
 
-test('recompressão: WebP de até 1600 px e miniatura de 400 px, sem EXIF/GPS/ICC', async () => {
+test('recompressão: WebP/AVIF de até 1280 px e miniatura de 320 px, sem EXIF/GPS/ICC', async () => {
   const original = await foto(3000, 2000, 'jpeg', true);
   assert.ok((await sharp(original).metadata()).exif, 'a foto de teste tem EXIF');
   const processada = await processarFoto(original, 0);
   const grande = await sharp(processada.grande).metadata(), mini = await sharp(processada.mini).metadata();
   assert.equal(grande.format, 'webp'); assert.equal(mini.format, 'webp');
-  assert.equal(Math.max(grande.width, grande.height), 1600); assert.equal(grande.width, 1600); assert.equal(grande.height, 1067);
-  assert.equal(Math.max(mini.width, mini.height), 400);
+  assert.equal(Math.max(grande.width, grande.height), 1280); assert.equal(grande.width, 1280); assert.equal(grande.height, 853);
+  assert.equal(Math.max(mini.width, mini.height), 320);
   for (const meta of [grande, mini]) { assert.equal(meta.exif, undefined); assert.equal(meta.icc, undefined); assert.equal(meta.xmp, undefined); }
   assert.ok(!processada.grande.includes(Buffer.from('Pessoa Real')));
   // Foto menor que o limite não é ampliada; PNG e WebP também são aceitos.
@@ -202,4 +202,15 @@ test('simulação (desenvolvimento ligado ao banco remoto) valida e processa, ma
   assert.deepEqual(resultado, {situacao: 'simulada'});
   await assert.rejects(criarAvaliacao({campos: campos({texto: 'curto'}), fotos: [], ip: '203.0.113.9', agora: relogio += 1000}, {...opcoes, gravar: false}), erro => erro instanceof ErroAvaliacao && erro.status === 400);
   assert.equal((await listarParaModeracao(new URL('http://erp.test/?status=todas'))).pagination.total, 0);
+});
+
+test('AVIF segue a moderação e exclusão remove todas as variantes',async()=>{
+ const {id}=await enviar({},[await foto(900,600,'jpeg')]);
+ const pending=(await listarParaModeracao(new URL('http://erp.test/'))).avaliacoes.find(item=>item.id===id);
+ const imageId=pending.fotos[0].id;
+ await assert.rejects(fotoDaAvaliacao(imageId,'grande',true,'avif'),{status:404});
+ const before=await fotoDaAvaliacao(imageId,'mini',false,'avif');assert.equal(before.tipo,'image/avif');assert.equal((await sharp(before.conteudo).metadata()).compression,'av1');
+ await excluirAvaliacao(id,pending.revisao,gestora);
+ await assert.rejects(fotoDaAvaliacao(imageId,'grande',false,'avif'),{status:404});
+ assert.equal((await avaliacoesDb().prepare("SELECT COUNT(*) AS total FROM image_variants WHERE owner_id=?").get(imageId)).total,0);
 });

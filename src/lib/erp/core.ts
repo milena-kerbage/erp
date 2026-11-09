@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { databaseFor } from '../database.ts';
+import {variantsDb} from '../storage/variants.ts';
 import type { Lead, LeadDetails, ChatMessage, ConversationStatus, HistoryEvent, Attachment, Person } from '../../features/leads/types.ts';
 import type { Preferences } from '../../features/settings/types.ts';
 import { ERP_RESOURCES, RESOURCE_DEFINITIONS, type ERPActor, type ERPResource, type ERPRecord, type FunnelDTO, type LeadsSnapshot, type LeadDTO, type WorkspaceSnapshot, type QuoteItem, type ERPPage } from './types.ts';
@@ -18,7 +19,7 @@ CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, funnel_id TEXT NOT NULL R
 CREATE INDEX IF NOT EXISTS leads_active_updated ON leads(archived_at, updated);
 CREATE TABLE IF NOT EXISTS lead_notes (id TEXT PRIMARY KEY, lead_id TEXT NOT NULL REFERENCES leads(id), actor TEXT NOT NULL, author_name TEXT NOT NULL, text TEXT NOT NULL, attachment_ids_json TEXT NOT NULL, created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS lead_notes_lead_created ON lead_notes(lead_id, created);
-CREATE TABLE IF NOT EXISTS lead_attachments (id TEXT PRIMARY KEY, lead_id TEXT NOT NULL REFERENCES leads(id), name TEXT NOT NULL, size INTEGER NOT NULL, mime_type TEXT NOT NULL, created INTEGER NOT NULL, duration REAL, content BLOB NOT NULL);
+CREATE TABLE IF NOT EXISTS lead_attachments (id TEXT PRIMARY KEY, lead_id TEXT NOT NULL REFERENCES leads(id), name TEXT NOT NULL, size INTEGER NOT NULL, mime_type TEXT NOT NULL, created INTEGER NOT NULL, duration REAL, content BLOB NOT NULL, object_key TEXT);
 CREATE INDEX IF NOT EXISTS lead_attachments_lead ON lead_attachments(lead_id, created);
 CREATE TABLE IF NOT EXISTS records (id TEXT PRIMARY KEY, resource TEXT NOT NULL, data_json TEXT NOT NULL, lead_id TEXT NOT NULL DEFAULT '', parent_id TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, archived_at INTEGER);
 CREATE INDEX IF NOT EXISTS records_resource_active ON records(resource,archived_at,created);
@@ -27,7 +28,7 @@ CREATE INDEX IF NOT EXISTS records_lead ON records(lead_id);
 CREATE TABLE IF NOT EXISTS erp_audit (id TEXT PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, resource TEXT NOT NULL, record_id TEXT NOT NULL, created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS erp_audit_created ON erp_audit(created);
 `;
-export function erpDB() { return databaseFor('erp', process.env.ERP_DB_PATH || '.data/erp.sqlite', erpSchema); }
+export function erpDB() { return variantsDb(databaseFor('erp', process.env.ERP_DB_PATH || '.data/erp.sqlite', erpSchema)); }
 export const erpDb = erpDB;
 export function jsonObject(value: unknown, label = 'Dados'): Json {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) throw new ERPError(400, `${label}: informe um objeto válido.`, 'INVALID_INPUT');
@@ -115,21 +116,25 @@ export async function lockErpCore() { if (erpDB().backend === 'postgres') await 
 const lock=lockErpCore;
 // A configuração inicial só precisa ser conferida uma vez por conexão/processo; repetir em cada requisição custa várias idas e voltas ao banco.
 const initialized = new WeakSet<object>();
+const initializing = new WeakMap<object, Promise<void>>();
 export async function initializeERP() {
   const database = erpDB();
   if (initialized.has(database)) return;
-  await database.transaction(async () => {
+  const existing = initializing.get(database);
+  if (existing) return existing;
+  const task = database.transaction(async () => {
     await lock();
     const result = await database.prepare('INSERT INTO workspace_settings (id,data_json,revision,updated) VALUES (?, ?, 1, ?) ON CONFLICT(id) DO NOTHING').run('workspace', JSON.stringify(initialPreferences), Date.now());
     if (Number(result.changes)) for (const [position,funnel] of initialFunnels.entries()) await database.prepare('INSERT INTO funnels VALUES (?, ?, 1, ?, ?) ON CONFLICT(id) DO NOTHING').run(funnel.id,JSON.stringify(funnel),position,Date.now());
-  });
-  initialized.add(database);
+  }).then(() => { initialized.add(database); }).finally(() => { initializing.delete(database); });
+  initializing.set(database, task);
+  await task;
 }
 async function audit(actor: ERPActor, action: string, resource: string, id: string) {
   await erpDB().prepare('INSERT INTO erp_audit VALUES (?, ?, ?, ?, ?, ?)').run(randomUUID(),actor.id,action,resource,id,Date.now());
 }
 async function mutate<T>(action: () => Promise<T>) { await initializeERP(); return erpDB().transaction(async () => { await lock(); return action(); }); }
-async function bumpWorkspace() { await erpDB().prepare('UPDATE workspace_settings SET revision = revision + 1, updated = ? WHERE id = ?').run(Date.now(),'workspace'); return (await erpDB().prepare('SELECT revision FROM workspace_settings WHERE id = ?').get('workspace'))!.revision as number; }
+async function bumpWorkspace() { return (await erpDB().prepare('UPDATE workspace_settings SET revision = revision + 1, updated = ? WHERE id = ? RETURNING revision').get(Date.now(),'workspace'))!.revision as number; }
 function funnelDTO(row: Row): FunnelDTO { return {...decode<Omit<FunnelDTO,'revision'|'position'>>(row.data_json),revision:Number(row.revision),position:Number(row.position)}; }
 async function requireFunnel(id: string) { const row = await erpDB().prepare('SELECT * FROM funnels WHERE id = ?').get(identifier(id)); if (!row) throw new ERPError(404,'Funil não encontrado.','NOT_FOUND'); return funnelDTO(row); }
 export async function workspaceSnapshot(): Promise<WorkspaceSnapshot> {
@@ -324,12 +329,14 @@ async function snapshotForRows(rows: Row[], singleId?: string): Promise<LeadsSna
     const details: Record<string,LeadDetails>={},messages: Record<string,ChatMessage[]>={},statuses: Record<string,ConversationStatus>={};
     for (const row of rows) { const id=String(row.id); details[id]=decode<LeadDetails>(row.details_json); messages[id]=[]; statuses[id]=row.status as ConversationStatus; }
     if (!rows.length) return {leads:[],details,messages,statuses};
-    const selectedIds=singleId ? [singleId] : rows.length<=500 ? rows.map(row=>String(row.id)) : [];
-    const subset=selectedIds.length ? `WHERE lead_id IN (${selectedIds.map(()=>'?').join(',')})` : '';
-    const attachments=await erpDB().prepare(`SELECT id,lead_id,name,size,mime_type,created,duration FROM lead_attachments ${subset} ORDER BY created,id`).all(...selectedIds);
+    const selectedIds=singleId ? [singleId] : rows.map(row=>String(row.id));
+    // Um parâmetro JSON evita o limite de placeholders e mantém o filtro mesmo acima de 500 leads.
+    const selected=JSON.stringify(selectedIds);
+    const subset=`WHERE lead_id IN (${erpDB().backend==='postgres'?'SELECT json_array_elements_text(?::json)':'SELECT value FROM json_each(?)'})`;
+    const attachments=await erpDB().prepare(`SELECT id,lead_id,name,size,mime_type,created,duration FROM lead_attachments ${subset} ORDER BY created,id`).all(selected);
     const attachmentMap=new Map<string,Attachment>();
     for (const item of attachments) { const id=String(item.lead_id); if (!details[id]) continue; const attachment: Attachment={id:String(item.id),name:String(item.name),size:Number(item.size),type:String(item.mime_type),addedAt:iso(item.created),url:`/api/erp/leads/${id}/attachments/${item.id}`,...(item.duration ? {duration:Number(item.duration)} : {})}; attachmentMap.set(attachment.id,attachment); details[id].attachments.push(attachment); }
-    const notes=await erpDB().prepare(`SELECT * FROM lead_notes ${subset} ORDER BY created,id`).all(...selectedIds);
+    const notes=await erpDB().prepare(`SELECT * FROM lead_notes ${subset} ORDER BY created,id`).all(selected);
     for (const note of notes) { const id=String(note.lead_id); if (!details[id]) continue; const attached=decode<string[]>(note.attachment_ids_json).flatMap(attachmentId=>attachmentMap.has(attachmentId) ? [attachmentMap.get(attachmentId)!] : []); messages[id].push({id:String(note.id),direction:'out',kind:'note',author:{name:String(note.author_name),seed:String(note.actor)},text:String(note.text),at:iso(note.created),...(attached.length ? {attachments:attached} : {})}); }
     return {leads:rows.map(leadDTO),details,messages,statuses};
 }
@@ -472,33 +479,44 @@ export async function archiveRecord(resourceValue: unknown, id: string, expected
 export async function reports(period?: {from:string;until:string}) {
   await initializeERP();
   if (period) reportPeriodFromURL(new URL(`https://local.invalid/?from=${encodeURIComponent(period.from)}&until=${encodeURIComponent(period.until)}`));
-  return erpDB().transaction(async () => {
-    const rows=await erpDB().prepare('SELECT * FROM records WHERE archived_at IS NULL').all();
-    const counts=Object.fromEntries(ERP_RESOURCES.map(resource=>[resource,rows.filter(row=>row.resource===resource).length])) as Record<ERPResource,number>;
-    const finance={incomePaid:0,expensePaid:0,incomePending:0,expensePending:0,overdueIncome:0,overdueExpense:0,byMonth:[] as {month:string;income:number;expense:number}[]};
-    const months=new Map<string,{month:string;income:number;expense:number}>();
-    const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-    const financialRows=rows.filter(row=>row.resource==='financeiro').filter(row=>{
-      if (!period) return true;
-      const data=decode<Json>(row.data_json),referenceDate=String(data.status==='paid' ? data.paidAt : data.dueDate);
-      return referenceDate>=period.from && referenceDate<=period.until;
-    });
-    counts.financeiro=financialRows.length;
-    for (const row of financialRows) {
-      const data=decode<Json>(row.data_json); if (data.status==='cancelled') continue; const amount=Math.round(Number(data.amount)*100);
-      const prefix=data.type==='income' ? 'income' : 'expense'; const key=`${prefix}${data.status==='paid' ? 'Paid':'Pending'}` as 'incomePaid'|'expensePaid'|'incomePending'|'expensePending'; finance[key]+=amount;
-      if (data.status==='pending' && String(data.dueDate)<today) finance[data.type==='income' ? 'overdueIncome':'overdueExpense']+=amount;
-      if (data.status==='paid') { const month=String(data.paidAt).slice(0,7),item=months.get(month) ?? {month,income:0,expense:0}; item[prefix]+=amount; months.set(month,item); }
-    }
-    for (const key of ['incomePaid','expensePaid','incomePending','expensePending','overdueIncome','overdueExpense'] as const) finance[key]/=100;
-    finance.byMonth=[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)).map(item=>({...item,income:item.income/100,expense:item.expense/100}));
-    const materials=rows.filter(row=>row.resource==='materiais').map(recordDTO);
-    const low=materials.filter(item=>Number((item as unknown as Json).quantity)<=Number((item as unknown as Json).minQuantity));
-    const stockValue=materials.reduce((sum,item)=>sum+Math.round(Number((item as unknown as Json).quantity)*Number((item as unknown as Json).unitCost)*100),0)/100;
-    const leadRows=await erpDB().prepare('SELECT * FROM leads WHERE archived_at IS NULL').all();
-    const funnels=(await erpDB().prepare('SELECT * FROM funnels ORDER BY position').all()).map(funnelDTO);
-    const byFunnel=funnels.map(funnel=>({funnelId:funnel.id,name:funnel.name,count:leadRows.filter(row=>row.funnel_id===funnel.id).length,budget:leadRows.filter(row=>row.funnel_id===funnel.id).reduce((sum,row)=>sum+Math.round(decode<Lead>(row.data_json).budget*100),0)/100}));
-    const sources=new Map<string,number>(); for (const row of leadRows) { const source=decode<LeadDetails>(row.details_json).source || 'Não informada'; sources.set(source,(sources.get(source) ?? 0)+1); }
-    return {counts,finance,inventory:{low,stockValue},leads:{total:leadRows.length,byFunnel,bySource:[...sources.entries()].map(([source,count])=>({source,count}))},...(period ? {period:{...period,appliesTo:'finance',dateBasis:'paidAt_or_dueDate',inventory:'current'}} : {})};
+  const database=erpDB();
+  const field=(name:string,column='data_json')=>database.backend==='postgres'?`(${column}::jsonb ->> '${name}')`:`json_extract(${column}, '$.${name}')`;
+  const numeric=(name:string)=>`COALESCE(CAST(${field(name)} AS NUMERIC),0)`;
+  const status=field('status'),type=field('type'),due=field('dueDate'),paid=field('paidAt');
+  const amount=`ROUND(${numeric('amount')} * 100)`;
+  const reference=`CASE WHEN ${status} = 'paid' THEN ${paid} ELSE ${due} END`;
+  const financePeriod=period?` AND ${reference} >= ? AND ${reference} <= ?`:'';
+  const parameters=period?[period.from,period.until]:[];
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const lowCondition=`${numeric('quantity')} <= ${numeric('minQuantity')}`;
+  return database.transaction(async()=>{
+    // O banco devolve uma linha por módulo, em vez dos documentos de cada registro.
+    const grouped=await database.prepare(`SELECT resource, COUNT(*) AS count,
+      SUM(CASE WHEN resource='materiais' THEN ROUND(${numeric('quantity')} * ${numeric('unitCost')} * 100) ELSE 0 END) AS stock_value,
+      SUM(CASE WHEN resource='materiais' AND ${lowCondition} THEN 1 ELSE 0 END) AS low_total,
+      SUM(CASE WHEN resource='financeiro' AND ${type}='income' AND ${status}='paid' THEN ${amount} ELSE 0 END) AS income_paid,
+      SUM(CASE WHEN resource='financeiro' AND ${type}='expense' AND ${status}='paid' THEN ${amount} ELSE 0 END) AS expense_paid,
+      SUM(CASE WHEN resource='financeiro' AND ${type}='income' AND ${status}='pending' THEN ${amount} ELSE 0 END) AS income_pending,
+      SUM(CASE WHEN resource='financeiro' AND ${type}='expense' AND ${status}='pending' THEN ${amount} ELSE 0 END) AS expense_pending,
+      SUM(CASE WHEN resource='financeiro' AND ${type}='income' AND ${status}='pending' AND ${due} < ? THEN ${amount} ELSE 0 END) AS overdue_income,
+      SUM(CASE WHEN resource='financeiro' AND ${type}='expense' AND ${status}='pending' AND ${due} < ? THEN ${amount} ELSE 0 END) AS overdue_expense
+      FROM records WHERE archived_at IS NULL ${period?`AND (resource <> 'financeiro' OR (${reference} >= ? AND ${reference} <= ?))`:''} GROUP BY resource`).all(today,today,...parameters);
+    const counts=Object.fromEntries(ERP_RESOURCES.map(resource=>[resource,0])) as Record<ERPResource,number>;
+    for(const row of grouped) counts[row.resource as ERPResource]=Number(row.count);
+    const financial=grouped.find(row=>row.resource==='financeiro'),stock=grouped.find(row=>row.resource==='materiais');
+    const months=await database.prepare(`SELECT SUBSTR(${paid},1,7) AS month,
+      SUM(CASE WHEN ${type}='income' THEN ${amount} ELSE 0 END) AS income,
+      SUM(CASE WHEN ${type}='expense' THEN ${amount} ELSE 0 END) AS expense
+      FROM records WHERE resource='financeiro' AND archived_at IS NULL AND ${status}='paid' ${financePeriod}
+      GROUP BY SUBSTR(${paid},1,7) ORDER BY month`).all(...parameters);
+    const low=await database.prepare(`SELECT * FROM records WHERE resource='materiais' AND archived_at IS NULL AND ${lowCondition} ORDER BY created DESC,id LIMIT 50`).all();
+    const funnels=await database.prepare(`SELECT f.id,f.data_json,COUNT(l.id) AS count,COALESCE(SUM(ROUND(COALESCE(CAST(${field('budget','l.data_json')} AS NUMERIC),0)*100)),0) AS budget
+      FROM funnels f LEFT JOIN leads l ON l.funnel_id=f.id AND l.archived_at IS NULL GROUP BY f.id,f.data_json,f.position ORDER BY f.position,f.id`).all();
+    const source=database.backend==='postgres'?"COALESCE(NULLIF(details_json::jsonb ->> 'source',''),'Não informada')":"COALESCE(NULLIF(json_extract(details_json,'$.source'),''),'Não informada')";
+    const sources=await database.prepare(`SELECT ${source} AS source,COUNT(*) AS count FROM leads WHERE archived_at IS NULL GROUP BY ${source} ORDER BY count DESC,source`).all();
+    return {counts,finance:{incomePaid:Number(financial?.income_paid??0)/100,expensePaid:Number(financial?.expense_paid??0)/100,incomePending:Number(financial?.income_pending??0)/100,expensePending:Number(financial?.expense_pending??0)/100,overdueIncome:Number(financial?.overdue_income??0)/100,overdueExpense:Number(financial?.overdue_expense??0)/100,byMonth:months.map(row=>({month:String(row.month),income:Number(row.income)/100,expense:Number(row.expense)/100}))},
+      inventory:{low:low.map(recordDTO),lowTotal:Number(stock?.low_total??0),stockValue:Number(stock?.stock_value??0)/100},
+      leads:{total:funnels.reduce((sum,row)=>sum+Number(row.count),0),byFunnel:funnels.map(row=>({funnelId:String(row.id),name:decode<{name:string}>(row.data_json).name,count:Number(row.count),budget:Number(row.budget)/100})),bySource:sources.map(row=>({source:String(row.source),count:Number(row.count)}))},
+      ...(period?{period:{...period,appliesTo:'finance',dateBasis:'paidAt_or_dueDate',inventory:'current'}}:{})};
   });
 }

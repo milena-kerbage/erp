@@ -1,8 +1,8 @@
-import Image from "next/image";
+import {ImagemNativa as Image} from "./ImagemNativa";
 import { css, cx } from "styled-system/css";
 import { Baby } from "@/loja/componentes/icones";
 import type { TomMidia } from "@/loja/componentes/inicio/Midia";
-import type { Foto } from "@/loja/lib/catalogo/fotos";
+import { ehFotoDoCatalogo, type Foto } from "@/loja/lib/catalogo/fotos";
 import { brilhoAoCarregar } from "./esqueleto";
 import { ImagemSuave } from "./ImagemSuave";
 
@@ -43,7 +43,7 @@ export function FotoProduto({
   return (
     <div className={cx(moldura, brilhoAoCarregar, className)}>
       <ImagemSuave src={foto.src} alt={foto.alt} fill sizes={sizes} preload={preload} className={css({ objectFit: "contain" })} />
-      {segunda && <Image src={segunda.src} alt="" fill sizes={sizes} className={fotoHover} />}
+      {segunda && <Image src={segunda.src} alt="" fill sizes={sizes} unoptimized={ehFotoDoCatalogo(segunda.src)} className={fotoHover} />}
     </div>
   );
 }

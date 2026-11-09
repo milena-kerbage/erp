@@ -11,6 +11,6 @@ export async function GET(request: Request) {
       try { remote = await diagnostics(); }
       catch (error) { remote = {ok: false, error: error instanceof WhatsAppError ? error.message : 'Diagnóstico indisponível.', checkedAt: new Date().toISOString()}; }
     }
-    return {ready: config.configured, configured: config.configured, checks: config.checks, apiVersion: config.apiVersion || null, appId: config.appId || null, phoneNumberId: config.phoneNumberId || null, businessAccountId: config.businessAccountId || null, urls: await publicUrls(request), lastWebhookAt: await lastWebhookAt(), unreadConversations: await unreadConversationCount(), retentionDays: config.retentionDays, storage: storageConfiguration(), mediaMaximumBytes: mediaMaximumBytes(), authMode: developmentAccess() ? 'development' : 'session', ...(remote ? {remote} : {})};
+    return {ready: config.configured, configured: config.configured, checks: config.checks, apiVersion: config.apiVersion || null, appId: config.appId || null, phoneNumberId: config.phoneNumberId || null, businessAccountId: config.businessAccountId || null, urls: await publicUrls(request, config.publicBaseUrl), lastWebhookAt: await lastWebhookAt(), unreadConversations: await unreadConversationCount(), retentionDays: config.retentionDays, storage: storageConfiguration(), mediaMaximumBytes: mediaMaximumBytes(), authMode: developmentAccess() ? 'development' : 'session', ...(remote ? {remote} : {})};
   }, false, 30);
 }

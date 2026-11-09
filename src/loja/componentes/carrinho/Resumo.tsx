@@ -6,7 +6,7 @@ import { botao } from "styled-system/recipes";
 import { CaretDown, CheckCircle, Tag } from "@/loja/componentes/icones";
 import { useTopoFixo } from "@/loja/componentes/produto/LateralFixa";
 import type { ContaDoCupom } from "@/loja/componentes/conta/cupomSacola";
-import { CUPONS, type Cupom, decimal } from "@/loja/lib/carrinho/totais";
+import { CUPONS, type Cupom, cupomVigente, decimal } from "@/loja/lib/carrinho/totais";
 import { CUPOM_GENERICO_PRIMEIRA, cupomDeBoasVindas, escolherCupom } from "@/loja/lib/contas/regras";
 import { formatarPreco } from "@/loja/lib/formatacao/moeda";
 
@@ -45,6 +45,7 @@ export function SeletorCupom({
   aoMudar,
   conta = { pronta: false, logada: false, cupom: null },
   abertoInicial = false,
+  cupons = CUPONS,
 }: {
   cupom?: Cupom;
   subtotal: number;
@@ -52,13 +53,14 @@ export function SeletorCupom({
   aoMudar: (codigo?: string, aviso?: string) => void;
   conta?: ContaDoCupom;
   abertoInicial?: boolean; // já abre com a lista (diálogo de cupom da sacola)
+  cupons?: Cupom[]; // cupons de campanha da loja (cadastro do ERP ou os de código), vindos do servidor
 }) {
   const [aberto, setAberto] = useState(abertoInicial);
   const [codigo, setCodigo] = useState("");
   const [erro, setErro] = useState("");
 
   function aplicar(valor: string) {
-    const resultado = escolherCupom(valor, subtotal, conta);
+    const resultado = escolherCupom(valor, subtotal, conta, cupons);
     if (resultado.tipo === "invalido") return setErro(resultado.mensagem);
     if (resultado.tipo === "minimo")
       return setErro(`Faltam ${reais(resultado.cupom.minimoCentavos - subtotal)} em produtos para usar ${resultado.cupom.codigo}.`);
@@ -67,9 +69,11 @@ export function SeletorCupom({
     setAberto(false);
     aoMudar(resultado.cupom.codigo, resultado.aviso);
   }
+  // Sugestões: o de primeira compra da conta (ou o BEMVINDO5, sem conta) e os de campanha marcados para exibir.
   const opcoes = [
     ...(conta.logada && conta.cupom && !conta.cupom.usado ? [cupomDeBoasVindas(conta.cupom.codigo)] : []),
-    ...CUPONS.filter((item) => !(conta.logada && item.codigo === CUPOM_GENERICO_PRIMEIRA)),
+    ...(conta.logada ? [] : CUPONS.filter((item) => item.codigo === CUPOM_GENERICO_PRIMEIRA)),
+    ...cupons.filter((item) => item.exibir && item.codigo !== CUPOM_GENERICO_PRIMEIRA && cupomVigente(item)),
   ];
 
   if (cupom) {

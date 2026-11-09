@@ -30,8 +30,8 @@ export async function jsonBody(request: Request): Promise<JsonObject> {
   try { const value = JSON.parse(bytes.toString('utf8')); if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(); return value; }
   catch { throw new WhatsAppError(400, 'JSON inválido.', 'INVALID_JSON'); }
 }
-export async function publicUrls(request: Request) {
-  const configured = (await effectiveConfiguration()).publicBaseUrl;
+export async function publicUrls(request: Request, configuredBase?: string) {
+  const configured = configuredBase ?? (await effectiveConfiguration()).publicBaseUrl;
   const base = configured || new URL(request.url).origin;
   return {base, publicHttps: Boolean(configured), webhook: `${base}/api/whatsapp/webhook`, privacy: `${base}/privacidade`, terms: `${base}/termos`, deletion: `${base}/exclusao-de-dados`, cookies: `${base}/cookies`, communications: `${base}/politica-de-comunicacao`, policies: `${base}/politicas`, dataDeletionCallback: `${base}/api/meta/data-deletion`};
 }

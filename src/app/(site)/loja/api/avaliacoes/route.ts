@@ -1,8 +1,8 @@
 import { limited } from "@/lib/auth/core";
-import { criarAvaliacao, hashDoIp, listarAprovadas } from "@/lib/loja/avaliacoes";
+import { criarAvaliacao, hashDoIp } from "@/lib/loja/avaliacoes";
 import { filtrosDaUrl, LIMITES_AVALIACAO, MENSAGEM_ENVIADA, slugValido } from "@/loja/lib/avaliacoes/regras";
-import { erroDaApi, gravacaoPermitida, ipDaRequisicao, respostaDeErro, SEM_CACHE } from "@/loja/lib/avaliacoes/servidor";
-import { buscarProduto } from "@/loja/lib/catalogo/exemplos";
+import { avaliacoesPublicas, erroDaApi, gravacaoPermitida, ipDaRequisicao, respostaDeErro, SEM_CACHE } from "@/loja/lib/avaliacoes/servidor";
+import { indiceDaLoja } from "@/lib/loja/catalogo";
 
 // Avaliações de produto (públicas, no host da loja: /api/avaliacoes → /loja/api/avaliacoes).
 // GET  ?produto=slug&ordem=recentes|maior|menor|fotos&nota=5,4&fotos=1&para=menina&busca=&offset=&limite=
@@ -15,14 +15,19 @@ import { buscarProduto } from "@/loja/lib/catalogo/exemplos";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const produtoExiste = (slug: string) => Boolean(buscarProduto(slug));
+// Produto do catálogo da loja (cadastro do ERP ou o de exemplo).
+async function verificadorDeProduto() {
+  const { buscarProduto } = await indiceDaLoja();
+  return (slug: string) => Boolean(buscarProduto(slug));
+}
 
 export async function GET(request: Request) {
   const parametros = new URL(request.url).searchParams;
   const produto = parametros.get("produto") ?? "";
+  const produtoExiste = await verificadorDeProduto();
   if (!slugValido(produto) || !produtoExiste(produto)) return respostaDeErro(404, "PRODUTO_INEXISTENTE", "Produto não encontrado.");
   try {
-    const resposta = await listarAprovadas(produto, filtrosDaUrl(parametros));
+    const resposta = await avaliacoesPublicas(produto, filtrosDaUrl(parametros));
     // CDN guarda 1 min (a moderação aparece rápido); o navegador sempre revalida.
     return Response.json(resposta, { headers: { "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300" } });
   } catch (erro) {
@@ -97,7 +102,7 @@ export async function POST(request: Request) {
     if (grande >= 0) return respostaDeErro(413, "FOTO_GRANDE", `A foto ${grande + 1} tem mais de 3 MB. Envie fotos de até 3 MB cada.`, { fotos: `A foto ${grande + 1} tem mais de 3 MB.` });
     const fotos = await Promise.all(arquivos.map(async (arquivo) => Buffer.from(await arquivo.arrayBuffer())));
 
-    const resultado = await criarAvaliacao({ campos, fotos, ip }, { produtoExiste, gravar });
+    const resultado = await criarAvaliacao({ campos, fotos, ip }, { produtoExiste: await verificadorDeProduto(), gravar });
     if (resultado.situacao === "simulada")
       return Response.json(
         { ok: true, simulada: true, mensagem: MENSAGEM_ENVIADA, aviso: "Desenvolvimento ligado ao banco remoto: a avaliação foi validada, mas não foi gravada." },

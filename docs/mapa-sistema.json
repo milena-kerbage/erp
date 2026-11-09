@@ -1,0 +1,3032 @@
+{
+  "scope": "Inventário estático. Caminhos consideram grupos de rotas e reescrita /loja por host. Metadados, layouts e proxy listados separadamente. Imports não provam execução nem quantidade SQL por HTTP.",
+  "counts": {
+    "sourceFiles": 696,
+    "pages": 97,
+    "handlers": 112
+  },
+  "entries": [
+    {
+      "file": "src/app/(erp)/(app)/[...slug]/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/[...slug]",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/navigation",
+        "@/components/layout/LockedModule",
+        "@/lib/navigation"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/agenda/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/agenda",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ajuda/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ajuda",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/InformationalPages"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/avaliacoes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/avaliacoes",
+      "methods": [],
+      "imports": [
+        "next/navigation"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/catalogo/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/catalogo",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/clientes/loja/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/clientes/loja",
+      "methods": [],
+      "imports": [
+        "next/navigation"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/clientes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/clientes",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/clients/components/ClientsTable"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/acessibilidade/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/acessibilidade",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/AccessibilitySettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/api/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/api",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/ApiSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/funis/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/funis",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/FunnelsSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/integracoes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/integracoes",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/IntegrationsSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/midia/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/midia",
+      "methods": [],
+      "imports": [
+        "@/features/settings/components/MediaSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes",
+      "methods": [],
+      "imports": [
+        "next/navigation"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/perfil/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/perfil",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/ProfileSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/preferencias/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/preferencias",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/PreferencesSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/usuarios/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/usuarios",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/UsersSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/configuracoes/whatsapp/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/configuracoes/whatsapp",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/settings/components/WhatsAppSettings"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/conta/novidades/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/conta/novidades",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/InformationalPages"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/conta/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/conta",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/lib/auth/server",
+        "@/features/operations/components/InformationalPages"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/conversas/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/conversas",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/whatsapp/components/WhatsAppInbox",
+        "@/features/whatsapp/client"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/avaliacoes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/avaliacoes",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/reviews/components/ReviewsModeration"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/carrinhos/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/carrinhos",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/vendas/Carrinhos"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/categorias/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/categorias",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/catalogo/Categorias",
+        "@/features/ecommerce/catalogo/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/clientes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/clientes",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/vendas/Clientes"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/colecoes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/colecoes",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/catalogo/Colecoes"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/cupons/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/cupons",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/vendas/Cupons"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/menu/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/menu",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/catalogo/MenuSite",
+        "@/features/ecommerce/catalogo/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/opcoes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/opcoes",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/catalogo/Opcoes"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/vendas/Painel"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/pedidos/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/pedidos",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/vendas/Pedidos"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/produtos/[id]/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/produtos/[id]",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/catalogo/EditorProduto",
+        "@/features/ecommerce/catalogo/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/produtos/novo/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/produtos/novo",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/ecommerce/catalogo/EditorProduto",
+        "@/features/ecommerce/catalogo/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/ecommerce/produtos/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/ecommerce/produtos",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/navigation",
+        "@/features/ecommerce/catalogo/ProdutosLista",
+        "@/features/ecommerce/catalogo/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/estoque/materiais/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/estoque/materiais",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/estoque/movimentacoes/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/estoque/movimentacoes",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/estoque/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/estoque",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/financeiro/fluxo-de-caixa/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/financeiro/fluxo-de-caixa",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/ReportsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/financeiro/pagar/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/financeiro/pagar",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/financeiro/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/financeiro",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/financeiro/receber/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/financeiro/receber",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/leads/[id]/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/leads/[id]",
+      "methods": [],
+      "imports": [
+        "next",
+        "react",
+        "next/navigation",
+        "@/lib/auth/server",
+        "@/lib/erp/access",
+        "@/lib/erp/core",
+        "@/features/leads/components/LeadDetail"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/leads/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/leads",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/leads/components/LeadsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/orcamentos/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/orcamentos",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/dashboard/components/Dashboard"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/pedidos/em-andamento/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/pedidos/em-andamento",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/pedidos/finalizados/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/pedidos/finalizados",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/pedidos/loja/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/pedidos/loja",
+      "methods": [],
+      "imports": [
+        "next/navigation"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/pedidos/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/pedidos",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/producao/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/producao",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/OperationsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(app)/relatorios/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/relatorios",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/features/operations/components/ReportsView"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(legal)/cookies/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/cookies",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/features/legal/config",
+        "@/features/legal/LegalDocument"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(legal)/exclusao-de-dados/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/exclusao-de-dados",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/features/legal/config",
+        "@/features/legal/LegalDocument"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(legal)/exclusao-de-dados/status/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/exclusao-de-dados/status",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/lib/meta/deletion",
+        "@/features/legal/LegalDocument"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(legal)/politica-de-comunicacao/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/politica-de-comunicacao",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/features/legal/config",
+        "@/features/legal/LegalDocument"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(legal)/politicas/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/politicas",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/features/legal/config",
+        "@/features/legal/LegalDocument",
+        "@/features/legal/legal.module.css"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(legal)/privacidade/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/privacidade",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/features/legal/config",
+        "@/features/legal/LegalDocument"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/(legal)/termos/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/termos",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/features/legal/config",
+        "@/features/legal/LegalDocument"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/convite/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/convite",
+      "methods": [],
+      "imports": [
+        "@/features/auth/AuthForm"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/login/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/login",
+      "methods": [],
+      "imports": [
+        "next/navigation",
+        "@/lib/auth/server",
+        "@/features/auth/AuthForm",
+        "@/components/layout/ConfigurationNotice"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/recuperar-senha/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/recuperar-senha",
+      "methods": [],
+      "imports": [
+        "@/features/auth/AuthForm"
+      ]
+    },
+    {
+      "file": "src/app/(erp)/redefinir-senha/page.tsx",
+      "type": "pagina",
+      "host": "erp",
+      "path": "/redefinir-senha",
+      "methods": [],
+      "imports": [
+        "@/features/auth/AuthForm"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(compra)/carrinho/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/carrinho",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/loja/componentes/carrinho/PaginaCarrinho",
+        "@/lib/loja/catalogo"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(compra)/checkout/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/checkout",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/loja/componentes/checkout/PaginaPedido",
+        "@/lib/loja/catalogo"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/cadastro/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/cadastro",
+      "methods": [],
+      "imports": [
+        "styled-system/css",
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/componentes/conta/PaginasConta",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/clube/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/clube",
+      "methods": [],
+      "imports": [
+        "next/navigation"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/dados/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/dados",
+      "methods": [],
+      "imports": [
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/componentes/conta/PaginasConta",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/entrar/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/entrar",
+      "methods": [],
+      "imports": [
+        "styled-system/css",
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/componentes/conta/PaginasConta",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/favoritos/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/favoritos",
+      "methods": [],
+      "imports": [
+        "styled-system/css",
+        "@/loja/componentes/conta/FavoritosAparelho",
+        "@/loja/componentes/conta/MolduraConta",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta",
+      "methods": [],
+      "imports": [
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/componentes/conta/VisaoGeralConta",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/pedidos/[numero]/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/pedidos/[numero]",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/loja/componentes/conta/DetalhePedidoEnviado",
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/pedidos/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/pedidos",
+      "methods": [],
+      "imports": [
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/componentes/conta/PedidosEnviados",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/redefinir/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/redefinir",
+      "methods": [],
+      "imports": [
+        "next",
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/componentes/conta/PaginasConta"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(conta)/conta/seguranca/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/conta/seguranca",
+      "methods": [],
+      "imports": [
+        "@/loja/componentes/conta/MolduraConta",
+        "@/loja/componentes/conta/PaginasConta",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/[...categoria]/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/[...categoria]",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/navigation",
+        "react",
+        "@/loja/componentes/listagem/CabecalhoListagem",
+        "@/loja/componentes/listagem/ContinueExplorando",
+        "@/loja/componentes/listagem/Esqueleto",
+        "@/loja/componentes/listagem/Resultado",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/catalogo/edicoes",
+        "@/loja/lib/catalogo/listagem",
+        "@/loja/lib/seo/config",
+        "@/loja/lib/seo/urls"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/ajuda/bordado-personalizado/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/ajuda/bordado-personalizado",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/ajuda/como-fazer-pedido/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/ajuda/como-fazer-pedido",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/carrinho/totais",
+        "@/loja/lib/empresa"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/ajuda/entregas/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/ajuda/entregas",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/carrinho/totais",
+        "@/loja/lib/casas/catalogo",
+        "@/loja/lib/empresa"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/ajuda/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/ajuda",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/icones",
+        "@/loja/componentes/institucional/BuscaAjuda",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/ajuda/conteudo",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/ajuda/perguntas-frequentes/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/ajuda/perguntas-frequentes",
+      "methods": [],
+      "imports": [
+        "styled-system/css",
+        "@/loja/componentes/institucional/Acordeao",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/componentes/seo/JsonLd",
+        "@/loja/lib/ajuda/conteudo",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/ajuda/tecidos-e-cuidados/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/ajuda/tecidos-e-cuidados",
+      "methods": [],
+      "imports": [
+        "styled-system/css",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/catalogo/fichas"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/ajuda/trocas-e-devolucoes/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/ajuda/trocas-e-devolucoes",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/empresa"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/busca/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/busca",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/link",
+        "react",
+        "styled-system/css",
+        "@/loja/componentes/busca/CampoBuscaPagina",
+        "@/loja/componentes/layout/cabecalho/estilos",
+        "@/loja/componentes/layout/cabecalho/navegacao",
+        "@/loja/componentes/listagem/CabecalhoListagem",
+        "@/loja/componentes/listagem/ContinueExplorando",
+        "@/loja/componentes/listagem/Esqueleto",
+        "@/loja/componentes/listagem/Resultado",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/catalogo/listagem",
+        "@/loja/lib/catalogo/urlsListagem",
+        "@/loja/lib/seo/urls"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/edicao-do-mes/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/edicao-do-mes",
+      "methods": [],
+      "imports": [
+        "next",
+        "react",
+        "@/loja/componentes/listagem/CabecalhoListagem",
+        "@/loja/componentes/listagem/ContinueExplorando",
+        "@/loja/componentes/listagem/Esqueleto",
+        "@/loja/componentes/listagem/Resultado",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/catalogo/edicoes",
+        "@/loja/lib/catalogo/urlsListagem",
+        "@/loja/lib/seo/urls"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/indique/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/indique",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/institucional/BotoesIndicacao",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/lib/seo/config",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/",
+      "methods": [],
+      "imports": [
+        "styled-system/css",
+        "@/loja/componentes/inicio/CarrosselProdutos",
+        "@/loja/componentes/inicio/conteudo",
+        "@/loja/componentes/inicio/FeatureTelaCheia",
+        "@/loja/componentes/inicio/GradeAbas",
+        "@/loja/componentes/inicio/Hero",
+        "@/loja/componentes/inicio/Instagram",
+        "@/loja/componentes/inicio/ParEditorial",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/catalogo/constantes"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/personalizado/[slug]/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/personalizado/[slug]",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/link",
+        "next/navigation",
+        "react",
+        "styled-system/css",
+        "styled-system/recipes",
+        "@/loja/componentes/casas/comuns",
+        "@/loja/componentes/casas/dadosProjeto",
+        "@/loja/componentes/casas/GavetaProjeto",
+        "@/loja/componentes/casas/ListagemProjetos",
+        "@/loja/componentes/casas/PainelProjeto",
+        "@/loja/componentes/casas/secoes",
+        "@/loja/componentes/layout/cabecalho/estilos",
+        "@/loja/componentes/listagem/CabecalhoListagem",
+        "@/loja/componentes/listagem/ContinueExplorando",
+        "@/loja/componentes/listagem/Esqueleto",
+        "@/loja/componentes/produto/Galeria",
+        "@/loja/componentes/produto/secoes",
+        "@/loja/componentes/seo/JsonLd",
+        "@/loja/lib/casas/catalogo",
+        "@/loja/lib/casas/filtragem",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/catalogo/categorias",
+        "@/loja/lib/catalogo/exemplos",
+        "@/loja/lib/catalogo/fotos",
+        "@/loja/lib/empresa",
+        "@/loja/lib/seo/projetos"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/personalizado/monte-o-seu/[etapa]/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/personalizado/monte-o-seu/[etapa]",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/navigation",
+        "@/loja/componentes/casas/Montador",
+        "@/loja/lib/casas/etapas"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/personalizado/monte-o-seu/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/personalizado/monte-o-seu",
+      "methods": [],
+      "imports": [
+        "next/navigation",
+        "@/loja/lib/casas/etapas"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/personalizado/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/personalizado",
+      "methods": [],
+      "imports": [
+        "next",
+        "react",
+        "@/loja/componentes/casas/comuns",
+        "@/loja/componentes/casas/ListagemProjetos",
+        "@/loja/componentes/casas/secoes",
+        "@/loja/componentes/listagem/CabecalhoListagem",
+        "@/loja/componentes/listagem/ContinueExplorando",
+        "@/loja/componentes/listagem/Esqueleto",
+        "@/loja/componentes/seo/JsonLd",
+        "@/loja/lib/casas/catalogo",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/seo/projetos"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/politicas/cookies/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/politicas/cookies",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/localizacao/cep",
+        "@/loja/lib/pedidos/historico",
+        "@/loja/lib/rastreamento/nucleo",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/politicas/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/politicas",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/icones",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/empresa",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/politicas/privacidade/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/politicas/privacidade",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/empresa",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/politicas/termos/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/politicas/termos",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/empresa",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/politicas/trocas/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/politicas/trocas",
+      "methods": [],
+      "imports": [
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/institucional/secoes",
+        "@/loja/lib/empresa",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/produto/[slug]/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/produto/[slug]",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/navigation",
+        "styled-system/css",
+        "@/loja/componentes/produto/Avaliacoes",
+        "@/loja/componentes/produto/dados",
+        "@/loja/componentes/produto/Destaques",
+        "@/loja/componentes/produto/Galeria",
+        "@/loja/componentes/produto/GavetaDetalhes",
+        "@/loja/componentes/produto/Looks",
+        "@/loja/componentes/produto/PainelCompra",
+        "@/loja/componentes/produto/secoes",
+        "@/loja/componentes/seo/JsonLd",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/catalogo/exemplos",
+        "@/loja/lib/catalogo/fotos",
+        "@/loja/lib/seo/produto",
+        "@/loja/lib/avaliacoes/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/pronta-entrega/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/pronta-entrega",
+      "methods": [],
+      "imports": [
+        "next",
+        "react",
+        "@/loja/componentes/listagem/CabecalhoListagem",
+        "@/loja/componentes/listagem/ContinueExplorando",
+        "@/loja/componentes/listagem/Esqueleto",
+        "@/loja/componentes/listagem/Resultado",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/catalogo/listagem",
+        "@/loja/lib/catalogo/urlsListagem",
+        "@/loja/lib/seo/urls"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/(vitrine)/sobre/page.tsx",
+      "type": "pagina",
+      "host": "loja",
+      "path": "/sobre",
+      "methods": [],
+      "imports": [
+        "next",
+        "next/link",
+        "styled-system/css",
+        "@/loja/componentes/carrinho/estilos",
+        "@/loja/componentes/icones",
+        "@/loja/componentes/institucional/estilos",
+        "@/loja/componentes/institucional/PaginaInstitucional",
+        "@/loja/componentes/seo/JsonLd",
+        "@/loja/lib/casas/catalogo",
+        "@/loja/lib/empresa",
+        "@/loja/lib/seo/config",
+        "@/loja/lib/seo/institucional"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/avaliacoes/foto/[id]/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/avaliacoes/foto/[id]",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/avaliacoes",
+        "@/loja/lib/avaliacoes/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/avaliacoes/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/avaliacoes",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/auth/core",
+        "@/lib/loja/avaliacoes",
+        "@/loja/lib/avaliacoes/regras",
+        "@/loja/lib/avaliacoes/servidor",
+        "@/lib/loja/catalogo"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/busca/sugestoes/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/busca/sugestoes",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "next/server",
+        "@/loja/lib/catalogo/indiceBusca",
+        "@/loja/lib/seo/urls"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/carrinho/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/carrinho",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/catalogo"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/carrinho/sincronizar/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/carrinho/sincronizar",
+      "methods": [
+        "PUT"
+      ],
+      "imports": [
+        "@/lib/loja/catalogo",
+        "@/lib/loja/gestao/carrinhos",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/catalogo/imagem/[id]/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/catalogo/imagem/[id]",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/imagens",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/cadastrar/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/cadastrar",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor",
+        "@/lib/loja/contas"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/entrar/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/entrar",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/eu/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/eu",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/excluir/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/excluir",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/pedidos/[numero]/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/pedidos/[numero]",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/pedidos/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/pedidos",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/perfil/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/perfil",
+      "methods": [
+        "PATCH"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/redefinir/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/redefinir",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/auth/core",
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/sair/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/sair",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/conta/senha/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/conta/senha",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/indexnow-chave/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/indexnow-chave",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "next/server"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/instagram/midia/[id]/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/instagram/midia/[id]",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "next/cache",
+        "@/loja/lib/instagram/feed",
+        "@/loja/lib/instagram/servidor"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/localizacao/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/localizacao",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "next/server",
+        "@/loja/lib/localizacao/cep",
+        "@/loja/lib/localizacao/servicos"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/api/pedidos/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/api/pedidos",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/contas",
+        "@/lib/loja/catalogo",
+        "@/loja/lib/checkout/pedido",
+        "@/loja/lib/contas/servidor",
+        "@/loja/lib/empresa"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/dev/midia/[formato]/route.tsx",
+      "type": "api",
+      "host": "loja",
+      "path": "/dev/midia/[formato]",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "next/navigation",
+        "next/server",
+        "@/loja/lib/seo/midia/gerar",
+        "@/loja/lib/seo/midia/modelos"
+      ]
+    },
+    {
+      "file": "src/app/(site)/loja/opensearch.xml/route.ts",
+      "type": "api",
+      "host": "loja",
+      "path": "/opensearch.xml",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/loja/lib/seo/config"
+      ]
+    },
+    {
+      "file": "src/app/api/[...path]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/[...path]",
+      "methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "imports": []
+    },
+    {
+      "file": "src/app/api/auth/[action]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/auth/[action]",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "next/server",
+        "nodemailer",
+        "@/lib/auth/cookies",
+        "@/lib/auth/core",
+        "@/lib/auth/http",
+        "@/lib/erp/access",
+        "@/lib/database"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/api-keys/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/api-keys/[id]",
+      "methods": [
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/api-keys/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/api-keys",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/avaliacoes/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/avaliacoes/[id]",
+      "methods": [
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "next/cache",
+        "@/lib/erp/server",
+        "@/lib/loja/avaliacoes"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/avaliacoes/foto/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/avaliacoes/foto/[id]",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/storage/images",
+        "@/lib/erp/server",
+        "@/lib/loja/avaliacoes"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/avaliacoes/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/avaliacoes",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/loja/avaliacoes",
+        "@/lib/loja/catalogo"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/dashboard/activity/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/dashboard/activity",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/dashboard"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/dashboard/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/dashboard"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/documentation/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/documentation",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "node:fs/promises",
+        "node:path",
+        "@/lib/erp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/funnels/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/funnels/[id]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/funnels/reorder/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/funnels/reorder",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/funnels/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/funnels",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/leads/[id]/attachments/[attachmentId]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/leads/[id]/attachments/[attachmentId]",
+      "methods": [
+        "GET",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/storage/images",
+        "@/lib/erp/server",
+        "@/lib/erp/files",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/leads/[id]/attachments/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/leads/[id]/attachments",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/files",
+        "@/lib/erp/uploads",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/leads/[id]/notes/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/leads/[id]/notes",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/leads/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/leads/[id]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/leads/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/leads",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/crm",
+        "@/lib/erp/server",
+        "@/lib/erp/core",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/carrinhos/[clienteId]/mensagem/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/carrinhos/[clienteId]/mensagem",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/carrinhos",
+        "@/lib/loja/gestao/rotas",
+        "@/lib/erp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/carrinhos/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/carrinhos",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/carrinhos",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/categorias/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/categorias/[id]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/categorias",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/categorias/imagens/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/categorias/imagens",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/categorias",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/categorias/ordem/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/categorias/ordem",
+      "methods": [
+        "PUT"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/categorias",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/categorias/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/categorias",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/categorias",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/clientes/[id]/redefinicao/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/clientes/[id]/redefinicao",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "next/server",
+        "@/lib/erp/server",
+        "@/lib/loja/contas",
+        "@/lib/loja/emailContas",
+        "@/loja/lib/contas/servidor"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/clientes/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/clientes/[id]",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/loja/avatar",
+        "@/lib/loja/contas",
+        "@/lib/loja/gestao/carrinhos"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/clientes/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/clientes",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/loja/avatar",
+        "@/lib/loja/contas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/colecoes/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/colecoes/[id]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/opcoes",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/colecoes/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/colecoes",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/opcoes",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/cupons/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/cupons/[id]",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/cupons",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/cupons/[id]/usos/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/cupons/[id]/usos",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/cupons",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/cupons/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/cupons",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/cupons",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/menu/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/menu/[id]",
+      "methods": [
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/menu",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/menu/ordem/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/menu/ordem",
+      "methods": [
+        "PUT"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/menu",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/menu/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/menu",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/menu",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/opcoes/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/opcoes/[id]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/opcoes",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/opcoes/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/opcoes",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/opcoes",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/painel/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/painel",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/painel",
+        "@/lib/loja/gestao/carrinhos",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/pedidos/[numero]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/pedidos/[numero]",
+      "methods": [
+        "PATCH"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/loja/contas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/pedidos/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/pedidos",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/loja/contas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/produtos/[id]/arquivar/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/produtos/[id]/arquivar",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/produtos",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/produtos/[id]/duplicar/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/produtos/[id]/duplicar",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/produtos",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/produtos/[id]/imagens/[imagemId]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/produtos/[id]/imagens/[imagemId]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/storage/images",
+        "@/lib/loja/gestao/imagens",
+        "@/lib/loja/gestao/rotas",
+        "@/lib/erp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/produtos/[id]/imagens/ordem/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/produtos/[id]/imagens/ordem",
+      "methods": [
+        "PUT"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/imagens",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/produtos/[id]/imagens/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/produtos/[id]/imagens",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/imagens",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/produtos/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/produtos/[id]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/produtos",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/loja/produtos/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/loja/produtos",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/loja/gestao/produtos",
+        "@/lib/loja/gestao/rotas"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/media/[id]/publish/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/media/[id]/publish",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/storage/media"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/media/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/media",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/storage/media"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/notifications/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/notifications",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/notifications"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/preferences/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/preferences",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/profile/photo/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/profile/photo",
+      "methods": [
+        "GET",
+        "POST",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/storage/images",
+        "@/lib/erp/server",
+        "@/lib/erp/files",
+        "@/lib/erp/uploads"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/profile/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/profile",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/records/[resource]/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/records/[resource]/[id]",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/records/[resource]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/records/[resource]",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/reports/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/reports",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/catalog",
+        "@/lib/erp/types",
+        "@/lib/database"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/team/[id]/invite/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/team/[id]/invite",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/team/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/team/[id]",
+      "methods": [
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/team/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/team",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/webhooks/[id]/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/webhooks/[id]",
+      "methods": [
+        "PATCH",
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/webhooks"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/webhooks/[id]/test/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/webhooks/[id]/test",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/webhooks"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/webhooks/deliveries/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/webhooks/deliveries",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/webhooks"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/webhooks/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/webhooks",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/webhooks"
+      ]
+    },
+    {
+      "file": "src/app/api/erp/workspace/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/erp/workspace",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/erp/server",
+        "@/lib/erp/core",
+        "@/lib/erp/access"
+      ]
+    },
+    {
+      "file": "src/app/api/meta/data-deletion/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/meta/data-deletion",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/meta/deletion",
+        "@/lib/whatsapp/config"
+      ]
+    },
+    {
+      "file": "src/app/api/meta/data-deletion/status/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/meta/data-deletion/status",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/meta/deletion"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/consent/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/consent",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/contacts/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/contacts",
+      "methods": [
+        "DELETE"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/conversations/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/conversations",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/bootstrap/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/bootstrap",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/integrations/bootstrap",
+        "@/lib/whatsapp/server",
+        "@/lib/whatsapp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/checklist/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/checklist",
+      "methods": [
+        "PUT"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/config/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/config",
+      "methods": [
+        "GET",
+        "PUT"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/whatsapp/config",
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/deletions/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/deletions",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/meta/deletion",
+        "@/lib/whatsapp/server",
+        "@/lib/whatsapp/core",
+        "@/lib/integrations/management"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/events/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/events",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/guide/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/guide",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "node:fs/promises",
+        "node:path",
+        "@/lib/integrations/manager",
+        "@/lib/whatsapp/server",
+        "@/lib/whatsapp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/oauth/callback/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/oauth/callback",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "next/headers",
+        "@/lib/auth/cookies",
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management",
+        "@/lib/integrations/oauth",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/oauth/start/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/oauth/start",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "next/headers",
+        "@/lib/auth/cookies",
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management",
+        "@/lib/integrations/oauth",
+        "@/lib/whatsapp/config",
+        "@/lib/whatsapp/server",
+        "@/lib/whatsapp/core"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/overview/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/overview",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/secrets/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/secrets",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/whatsapp/config",
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/subscribe/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/subscribe",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management",
+        "@/lib/whatsapp/config",
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/tests/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/tests",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/management/token/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/management/token",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/integrations/manager",
+        "@/lib/integrations/management",
+        "@/lib/whatsapp/server",
+        "@/lib/whatsapp/core",
+        "@/lib/integrations/oauth"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/media/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/media",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server",
+        "@/lib/auth/server",
+        "@/lib/auth/environment"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/messages/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/messages",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server",
+        "@/lib/erp/dispatch"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/read/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/read",
+      "methods": [
+        "POST"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/status/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/status",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/database",
+        "@/lib/whatsapp/server",
+        "@/lib/auth/environment"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/templates/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/templates",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/unread/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/unread",
+      "methods": [
+        "GET"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server"
+      ]
+    },
+    {
+      "file": "src/app/api/whatsapp/webhook/route.ts",
+      "type": "api",
+      "host": "erp",
+      "path": "/api/whatsapp/webhook",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "imports": [
+        "@/lib/whatsapp/core",
+        "@/lib/whatsapp/server",
+        "@/lib/erp/dispatch"
+      ]
+    }
+  ],
+  "sqlModules": [
+    {
+      "file": "src/lib/auth/core.ts",
+      "prepareSites": 20
+    },
+    {
+      "file": "src/lib/database.ts",
+      "prepareSites": 1
+    },
+    {
+      "file": "src/lib/erp/access.ts",
+      "prepareSites": 37
+    },
+    {
+      "file": "src/lib/erp/core.ts",
+      "prepareSites": 50
+    },
+    {
+      "file": "src/lib/erp/crm.ts",
+      "prepareSites": 4
+    },
+    {
+      "file": "src/lib/erp/dashboard.ts",
+      "prepareSites": 7
+    },
+    {
+      "file": "src/lib/erp/files.ts",
+      "prepareSites": 12
+    },
+    {
+      "file": "src/lib/erp/notifications.ts",
+      "prepareSites": 4
+    },
+    {
+      "file": "src/lib/erp/webhooks.ts",
+      "prepareSites": 13
+    },
+    {
+      "file": "src/lib/integrations/bootstrap.ts",
+      "prepareSites": 1
+    },
+    {
+      "file": "src/lib/integrations/management.ts",
+      "prepareSites": 14
+    },
+    {
+      "file": "src/lib/loja/avaliacoes.ts",
+      "prepareSites": 19
+    },
+    {
+      "file": "src/lib/loja/contas.ts",
+      "prepareSites": 49
+    },
+    {
+      "file": "src/lib/loja/gestao/carrinhos.ts",
+      "prepareSites": 11
+    },
+    {
+      "file": "src/lib/loja/gestao/catalogoBanco.ts",
+      "prepareSites": 10
+    },
+    {
+      "file": "src/lib/loja/gestao/categorias.ts",
+      "prepareSites": 16
+    },
+    {
+      "file": "src/lib/loja/gestao/cupons.ts",
+      "prepareSites": 17
+    },
+    {
+      "file": "src/lib/loja/gestao/esquema.ts",
+      "prepareSites": 2
+    },
+    {
+      "file": "src/lib/loja/gestao/imagens.ts",
+      "prepareSites": 15
+    },
+    {
+      "file": "src/lib/loja/gestao/leads.ts",
+      "prepareSites": 4
+    },
+    {
+      "file": "src/lib/loja/gestao/menu.ts",
+      "prepareSites": 14
+    },
+    {
+      "file": "src/lib/loja/gestao/opcoes.ts",
+      "prepareSites": 27
+    },
+    {
+      "file": "src/lib/loja/gestao/painel.ts",
+      "prepareSites": 5
+    },
+    {
+      "file": "src/lib/loja/gestao/produtos.ts",
+      "prepareSites": 30
+    },
+    {
+      "file": "src/lib/loja/gestao/semente.ts",
+      "prepareSites": 16
+    },
+    {
+      "file": "src/lib/meta/deletion.ts",
+      "prepareSites": 5
+    },
+    {
+      "file": "src/lib/rate-limit.ts",
+      "prepareSites": 2
+    },
+    {
+      "file": "src/lib/storage/media.ts",
+      "prepareSites": 7
+    },
+    {
+      "file": "src/lib/storage/variants.ts",
+      "prepareSites": 3
+    },
+    {
+      "file": "src/lib/whatsapp/config.ts",
+      "prepareSites": 6
+    },
+    {
+      "file": "src/lib/whatsapp/core.ts",
+      "prepareSites": 56
+    }
+  ],
+  "routingFiles": [
+    "src/app/(erp)/(app)/configuracoes/layout.tsx",
+    "src/app/(erp)/(app)/configuracoes/template.tsx",
+    "src/app/(erp)/(app)/layout.tsx",
+    "src/app/(erp)/(app)/leads/template.tsx",
+    "src/app/(erp)/(app)/loading.tsx",
+    "src/app/(erp)/(app)/template.tsx",
+    "src/app/(erp)/(legal)/layout.tsx",
+    "src/app/(erp)/layout.tsx",
+    "src/app/(site)/layout.tsx",
+    "src/app/(site)/loja/(compra)/layout.tsx",
+    "src/app/(site)/loja/(conta)/conta/layout.tsx",
+    "src/app/(site)/loja/(conta)/layout.tsx",
+    "src/app/(site)/loja/(vitrine)/layout.tsx",
+    "src/app/(site)/loja/(vitrine)/personalizado/monte-o-seu/layout.tsx",
+    "src/app/(site)/loja/error.tsx",
+    "src/app/(site)/loja/not-found.tsx",
+    "src/app/(site)/loja/opengraph-image.tsx",
+    "src/app/(site)/loja/sitemap.ts",
+    "src/app/robots.ts",
+    "src/loja/proxy.ts",
+    "src/proxy.ts"
+  ],
+  "migrations": [
+    "001_auth.sql",
+    "002_whatsapp.sql",
+    "003_meta_deletion.sql",
+    "004_integration_settings.sql",
+    "005_integration_manager.sql",
+    "006_erp.sql",
+    "007_workspace_access.sql",
+    "008_loja_avaliacoes.sql",
+    "009_loja_clientes.sql",
+    "010_loja_gestao.sql",
+    "011_performance.sql",
+    "012_storage.sql",
+    "013_crm_reporting_indexes.sql",
+    "014_image_compression.sql"
+  ]
+}

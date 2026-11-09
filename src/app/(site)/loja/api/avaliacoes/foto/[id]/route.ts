@@ -11,12 +11,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const tamanho = new URL(request.url).searchParams.get("tamanho") === "grande" ? "grande" : "mini";
   try {
-    const foto = await fotoDaAvaliacao(id, tamanho, true);
+    const foto = await fotoDaAvaliacao(id, tamanho, true,new URL(request.url).searchParams.get('formato')==='avif'?'avif':'webp');
     return new Response(new Uint8Array(foto.conteudo), {
-      headers: {
+      headers: { Vary:"Accept",
         "Content-Type": foto.tipo,
         "Content-Length": String(foto.conteudo.length),
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": "public, max-age=31536000, s-maxage=86400, immutable",
         "Content-Disposition": "inline",
         "X-Content-Type-Options": "nosniff",
       },

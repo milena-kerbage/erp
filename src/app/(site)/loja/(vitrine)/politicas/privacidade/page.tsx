@@ -104,8 +104,16 @@ export default function Privacidade() {
           e-mails pela loja.
         </p>
         <p>
+          Enquanto você está com a conta aberta, guardamos também uma cópia da sua sacola (as peças, as opções escolhidas, as quantidades
+          e o valor “a partir de”, com a data da última mudança), para você retomar em outro aparelho e para a equipe poder ajudar a
+          concluir um pedido que ficou parado: a vendedora pode mandar uma mensagem pelo WhatsApp, nunca de forma automática. Sem login,
+          a sacola fica só no seu navegador. O cadastro também entra no nosso controle de atendimento (CRM), com os pedidos feitos; para
+          apagar esse registro também, peça pelo WhatsApp {EMPRESA.whatsapp.exibicao} ou pelo e-mail{" "}
+          <a href={`mailto:${EMPRESA.emailPrivacidade}`}>{EMPRESA.emailPrivacidade}</a>.
+        </p>
+        <p>
           Você pode excluir a conta a qualquer momento em <Link href="/conta/seguranca">Minha conta › Segurança</Link>. A exclusão
-          apaga a conta, os dados pessoais, as sessões e o cupom; os pedidos ficam no ateliê sem nome, contato, cidade, observações nem a
+          apaga a conta, os dados pessoais, as sessões, a cópia da sacola e o cupom; os pedidos ficam no ateliê sem nome, contato, cidade, observações nem a
           mensagem, só com as peças e os valores, para controle e obrigações legais.
         </p>
 

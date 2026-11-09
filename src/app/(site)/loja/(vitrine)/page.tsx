@@ -18,16 +18,18 @@ import { GradeAbas } from "@/loja/componentes/inicio/GradeAbas";
 import { Hero } from "@/loja/componentes/inicio/Hero";
 import { SecaoInstagram } from "@/loja/componentes/inicio/Instagram";
 import { ParEditorial } from "@/loja/componentes/inicio/ParEditorial";
-import { buscarVarios, listarProdutos, MAIS_VENDIDOS_SLUGS, PRONTA_ENTREGA } from "@/loja/lib/catalogo/exemplos";
+import { indiceDaLoja } from "@/lib/loja/catalogo";
+import { PRONTA_ENTREGA } from "@/loja/lib/catalogo/constantes";
 
 // Página inicial: alterna mídia de ponta a ponta com módulos contidos e claros, com 96 px entre
 // módulos no desktop e 64 no celular, e fecha com o Instagram do ateliê antes do rodapé.
-// Fotos: ver src/loja/componentes/inicio/conteudo.ts.
-export default function PaginaInicial() {
-  const maisVendidos = buscarVarios(MAIS_VENDIDOS_SLUGS);
-  const prontaEntrega = listarProdutos()
-    .filter((produto) => produto.atributos.entrega?.includes(PRONTA_ENTREGA))
-    .slice(0, 8);
+// Fotos: ver src/loja/componentes/inicio/conteudo.ts. Carrosséis: as coleções "mais-vendidos" e
+// "pronta-entrega" do cadastro do ERP (sem a coleção, as peças a pronta entrega do catálogo).
+export default async function PaginaInicial() {
+  const { catalogo, buscarVarios, colecao } = await indiceDaLoja();
+  const maisVendidos = buscarVarios(catalogo.maisVendidos);
+  const colecaoPronta = catalogo.origem === "banco" ? colecao("pronta-entrega") : [];
+  const prontaEntrega = (colecaoPronta.length ? colecaoPronta : catalogo.produtos.filter((produto) => produto.atributos.entrega?.includes(PRONTA_ENTREGA))).slice(0, 8);
 
   return (
     <>

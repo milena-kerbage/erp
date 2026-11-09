@@ -4,13 +4,40 @@
 
 export type Linha = { preco: string; quantidade: number };
 
-export type Cupom = { codigo: string; percentual: number; minimoCentavos: number; descricao: string };
+// Cupom: percentual (`percentual`) ou valor fixo (`valorCentavos`, com `percentual` 0). Os de campanha
+// vêm do cadastro do ERP (erp_core.loja_cupons_campanha) com validade (`inicio`/`fim`, ms), `primeiraCompra`
+// e `exibir` (sugerido no seletor da sacola); o servidor confere tudo de novo ao criar o pedido.
+export type Cupom = {
+  codigo: string;
+  percentual: number;
+  minimoCentavos: number;
+  descricao: string;
+  valorCentavos?: number;
+  inicio?: number;
+  fim?: number;
+  primeiraCompra?: boolean;
+  exibir?: boolean;
+};
 
 // [CONFIRMAR] cupons e regras com o ateliê (exemplos para o wireframe).
+// Fallback: valem enquanto o banco não tem cupons de campanha cadastrados (a importação do catálogo
+// grava o ENXOVAL10 lá).
 export const CUPONS: Cupom[] = [
-  { codigo: "BEMVINDO5", percentual: 5, minimoCentavos: 0, descricao: "5% na primeira compra" },
-  { codigo: "ENXOVAL10", percentual: 10, minimoCentavos: 100000, descricao: "10% em compras acima de R$ 1.000" },
+  { codigo: "BEMVINDO5", percentual: 5, minimoCentavos: 0, descricao: "5% na primeira compra", exibir: true },
+  { codigo: "ENXOVAL10", percentual: 10, minimoCentavos: 100000, descricao: "10% em compras acima de R$ 1.000", exibir: true },
 ];
+
+/** Cupom dentro da validade (início e fim opcionais, em ms). */
+export function cupomVigente(cupom: Pick<Cupom, "inicio" | "fim">, agora = Date.now()): boolean {
+  return (cupom.inicio === undefined || agora >= cupom.inicio) && (cupom.fim === undefined || agora < cupom.fim);
+}
+
+/** Desconto do cupom sobre o subtotal (0 abaixo do mínimo; valor fixo nunca passa do subtotal). */
+export function descontoDoCupom(cupom: Cupom | undefined, subtotal: number): number {
+  if (!cupom || subtotal < cupom.minimoCentavos) return 0;
+  if (cupom.valorCentavos !== undefined && cupom.valorCentavos > 0) return Math.min(cupom.valorCentavos, subtotal);
+  return Math.round((subtotal * cupom.percentual) / 100);
+}
 
 export const DESCONTO_PIX_PERCENTUAL = 5;
 export const PARCELA_MINIMA_CENTAVOS = 2000;
@@ -76,7 +103,7 @@ export type Totais = {
 export function calcularTotais(linhas: Linha[], cupom?: Cupom, frete = 0): Totais {
   const subtotal = linhas.reduce((soma, linha) => soma + centavos(linha.preco) * linha.quantidade, 0);
   const itens = linhas.reduce((soma, linha) => soma + linha.quantidade, 0);
-  const descontoCupom = cupom && subtotal >= cupom.minimoCentavos ? Math.round((subtotal * cupom.percentual) / 100) : 0;
+  const descontoCupom = descontoDoCupom(cupom, subtotal);
   const produtos = subtotal - descontoCupom;
   const descontoPix = Math.round((produtos * DESCONTO_PIX_PERCENTUAL) / 100);
   const totalCartao = produtos + frete;

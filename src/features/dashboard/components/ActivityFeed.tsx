@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import styled from "@emotion/styled";
 import {
@@ -16,7 +16,7 @@ import { transientOptions } from "@/lib/emotion/transient";
 import { formatTime } from "@/lib/format";
 import type { Tone } from "@/styles/theme";
 import { findStatus } from "@/features/conversations/status";
-import { useLeads } from "@/features/leads/store";
+import {erpRequest} from "@/features/erp/client";
 import { useFunnels } from "@/features/settings/store";
 import { dayKey, startOfDay } from "../metrics";
 import { Card, CardHead, EmptyNote, Segmented, SegmentedItem } from "./ui";
@@ -130,109 +130,12 @@ const shortDate = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-d
 
 /** Tudo o que aconteceu no ateliê: leads novos, etapas, responsáveis, conversas e arquivos. */
 export function ActivityFeed({ now, className }: { now: Date; className?: string }) {
-  const { leads, details, messages } = useLeads();
+  const [events,setEvents]=useState<{id:string;action:string;at:string;leadId:string;name:string}[]>([]);
+  useEffect(()=>{let active=true;void erpRequest<{events:typeof events}>("/dashboard/activity").then(result=>{if(active)setEvents(result.events);}).catch(()=>{});return()=>{active=false;};},[]);
   const { findFunnel } = useFunnels();
   const [range, setRange] = useState<Range>("week");
 
-  const activities = useMemo(() => {
-    const list: Activity[] = [];
-    for (const lead of leads) {
-      const info = details[lead.id];
-      const funnel = findFunnel(lead.funnelId);
-      const first = lead.name.split(" ")[0];
-      for (const event of info?.history ?? []) {
-        const base = { id: `${lead.id}-${event.id}`, at: event.at, href: `/leads/${lead.id}` };
-        if (event.type === "created") {
-          list.push({
-            ...base,
-            icon: UserPlusIcon,
-            tone: "green",
-            title: "Novo lead",
-            detail: (
-              <>
-                <strong>{lead.name}</strong> chegou pelo {event.source}
-              </>
-            ),
-            text: `${lead.name} ${event.source}`,
-          });
-        }
-        if (event.type === "stage") {
-          const stage = funnel.stages.find((item) => item.id === event.stage)?.label ?? event.stage;
-          list.push({
-            ...base,
-            icon: ArrowFatLinesRightIcon,
-            tone: "blue",
-            title: "Mudou de etapa",
-            detail: (
-              <>
-                {first} foi para <strong>{stage}</strong>
-              </>
-            ),
-            text: `${lead.name} ${stage}`,
-          });
-        }
-        if (event.type === "owner") {
-          list.push({
-            ...base,
-            icon: UserSwitchIcon,
-            tone: "lavender",
-            title: "Novo responsável",
-            detail: (
-              <>
-                {first} agora com <strong>{event.owner}</strong>
-              </>
-            ),
-            text: `${lead.name} ${event.owner}`,
-          });
-        }
-        if (event.type === "status") {
-          const status = findStatus(event.to);
-          list.push({
-            ...base,
-            icon: ListChecksIcon,
-            tone: status.tone,
-            title: `Conversa ${status.label.toLowerCase()}`,
-            detail: (
-              <>
-                Atendimento de <strong>{first}</strong> por {event.by.split(" ")[0]}
-              </>
-            ),
-            text: `${lead.name} ${status.label} ${event.by}`,
-          });
-        }
-        if (event.type === "file") {
-          list.push({
-            ...base,
-            icon: PaperclipIcon,
-            tone: "yellow",
-            title: "Arquivo anexado",
-            detail: (
-              <>
-                <strong>{event.fileName}</strong> em {first}
-              </>
-            ),
-            text: `${lead.name} ${event.fileName}`,
-          });
-        }
-      }
-
-      for (const message of messages[lead.id] ?? []) {
-        if (message.direction !== "in" || message.kind !== "message") continue;
-        const text = message.text || "Anexo";
-        list.push({
-          id: `${lead.id}-${message.id}`,
-          at: message.at,
-          icon: ChatCircleTextIcon,
-          tone: "teal",
-          title: `Mensagem de ${first}`,
-          detail: <>“{text.length > 70 ? `${text.slice(0, 70).trimEnd()}…` : text}”</>,
-          text: `${lead.name} ${text}`,
-          href: `/leads/${lead.id}`,
-        });
-      }
-    }
-    return list.sort((a, b) => b.at.localeCompare(a.at));
-  }, [leads, details, messages, findFunnel]);
+  const activities=useMemo<Activity[]>(()=>events.map(event=>({id:event.id,at:event.at,href:`/leads/${event.leadId}`,icon:event.action==='created'?UserPlusIcon:ListChecksIcon,tone:'green',title:({created:'Novo lead',updated:'Ficha atualizada',note_created:'Nota registrada',file_attached:'Arquivo anexado',file_removed:'Arquivo removido'} as Record<string,string>)[event.action]??'Ficha atualizada',detail:<strong>{event.name}</strong>,text:event.name})),[events]);
 
   const today = startOfDay(now);
   const yesterday = new Date(today);

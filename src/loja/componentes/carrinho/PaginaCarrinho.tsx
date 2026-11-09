@@ -11,6 +11,7 @@ import { resolverItem } from "@/loja/lib/carrinho/linhas";
 import { ConviteCupom } from "@/loja/componentes/conta/ConviteCupom";
 import { type ContaDoCupom, cupomDaSacola, useContaDoCupom } from "@/loja/componentes/conta/cupomSacola";
 import {
+  type Cupom,
   calcularTotais,
   DESCONTO_PIX_PERCENTUAL,
   MAX_PARCELAS,
@@ -57,12 +58,12 @@ type Remocao = { item: ItemCarrinho; produto: ProdutoCarrinho };
 // então não entram aqui; o prazo de PRODUÇÃO (pronta entrega x sob encomenda x projeto) continua.
 // Produtos, projetos de quarto e o quartinho personalizado ficam na mesma sacola (resolverItem).
 // Cupom: o escolhido ou, com conta, o de primeira compra aplicado sozinho (cupomDaSacola; o servidor confere).
-function calcular(itens: ItemCarrinho[], porSlug: Map<string, ProdutoCarrinho>, preferencias: PreferenciasCompra, contaCupom: ContaDoCupom) {
+function calcular(itens: ItemCarrinho[], porSlug: Map<string, ProdutoCarrinho>, preferencias: PreferenciasCompra, contaCupom: ContaDoCupom, cupons: Cupom[]) {
   const resolvidos = itens.map((item) => ({ item, produto: resolverItem(item, porSlug) }));
   const linhas = resolvidos.flatMap(({ item, produto }) => (produto ? [{ item, produto }] : []));
   const indisponiveis = resolvidos.flatMap(({ item, produto }) => (produto ? [] : [item]));
   const precos = linhas.map(({ item, produto }) => ({ preco: produto.preco, quantidade: item.quantidade }));
-  const escolhido = cupomDaSacola(preferencias, contaCupom, calcularTotais(precos).subtotal);
+  const escolhido = cupomDaSacola(preferencias, contaCupom, calcularTotais(precos).subtotal, cupons);
   const cupom = escolhido.cupom;
   const totais = calcularTotais(precos, cupom);
   const producao = prazoDeProducao(linhas.map(({ produto }) => produto));
@@ -78,7 +79,7 @@ const contagem = (quantidade: number) => `${quantidade} ${quantidade === 1 ? "it
 // A loja é um CATÁLOGO COM PREÇO: valores "a partir de", frete e prazo de entrega combinados pelo
 // WhatsApp e o botão leva ao pedido (/checkout), que abre a conversa com o ateliê. O cupom segue em
 // `usePreferenciasCompra`. Itens no navegador até o carrinho existir na API.
-export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCarrinho[]; maisVendidos: string[] }) {
+export function PaginaCarrinho({ catalogo, maisVendidos, cupons }: { catalogo: ProdutoCarrinho[]; maisVendidos: string[]; cupons: Cupom[] }) {
   const itens = useItensCarrinho();
   const favoritos = useFavoritos();
   const preferencias = usePreferenciasCompra();
@@ -100,7 +101,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
 
   if (itens === null) return <Esqueleto />;
 
-  const conta = calcular(itens, porSlug, preferencias, contaCupom);
+  const conta = calcular(itens, porSlug, preferencias, contaCupom, cupons);
   const { linhas, totais, cupom } = conta;
   const vazia = linhas.length === 0;
   const noCarrinho = new Set(linhas.flatMap(({ item, produto }) => (produto.tipo ? [] : [item.slug])));
@@ -126,6 +127,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
       porSlug,
       preferencias,
       contaCupom,
+      cupons,
     );
     avisar(`Quantidade de ${nome}: ${quantidade}. Total a partir de ${reais(depois.totais.totalCartao)}.`);
   }
@@ -371,6 +373,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos }: { catalogo: ProdutoCa
           subtotal={totais.subtotal}
           desconto={totais.descontoCupom}
           conta={contaCupom}
+          cupons={cupons}
           abertoInicial
           aoMudar={(codigo, aviso) => {
             setAvisoCupom(aviso ?? "");

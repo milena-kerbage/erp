@@ -69,7 +69,7 @@ test('CRM grava alterações e histórico atribuído ao ator; concorrência reje
  await rejects(()=>createLead({lead:{...leadInput,budget:1.001}},actor),'INVALID_NUMBER');
 });
 test('notas internas e anexos reais persistem sem simular envio de mensagem externa',async()=>{
- const contact=await lead();await erpDB().prepare('INSERT INTO lead_attachments VALUES (?, ?, ?, ?, ?, ?, NULL, ?)').run('anexo-1',contact.id,'medidas.txt',4,'text/plain',Date.now(),Buffer.from('1234'));
+ const contact=await lead();await erpDB().prepare('INSERT INTO lead_attachments (id,lead_id,name,size,mime_type,created,duration,content) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)').run('anexo-1',contact.id,'medidas.txt',4,'text/plain',Date.now(),Buffer.from('1234'));
  const note=await addNote(contact.id,{text:'Medidas conferidas',attachmentIds:['anexo-1']},actor);
  assert.equal(note.message.kind,'note');assert.equal(note.message.status,undefined);
  const snapshot=await leadsSnapshot();assert.equal(snapshot.messages[contact.id][0].text,'Medidas conferidas');assert.equal(snapshot.messages[contact.id][0].attachments[0].name,'medidas.txt');assert.equal(snapshot.details[contact.id].attachments[0].url,`/api/erp/leads/${contact.id}/attachments/anexo-1`);

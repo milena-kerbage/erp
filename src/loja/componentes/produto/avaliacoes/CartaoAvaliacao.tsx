@@ -45,7 +45,7 @@ export function CartaoAvaliacao({ avaliacao, aoAbrirFoto }: { avaliacao: Avaliac
                 className={miniatura}
               >
                 {/* biome-ignore lint/performance/noImgElement: WebP já recomprimido no servidor (400 px), servido pela API com cache imutável */}
-                <img src={urlFotoAvaliacao(foto.id, "mini")} alt="" loading="lazy" decoding="async" width={80} height={80} className={imagemMiniatura} />
+                <picture style={{display:"contents"}}><source type="image/avif" srcSet={urlFotoAvaliacao(foto.id,"mini")+"&formato=avif"}/><img src={urlFotoAvaliacao(foto.id, "mini")} alt="" loading="lazy" decoding="async" width={80} height={80} className={imagemMiniatura} /></picture>
               </button>
             </li>
           ))}
@@ -104,14 +104,14 @@ export function FotosAvaliacao({ galeria, aberta, aoFechar }: { galeria: Galeria
         </div>
         {foto && (
           // biome-ignore lint/performance/noImgElement: foto já otimizada no servidor (WebP 1600 px)
-          <img
+          <picture style={{display:"contents"}} key={foto.id}><source type="image/avif" srcSet={urlFotoAvaliacao(foto.id,"grande")+"&formato=avif"}/><img
             key={foto.id}
             src={urlFotoAvaliacao(foto.id, "grande")}
             alt={`Foto ${indice + 1} enviada por ${origem?.autora ?? "cliente"}`}
             width={foto.largura}
             height={foto.altura}
             className={imagemGrande}
-          />
+          /></picture>
         )}
         {total > 1 && (
           // biome-ignore lint/a11y/useSemanticElements: grupo de dois botões em linha

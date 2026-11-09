@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { PaginaCarrinho } from "@/loja/componentes/carrinho/PaginaCarrinho";
-import { catalogoParaCarrinho } from "@/loja/lib/carrinho/catalogo";
-import { MAIS_VENDIDOS_SLUGS } from "@/loja/lib/catalogo/exemplos";
+import { catalogoDaLoja, catalogoDaSacola } from "@/lib/loja/catalogo";
 
 // Sacola (lululemon-sacola.md), no grupo (compra): cabeçalho mínimo e rodapé enxuto, como o checkout.
 // A URL pública continua /carrinho. Os itens vivem no navegador até o carrinho existir na API; o
@@ -14,9 +13,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/carrinho" },
 };
 
-export default function Carrinho() {
-  const catalogo = catalogoParaCarrinho();
+// O catálogo e os cupons de campanha vêm do cadastro do ERP (ou do de exemplo): src/lib/loja/catalogo.ts.
+export default async function Carrinho() {
+  const [catalogo, { maisVendidos: destaques, cupons }] = await Promise.all([catalogoDaSacola(), catalogoDaLoja()]);
   // Mais vendidos primeiro; o resto do catálogo completa as sugestões quando o mix acaba.
-  const maisVendidos = [...new Set([...MAIS_VENDIDOS_SLUGS, ...catalogo.map((produto) => produto.slug)])];
-  return <PaginaCarrinho catalogo={catalogo} maisVendidos={maisVendidos} />;
+  const maisVendidos = [...new Set([...destaques, ...catalogo.map((produto) => produto.slug)])];
+  return <PaginaCarrinho catalogo={catalogo} maisVendidos={maisVendidos} cupons={cupons} />;
 }

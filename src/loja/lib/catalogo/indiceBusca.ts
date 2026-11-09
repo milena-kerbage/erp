@@ -1,9 +1,10 @@
 import "server-only";
 import { TERMOS_MAIS_BUSCADOS } from "@/loja/componentes/layout/cabecalho/navegacao";
 import { dividirNome, fotosDoProduto } from "@/loja/componentes/produto/dados";
+import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { listarProjetos } from "@/loja/lib/casas/catalogo";
-import { buscarCategoria, CATEGORIAS_EXISTENTES } from "@/loja/lib/catalogo/categorias";
-import { listarProdutos, MAIS_VENDIDOS_SLUGS, type Produto } from "@/loja/lib/catalogo/exemplos";
+import type { ArvoreCategorias } from "@/loja/lib/catalogo/categorias";
+import type { Produto } from "@/loja/lib/catalogo/exemplos";
 import { buscarTexto } from "@/loja/lib/catalogo/listagem";
 import {
   type EloSugerido,
@@ -20,25 +21,26 @@ import { formatarPreco } from "@/loja/lib/formatacao/moeda";
 // Índice das sugestões da busca, montado no servidor a partir do catálogo (uma vez por processo) e
 // respondido pela rota /api/busca/sugestoes. Fontes dos termos: mais buscados, categorias, cores,
 // tecidos, temas e estilos e o nome das peças. Todo termo sugerido leva a uma /busca com resultado
-// (é conferido com a mesma buscarTexto da página de resultados). Quando o catálogo vier da API do
-// ERP, só a montagem do índice muda.
+// (é conferido com a mesma buscarTexto da página de resultados). O catálogo é o da loja (cadastro do ERP
+// ou o de exemplo): o índice e as respostas guardadas valem para uma versão do catálogo e são refeitos
+// quando ele muda (escrita no ERP → revalidateTag).
 
 const ATRIBUTOS_TERMO = ["cor", "tecido", "tema", "estilo"] as const;
 const MAXIMO_CATEGORIAS = 3;
 const MAXIMO_PROJETOS = 2;
 const MAXIMO_CACHE = 300;
 
-type Indice = { termos: TermoIndice[]; produtos: Produto[]; categorias: EloSugerido[]; projetos: Array<EloSugerido & { texto: string }> };
+type Indice = { termos: TermoIndice[]; produtos: Produto[]; categorias: EloSugerido[]; projetos: Array<EloSugerido & { texto: string }>; destaques: string[] };
 
-let indice: Indice | null = null;
+let indice: { versao: string; dados: Indice } | null = null;
 const cache = new Map<string, RespostaSugestoes>();
 
 function minusculo(texto: string): string {
   return texto.toLocaleLowerCase("pt-BR");
 }
 
-function montarIndice(): Indice {
-  const produtos = listarProdutos();
+function montarIndice(produtos: Produto[], arvore: ArvoreCategorias, destaques: string[]): Indice {
+  const { buscarCategoria, existentes: CATEGORIAS_EXISTENTES } = arvore;
   const candidatos: TermoIndice[] = [
     ...TERMOS_MAIS_BUSCADOS.map((texto) => ({ texto, fonte: "popular" as const })),
     ...[...CATEGORIAS_EXISTENTES].map((chave) => ({ texto: minusculo(buscarCategoria(chave)?.rotulo ?? ""), fonte: "categoria" as const })),
@@ -63,7 +65,7 @@ function montarIndice(): Indice {
     href: `/personalizado/${projeto.slug}`,
     texto: `${projeto.nome} ${projeto.tema} ${projeto.estilo} ${projeto.tecido}`,
   }));
-  return { termos, produtos, categorias, projetos };
+  return { termos, produtos, categorias, projetos, destaques };
 }
 
 function familiaDe(produto: Produto): string | undefined {
@@ -84,18 +86,23 @@ export function vazio(q: string): RespostaSugestoes {
 }
 
 // A consulta já chega aparada (normalizarBusca); a chave do cache é a forma normalizada.
-export function sugerir(q: string): RespostaSugestoes {
+export async function sugerir(q: string): Promise<RespostaSugestoes> {
   const chave = normalizarTexto(q);
   if (chave.length < MINIMO_CARACTERES) return vazio(q);
+  const catalogo = await catalogoDaLoja();
+  if (indice?.versao !== catalogo.versao) {
+    indice = { versao: catalogo.versao, dados: montarIndice(catalogo.produtos, await arvoreDaLoja(), catalogo.maisVendidos) };
+    cache.clear();
+  }
   const guardada = cache.get(chave);
   if (guardada) return { ...guardada, q };
 
-  indice ??= montarIndice();
-  const encontrados = buscarTexto(indice.produtos, q);
+  const dados = indice.dados;
+  const encontrados = buscarTexto(dados.produtos, q);
   const produtos = ordenarProdutos(
     encontrados.map((produto) => ({ ...produto, familia: familiaDe(produto) })),
     q,
-    { destaques: MAIS_VENDIDOS_SLUGS },
+    { destaques: dados.destaques },
   ).map((produto) => {
     const { base, variacao } = dividirNome(produto.nome);
     const [foto] = fotosDoProduto(produto);
@@ -112,10 +119,10 @@ export function sugerir(q: string): RespostaSugestoes {
   });
   const resposta: RespostaSugestoes = {
     q,
-    termos: sugerirTermos(indice.termos, q),
+    termos: sugerirTermos(dados.termos, q),
     produtos,
-    categorias: melhores(indice.categorias, (categoria) => categoria.rotulo, q, MAXIMO_CATEGORIAS),
-    projetos: melhores(indice.projetos, (projeto) => projeto.texto, q, MAXIMO_PROJETOS),
+    categorias: melhores(dados.categorias, (categoria) => categoria.rotulo, q, MAXIMO_CATEGORIAS),
+    projetos: melhores(dados.projetos, (projeto) => projeto.texto, q, MAXIMO_PROJETOS),
     total: encontrados.length,
   };
   if (cache.size >= MAXIMO_CACHE) cache.delete(cache.keys().next().value as string);

@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { randomBytes, createHash, scrypt, timingSafeEqual } from 'node:crypto';
 import { databaseFor } from '../database.ts';
+import { databaseLimited } from '../rate-limit.ts';
 
 export const SESSION_TTL = 8 * 60 * 60 * 1000;
 export const IDLE_TTL = 30 * 60 * 1000;
@@ -66,15 +67,7 @@ export async function createUser(email: string, name: string, hash: string, id =
   await db().prepare('INSERT INTO users (id, email, name, password_hash) VALUES (?, ?, ?, ?)').run(id, normalizeEmail(email), name.trim(), hash);
 }
 export async function limited(key: string, max: number, window = 15 * 60 * 1000) {
-  const now = Date.now();
-  const database = db();
-  return database.transaction(async () => {
-    await database.prepare('DELETE FROM attempts WHERE until < ?').run(now);
-    await database.prepare(`INSERT INTO attempts (key, count, until) VALUES (?, 1, ?)
-      ON CONFLICT(key) DO UPDATE SET count = attempts.count + 1`).run(key, now + window);
-    const row = await database.prepare('SELECT count FROM attempts WHERE key = ?').get(key) as { count: number };
-    return row.count > max;
-  });
+  return databaseLimited(db(), 'attempts', key, max, window);
 }
 export async function createSession(userId: string) {
   const token = newToken();
@@ -107,13 +100,19 @@ export async function changeUserPassword(user: AuthUser, password: string) {
 export async function sessionUser(token?: string, touch = true) {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const now = Date.now();
+  if (touch) {
+    // Valida e renova na mesma instrução; uma sessão revogada nunca é reativada.
+    const user = await db().prepare(`UPDATE sessions SET seen = ?
+      WHERE hash = ? AND expires > ? AND seen > ?
+      RETURNING user_id AS id,
+        (SELECT email FROM users WHERE users.id = user_id) AS email,
+        (SELECT name FROM users WHERE users.id = user_id) AS name`).get(now, digest(token), now, now - IDLE_TTL) as Pick<AuthUser, 'id' | 'email' | 'name'> | undefined;
+    return user ? {id: user.id, email: user.email, name: user.name} : null;
+  }
   const user = await db().prepare(`SELECT users.id, users.email, users.name FROM sessions JOIN users ON users.id = sessions.user_id
     WHERE sessions.hash = ? AND sessions.expires > ? AND sessions.seen > ?`).get(digest(token), now, now - IDLE_TTL) as Pick<AuthUser, 'id' | 'email' | 'name'> | undefined;
   if (!user) return null;
   // Background polling validates the existing timeout without extending activity.
-  if (!touch) return { id: user.id, email: user.email, name: user.name };
-  const refreshed = await db().prepare('UPDATE sessions SET seen = ? WHERE hash = ? AND expires > ? AND seen > ?').run(now, digest(token), now, now - IDLE_TTL);
-  if (!refreshed.changes) return null;
   return { id: user.id, email: user.email, name: user.name };
 }
 export async function revokeSession(token?: string) {

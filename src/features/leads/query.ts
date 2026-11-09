@@ -1,0 +1,3 @@
+import type { Lead, LeadDetails, ChatMessage, ConversationStatus } from './types.ts';
+export type LeadQuery = {q?:string;funnels?:string[];stages?:string[];sources?:string[];owners?:string[];createdDays?:number;eventDays?:number|'none';stale?:boolean;unread?:boolean;sort?:'activity'|'name'|'event'|'stage'|'budget'|'contact'|'created'|'source'|'owner';direction?:'asc'|'desc';conversations?:boolean;statuses?:string[];archived?:boolean;searchNotes?:boolean};
+export type LeadPage = {leads:Lead[];details:Record<string,LeadDetails>;messages:Record<string,ChatMessage[]>;statuses:Record<string,ConversationStatus>;pagination:{limit:number;offset:number;total:number|null;hasMore:boolean;nextCursor?:string|null};byStage:{funnelId:string;stage:string;count:number;budget:number}[]};

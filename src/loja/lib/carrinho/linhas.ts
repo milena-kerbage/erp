@@ -91,12 +91,29 @@ export function produtoDoQuartinho(item: ItemCarrinho): ProdutoCarrinho | undefi
   };
 }
 
-// O que a sacola mostra para o item; undefined = indisponível (fica fora do total, com aviso).
+// Acréscimos das opções escolhidas (cadastro do ERP): a opção da variação (ex.: tamanho maior) e o
+// bordado com o nome quando a peça cobra por ele. Sem acréscimo, o produto volta igual.
+export function acrescimoDoItem(produto: ProdutoCarrinho, item: Pick<ItemCarrinho, "variacao" | "personalizacao">): number {
+  const opcao = item.variacao ? produto.opcoes?.find((atual) => atual.rotulo === item.variacao) : undefined;
+  const bordado = item.personalizacao === "com" ? (produto.personalizacaoAcrescimoCentavos ?? 0) : 0;
+  return (opcao?.acrescimoCentavos ?? 0) + bordado;
+}
+
+function comAcrescimo(produto: ProdutoCarrinho, item: ItemCarrinho): ProdutoCarrinho {
+  const acrescimo = acrescimoDoItem(produto, item);
+  if (acrescimo <= 0) return produto;
+  const preco = centavos(produto.preco) + acrescimo;
+  return { ...produto, preco: decimal(preco), pix: decimal(Math.round((preco * (100 - DESCONTO_PIX_PERCENTUAL)) / 100)) };
+}
+
+// O que a sacola mostra para o item (já com o preço das opções escolhidas); undefined = indisponível
+// (fica fora do total, com aviso). A mesma função no navegador e no recálculo do servidor.
 export function resolverItem(item: ItemCarrinho, porSlug: Map<string, ProdutoCarrinho>): ProdutoCarrinho | undefined {
   const tipo = tipoDe(item);
   if (tipo === "projeto") return produtoDoProjeto(item);
   if (tipo === "personalizado") return produtoDoQuartinho(item);
-  return porSlug.get(item.slug);
+  const produto = porSlug.get(item.slug);
+  return produto && comAcrescimo(produto, item);
 }
 
 // Linhas de atributos do item na sacola (12, cinza): cor, tamanho do berço, bordado e a unidade

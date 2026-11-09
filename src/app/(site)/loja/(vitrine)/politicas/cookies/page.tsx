@@ -79,8 +79,8 @@ export default function Cookies() {
         <p className={css({ fontSize: "sm", color: "textoSuave" })}>Atualizada em {ATUALIZACAO_POLITICAS}.</p>
         <p>
           Cookies são pequenos arquivos que o site grava no seu navegador. A loja também usa o armazenamento local do navegador
-          (localStorage), que funciona de forma parecida, mas nunca é enviado ao nosso servidor. Não há cookies de outras empresas sem a
-          sua autorização.
+          (localStorage), que funciona de forma parecida e fica no aparelho (a única exceção é a sacola de quem entrou na conta, veja
+          abaixo). Não há cookies de outras empresas sem a sua autorização.
         </p>
 
         <h2 id="necessarios">Necessários</h2>
@@ -99,8 +99,9 @@ export default function Cookies() {
       <div className={depoisDaTabela}>
         <h2 id="armazenamento">Armazenamento no seu aparelho</h2>
         <p>
-          Ficam só no seu navegador e não são enviados ao ateliê. É assim que a loja lembra a sua sacola, os seus favoritos e os pedidos
-          que você enviou, sem precisar de login.
+          Ficam no seu navegador. É assim que a loja lembra a sua sacola, os seus favoritos e os pedidos que você enviou, sem precisar
+          de login. Com a conta aberta, uma cópia da sacola vai também para a sua conta no ateliê (veja a{" "}
+          <Link href="/politicas/privacidade#conta">Política de privacidade</Link>); sem login, nada sai do aparelho.
         </p>
       </div>
       <Tabela linhas={ARMAZENAMENTO} rotulo="Dados guardados no navegador" />

@@ -28,9 +28,11 @@ export function LeadDetail({ leadId }: { leadId: string }) {
   const mobile = useIsMobile();
   const [archiving, setArchiving] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [requested,setRequested]=useState<string|null>(null);
   const [pane, setPane] = useState<Pane>("info");
   const {
     leads,
+    hydrate,
     loading,
     error,
     refresh,
@@ -51,6 +53,8 @@ export function LeadDetail({ leadId }: { leadId: string }) {
   const switchRef = useRef<HTMLDivElement>(null);
   const { findFunnel } = useFunnels();
   const { currentUser: teamMember } = useWorkspace();
+
+  useEffect(()=>{let active=true;void hydrate(leadId).finally(()=>{if(active)setRequested(leadId);});return()=>{active=false;};},[leadId,hydrate]);
 
   // Abrir a oportunidade mostra o chat: a conversa fica lida.
   useEffect(() => {
@@ -113,8 +117,8 @@ export function LeadDetail({ leadId }: { leadId: string }) {
     return () => observer.disconnect();
   }, [pane, pendingMessages]);
 
-  if (loading) return <div role="status" style={{ padding: "2rem" }}>Carregando oportunidade…</div>;
-  if (error && (!lead || !leadDetails)) return <div role="alert" style={{ padding: "2rem" }}>{error} <Button onClick={() => void refresh()}>Tentar novamente</Button></div>;
+  if ((loading && (!lead || !leadDetails)) || requested!==leadId) return <div role="status" style={{ padding: "2rem" }}>Carregando oportunidade…</div>;
+  if (error && (!lead || !leadDetails)) return <div role="alert" style={{ padding: "2rem" }}>{error} <Button onClick={() => void hydrate(leadId)}>Tentar novamente</Button></div>;
   if (!lead || !leadDetails) notFound();
 
   return (

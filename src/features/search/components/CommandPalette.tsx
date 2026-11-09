@@ -37,7 +37,8 @@ import { EASE_OUT, fadeIn, rise } from "@/styles/animations";
 import type { Tone } from "@/styles/theme";
 import { backdropExit, DOCK_SPACE, sheetExit, sheetStyles } from "@/styles/sheet";
 import { formatBudget, formatPhone } from "@/features/leads/format";
-import { useLeads } from "@/features/leads/store";
+import {erpRequest} from "@/features/erp/client";
+import type {LeadPage} from "@/features/leads/query";
 import { useFunnels, useWorkspace } from "@/features/settings/store";
 import {
   excerpt,
@@ -442,9 +443,15 @@ function saveRecent(items: Recent[]) {
 }
 
 /** Tudo o que dá para achar: leads, mensagens, funis, equipe, páginas e ações. */
-function useSearchData(query: string) {
+function useSearchData(query: string,open:boolean) {
   const theme = useTheme();
-  const { leads, details, messages } = useLeads();
+  const [snapshot,setSnapshot]=useState<Pick<LeadPage,'leads'|'details'|'messages'>>({leads:[],details:{},messages:{}});
+  useEffect(()=>{
+    if(!open){setSnapshot({leads:[],details:{},messages:{}});return;}
+    let active=true;const timer=setTimeout(()=>{const params=new URLSearchParams({summary:'1',limit:'20',filter:JSON.stringify({q:query,searchNotes:true})});void erpRequest<LeadPage>(`/leads?${params}`).then(page=>{if(active)setSnapshot(page);}).catch(()=>{if(active)setSnapshot({leads:[],details:{},messages:{}});});},300);
+    return()=>{active=false;clearTimeout(timer);};
+  },[query,open]);
+  const {leads,details,messages}=snapshot;
   const { funnels, findFunnel } = useFunnels();
   const { members } = useWorkspace();
   const { settings, update } = useAccessibility();
@@ -613,6 +620,23 @@ function useSearchData(query: string) {
         ),
         meta: module.soon ? <Badge tone="peach">Produção</Badge> : undefined,
       });
+      // Seções dos módulos liberados (ex.: E-commerce > Cupons), com o módulo como contexto.
+      if (module.soon || !navigation.main.some((item) => item.href === module.href)) continue;
+      for (const tab of module.tabs ?? []) {
+        results.push({
+          id: `page:${tab.href}`,
+          group: "pages",
+          title: tab.label,
+          subtitle: module.label,
+          keywords: module.label,
+          href: tab.href,
+          leading: (
+            <IconBubble>
+              <module.icon size={17} />
+            </IconBubble>
+          ),
+        });
+      }
     }
     for (const page of settingsPages) {
       results.push({
@@ -657,7 +681,7 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: CommandPale
   const [scope, setScope] = useState<SearchScope>("all");
   const [active, setActive] = useState(0);
   const [recent, setRecent] = useState<Recent[]>([]);
-  const data = useSearchData(query);
+  const data = useSearchData(query,open);
   useSheet(open, onClose, "search");
   useSheetDrag(panelRef, onClose, open);
 

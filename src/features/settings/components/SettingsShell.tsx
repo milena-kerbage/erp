@@ -38,6 +38,7 @@ const groups: { label: string; items: { label: string; href: string; icon: Icon 
     label: "Conexões",
     items: [
       { label: "Integrações", href: "/configuracoes/integracoes", icon: PlugsConnectedIcon },
+        { label: "Fotos e vídeos", href: "/configuracoes/midia", icon: PlugsConnectedIcon },
       { label: "WhatsApp Business", href: "/configuracoes/whatsapp", icon: WhatsappLogoIcon },
       { label: "API e webhooks", href: "/configuracoes/api", icon: CodeIcon },
     ],

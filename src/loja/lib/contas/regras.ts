@@ -3,7 +3,7 @@
 // servidor (src/lib/loja/contas.ts, que valida TUDO de novo) e no `node --test` (tests/contas.test.mjs).
 // As contas de cliente são separadas das contas da equipe do ERP (outra tabela, outro cookie).
 
-import { type Cupom, CUPONS } from "../carrinho/totais.ts";
+import { type Cupom, CUPONS, cupomVigente } from "../carrinho/totais.ts";
 import { cpfValido, digitos, telefoneValido } from "../checkout/validacao.ts";
 
 /** Versão dos Termos de uso e da Política de privacidade aceita no cadastro (gravada com a data). */
@@ -229,7 +229,13 @@ export type EscolhaCupom =
  *   (que continua guardado para outro pedido).
  * Mesma função no navegador (prévia) e no servidor (que confere o uso no banco).
  */
-export function escolherCupom(codigoBruto: string, subtotalCentavos: number, conta: { logada: boolean; cupom: CupomConta | null }): EscolhaCupom {
+export function escolherCupom(
+  codigoBruto: string,
+  subtotalCentavos: number,
+  conta: { logada: boolean; cupom: CupomConta | null },
+  campanhas: Cupom[] = CUPONS,
+  agora = Date.now(),
+): EscolhaCupom {
   const codigo = codigoBruto.trim().toUpperCase();
   if (!codigo || codigo.length > 30) return { tipo: "invalido", mensagem: "Cupom não encontrado. Confira o código." };
   const disponivel = conta.cupom && !conta.cupom.usado ? conta.cupom : null;
@@ -247,8 +253,11 @@ export function escolherCupom(codigoBruto: string, subtotalCentavos: number, con
       };
     }
   }
-  const generico = CUPONS.find((item) => item.codigo === codigo);
-  if (!generico) return { tipo: "invalido", mensagem: "Cupom não encontrado. Confira o código." };
+  const generico = campanhas.find((item) => item.codigo === codigo && item.codigo !== CUPOM_GENERICO_PRIMEIRA) ?? (codigo === CUPOM_GENERICO_PRIMEIRA ? CUPONS[0] : undefined);
+  if (!generico || !cupomVigente(generico, agora)) return { tipo: "invalido", mensagem: "Cupom não encontrado. Confira o código." };
+  // Cupom de primeira compra de campanha: com conta, só enquanto o de boas-vindas não foi usado (o servidor
+  // confere os pedidos de verdade).
+  if (generico.primeiraCompra && conta.logada && conta.cupom?.usado) return { tipo: "invalido", mensagem: `O ${generico.codigo} vale só na primeira compra.` };
   if (subtotalCentavos < generico.minimoCentavos) return { tipo: "minimo", cupom: generico, mensagem: `O ${generico.codigo} vale a partir de um valor mínimo em produtos.` };
   return {
     tipo: "ok",
