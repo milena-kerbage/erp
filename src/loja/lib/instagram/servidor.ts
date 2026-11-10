@@ -1,13 +1,23 @@
 import "server-only";
 import { buscarFeed, type ResultadoFeed, VERSAO_PADRAO } from "./feed";
+import { connectionToken, currentConnection } from "@/lib/instagram/store";
 
-// Lado do servidor do feed do Instagram: lê o token (INSTAGRAM_ACCESS_TOKEN, só no servidor, NUNCA
-// NEXT_PUBLIC_) e a versão da API, busca com cache de 1 h (tag "instagram") e registra as falhas no log
-// do servidor sem derrubar a página. Passo a passo do token: docs/loja.md, seção "Instagram".
+// Feed com token OAuth criptografado no banco; sem INSTAGRAM_APP_ID mantém o token manual legado.
+// Credenciais ficam só no servidor. Busca com cache de 1 h (tag "instagram") sem derrubar a home.
+// Configuração: docs/instagram-meta.md e docs/loja.md, seção "Instagram".
 
 const avisados = new Set<string>();
 
-export function configuracaoInstagram(): { token: string | undefined; versao: string } {
+export async function configuracaoInstagram(): Promise<{ token: string | undefined; versao: string }> {
+  // Ao adotar OAuth, o banco passa a ser a fonte de acesso. Nunca restaura o token legado após revogação.
+  if (process.env.INSTAGRAM_APP_ID?.trim()) {
+    try {
+      const connection = await currentConnection();
+      return { token: connection ? await connectionToken(connection) : undefined, versao: process.env.INSTAGRAM_GRAPH_VERSION?.trim() || VERSAO_PADRAO };
+    } catch {
+      return { token: undefined, versao: process.env.INSTAGRAM_GRAPH_VERSION?.trim() || VERSAO_PADRAO };
+    }
+  }
   return {
     token: process.env.INSTAGRAM_ACCESS_TOKEN?.trim() || undefined,
     versao: process.env.INSTAGRAM_GRAPH_VERSION?.trim() || VERSAO_PADRAO,
@@ -16,11 +26,11 @@ export function configuracaoInstagram(): { token: string | undefined; versao: st
 
 /** Posts do perfil ou { ok: false }. Sem token é o estado normal até a configuração: só avisa uma vez. */
 export async function postsDoInstagram(): Promise<ResultadoFeed> {
-  const resultado = await buscarFeed(configuracaoInstagram());
+  const resultado = await buscarFeed(await configuracaoInstagram());
   if (!resultado.ok) {
     const chave = `${resultado.motivo}:${resultado.detalhe ?? ""}`;
     if (resultado.motivo === "sem-token") {
-      if (!avisados.has(chave)) console.info("[instagram] INSTAGRAM_ACCESS_TOKEN vazio: a home mostra o convite para seguir (docs/loja.md).");
+      if (!avisados.has(chave)) console.info("[instagram] Sem acesso válido ao perfil: a home mostra o convite para seguir (docs/instagram-meta.md e docs/loja.md).");
     } else {
       // Erro de verdade: registra sempre (com o motivo, sem o token), mas a seção cai no convite.
       console.error(`[instagram] Feed indisponível (${resultado.motivo}${resultado.detalhe ? `: ${resultado.detalhe}` : ""}). A home mostra o convite para seguir.`);

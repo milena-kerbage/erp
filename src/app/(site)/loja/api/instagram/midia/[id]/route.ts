@@ -31,7 +31,7 @@ async function baixar(url: string): Promise<Response | null> {
 }
 
 async function urlAtual(id: string): Promise<string | null> {
-  const { token, versao } = configuracaoInstagram();
+  const { token, versao } = await configuracaoInstagram();
   if (!token) return null;
   try {
     const resposta = await fetch(urlDaMidia(versao, id, token), { cache: "no-store", signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });

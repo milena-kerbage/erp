@@ -32,8 +32,8 @@ export async function legalRetentionDays() {
   return Number.isInteger(days) && days >= 1 && days <= 3650 ? days : 90;
 }
 
-export const POLICY_VERSION = '2026-10-12';
-export const POLICY_DATE = '12 de outubro de 2026';
+export const POLICY_VERSION = '2026-11-10';
+export const POLICY_DATE = '10 de novembro de 2026';
 export const LEGAL_LINKS = [
   { href: '/privacidade', title: 'Política de privacidade', description: 'Dados tratados, finalidades, compartilhamento e seus direitos.' },
   { href: '/termos', title: 'Termos de uso', description: 'Regras de acesso ao sistema e de atendimento pelos canais digitais.' },

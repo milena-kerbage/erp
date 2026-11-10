@@ -247,7 +247,11 @@ A última seção da home, antes do rodapé, mostra os **posts reais** do perfil
 
 **Para atualizar na hora** (ex.: depois de um post importante): faça um novo deploy ou chame `revalidateTag("instagram", "max")` num handler do servidor. Sem isso, o feed renova sozinho em até 1 h.
 
-### Como obter o token (uma vez)
+### Conexão pelo ERP (OAuth)
+
+A integração em `/configuracoes/instagram` conecta o perfil pelo login oficial e guarda o token criptografado no banco. Configuração, callbacks, migração `015_instagram.sql` e testes estão em [Instagram e Meta](instagram-meta.md). Com `INSTAGRAM_APP_ID` preenchido, o feed usa exclusivamente essa conexão; não recorre ao token manual após desconexão ou revogação. Para esse fluxo, use `npm run instagram:manutencao` e a renovação pela tela.
+
+### Como obter o token manual (alternativa sem OAuth)
 
 1. **Conta profissional:** no app do Instagram, o perfil precisa ser comercial ou de criador (Configurações > Tipo de conta e ferramentas).
 2. **App da Meta:** em [developers.facebook.com/apps](https://developers.facebook.com/apps), abra o app já usado para o WhatsApp do ERP (dá para reaproveitar) ou crie um do tipo "Empresa".

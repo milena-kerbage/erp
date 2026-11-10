@@ -6,6 +6,7 @@ A loja virtual (Panda CSS) roda no mesmo projeto, em `www.ateliemilenakerbage.co
 O WhatsApp Cloud API tem backend persistente, caixa de entrada real em `/conversas`, diagnóstico em `/configuracoes/whatsapp` e políticas públicas em `/politicas`. A implantação escolhida é Vercel com PostgreSQL do Supabase; SQLite permanece para desenvolvimento e testes locais. A conta Meta, o número e os projetos remotos ainda precisam ser configurados.
 
 - [Manual técnico e operacional do WhatsApp](docs/whatsapp-meta.md)
+- [Instagram: login, webhooks, callbacks, políticas e configuração na Meta](docs/instagram-meta.md)
 - [Pendências de implantação para o gestor](docs/pendencias-implantacao-whatsapp.md)
 - [Backend do ERP, contratos e implantação PostgreSQL](docs/erp-backend.md)
 - [Loja (e-commerce): domínios, estrutura, tema e pendências](docs/loja.md)

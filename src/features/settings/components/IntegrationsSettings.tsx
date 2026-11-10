@@ -51,7 +51,7 @@ const catalog: CatalogItem[] = [
     id: "instagram",
     group: "Mensagens",
     name: "Instagram Direct",
-    description: "Mensagens do Direct viram conversas, e quem chama vira lead automaticamente.",
+    description: "Conexão oficial do perfil e recebimento de eventos do Instagram. Atendimento e leads em preparação.",
     icon: InstagramLogoIcon,
     tone: "rose",
     accountLabel: "Perfil do Instagram",
@@ -243,8 +243,8 @@ export function IntegrationsSettings() {
         </MenuItem>
       </Menu>
     ) : (
-      <Button variant="secondary" size="sm" icon={PlugsConnectedIcon} disabled={item.id !== "whatsapp"} href={item.id === "whatsapp" ? "/configuracoes/whatsapp" : undefined}>
-        {item.id === "whatsapp" ? "Configurar" : "Pendente"}
+      <Button variant="secondary" size="sm" icon={PlugsConnectedIcon} disabled={item.id !== "whatsapp" && item.id !== "instagram"} href={item.id === "instagram" ? "/configuracoes/instagram" : item.id === "whatsapp" ? "/configuracoes/whatsapp" : undefined}>
+        {item.id === "whatsapp" || item.id === "instagram" ? "Configurar" : "Pendente"}
       </Button>
     );
 
@@ -269,12 +269,12 @@ export function IntegrationsSettings() {
 
       <PageHeader
         title="Integrações"
-        description="Gerencie a configuração, credenciais, etapas e testes reais da integração WhatsApp."
+        description="Gerencie as integrações oficiais de WhatsApp e Instagram do Ateliê."
       />
 
       <IntegrationManagerPanel />
 
-      <Notice>O WhatsApp é configurado no painel acima. As outras integrações aguardam seus respectivos conectores oficiais.</Notice>
+      <Notice>O WhatsApp é configurado no painel acima. Abra Configurar no Instagram para conectar o perfil e consultar as URLs da Meta.</Notice>
 
       {view === "table" ? (
         <TableCard>
@@ -385,9 +385,9 @@ export function IntegrationsSettings() {
                                 variant="secondary"
                                 size="sm"
                                 icon={PlugsConnectedIcon}
-                                disabled={item.id !== "whatsapp"} href={item.id === "whatsapp" ? "/configuracoes/whatsapp" : undefined}
+                                disabled={item.id !== "whatsapp" && item.id !== "instagram"} href={item.id === "instagram" ? "/configuracoes/instagram" : item.id === "whatsapp" ? "/configuracoes/whatsapp" : undefined}
                               >
-                                {item.id === "whatsapp" ? "Configurar" : "Pendente"}
+                                {item.id === "whatsapp" || item.id === "instagram" ? "Configurar" : "Pendente"}
                               </Button>
                             </>
                           )}
