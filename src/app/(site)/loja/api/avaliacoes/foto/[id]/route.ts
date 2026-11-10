@@ -13,7 +13,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const foto = await fotoDaAvaliacao(id, tamanho, true,new URL(request.url).searchParams.get('formato')==='avif'?'avif':'webp');
     return new Response(new Uint8Array(foto.conteudo), {
-      headers: { Vary:"Accept",
+      headers: {
+        // CDN por 1 dia (não 1 ano): uma avaliação excluída a pedido da cliente sai da CDN em até 24 h.
+        // Sem Vary: o formato vem na URL (?formato), então o cache não se divide por navegador.
         "Content-Type": foto.tipo,
         "Content-Length": String(foto.conteudo.length),
         "Cache-Control": "public, max-age=31536000, s-maxage=86400, immutable",

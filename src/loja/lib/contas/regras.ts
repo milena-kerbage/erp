@@ -6,6 +6,13 @@
 import { type Cupom, CUPONS, cupomVigente } from "../carrinho/totais.ts";
 import { cpfValido, digitos, telefoneValido } from "../checkout/validacao.ts";
 
+/**
+ * Cookie de dica "tem sessão" (valor 1, SEM o token, legível pelo JavaScript). Gravado e apagado junto
+ * com o cookie httpOnly da sessão: sem ele, o navegador sabe que a visita é anônima e não chama
+ * /api/conta/eu, o que poupa uma função do servidor em cada página vista por quem não entrou.
+ */
+export const COOKIE_DICA_SESSAO = "mk_sessao";
+
 /** Versão dos Termos de uso e da Política de privacidade aceita no cadastro (gravada com a data). */
 export const VERSAO_TERMOS = "2026-11-08";
 

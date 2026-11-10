@@ -16,7 +16,27 @@ import { arvoreDoCatalogo, type CatalogoLoja, catalogoEstatico, type IndiceCatal
 
 export const TAGS_LOJA = { catalogo: "loja:catalogo", menu: "loja:menu", cupons: "loja:cupons" } as const;
 
-const doBanco = unstable_cache(async () => lerCatalogoDoBanco(), ["loja-catalogo-v1"], {
+// Uma leitura do catálogo são ~10 consultas (alguns segundos pelo pooler). Quando muitas páginas
+// regeneram juntas (build, ou o ERP acabou de invalidar a tag), cada uma pediria a sua e todas fariam
+// fila na mesma conexão até estourar o tempo limite. Leitura única por processo: quem chega durante uma
+// leitura em andamento espera a mesma. Uma nova tentativa curta cobre a falha passageira do pooler.
+let leituraEmAndamento: ReturnType<typeof lerCatalogoDoBanco> | null = null;
+async function lerComNovaTentativa() {
+  try {
+    return await lerCatalogoDoBanco();
+  } catch {
+    await new Promise((resolver) => setTimeout(resolver, 750));
+    return lerCatalogoDoBanco();
+  }
+}
+function lerUmaVez() {
+  leituraEmAndamento ??= lerComNovaTentativa().finally(() => {
+    leituraEmAndamento = null;
+  });
+  return leituraEmAndamento;
+}
+
+const doBanco = unstable_cache(async () => lerUmaVez(), ["loja-catalogo-v1"], {
   tags: [TAGS_LOJA.catalogo, TAGS_LOJA.menu, TAGS_LOJA.cupons],
   revalidate: 3600,
 });

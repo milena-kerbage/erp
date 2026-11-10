@@ -1,39 +1,31 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { css } from "styled-system/css";
 import { RESPIRO_LATERAL } from "@/loja/componentes/layout/cabecalho/estilos";
 import { type Projeto } from "@/loja/lib/casas/catalogo";
 import { AvisoDemonstracao } from "./AvisoDemonstracao";
 import { filtrarProjetos, limparFiltros, ordenarProjetos, type ProjetoFiltravel } from "@/loja/lib/casas/filtragem";
-import { CATEGORIAS_EXISTENTES } from "@/loja/lib/catalogo/categorias";
-import { REGRAS_SEO } from "@/loja/lib/seo/config";
-import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
+import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 import { AreaProjetos } from "./AreaProjetos";
 import { CardMonteOSeu, CardProjeto } from "./CardProjeto";
 
-type Busca = Record<string, string | string[] | undefined>;
-
-// Resultado de Projetos no mesmo fluxo da listagem de produtos (Resultado + AreaListagem): lê filtros
-// e ordem da URL (motor de URLs; forma canônica imposta com 308 no proxy.ts), filtra, ordena e
-// entrega a grade à área interativa (barra flutuante + gaveta). A gaveta recebe só o essencial de
-// cada projeto para contar os filtros ao vivo no navegador. Fica dentro do <Suspense>.
-export async function ListagemProjetos({
+// Resultado de Projetos no mesmo fluxo da listagem de produtos (Resultado + AreaListagem): com os
+// filtros e a ordem já lidos da URL, filtra, ordena e entrega a grade à área interativa (barra
+// flutuante + gaveta). A gaveta recebe só o essencial de cada projeto para contar os filtros ao vivo no
+// navegador. Sem async nem APIs do servidor: renderiza no HTML estático (fallback sem filtros) e no
+// navegador (ProjetosNaUrl, com os filtros da query), para a página ficar inteira na CDN.
+export function ResultadoProjetos({
   projetos,
   categoria,
-  searchParams,
+  filtrosDaUrl,
+  ordemDaUrl,
 }: {
   projetos: Projeto[];
   categoria: string;
-  searchParams: Promise<Busca>;
+  filtrosDaUrl: Record<string, string[]>;
+  ordemDaUrl?: string;
 }) {
-  const busca = new URLSearchParams();
-  for (const [chave, valor] of Object.entries(await searchParams)) {
-    for (const item of Array.isArray(valor) ? valor : [valor ?? ""]) busca.append(chave, item);
-  }
-  const resultado = interpretarUrlListagem(`/${categoria}`, busca, CATEGORIAS_EXISTENTES, REGRAS_SEO);
-  if (resultado.tipo === "redirecionar") redirect(resultado.destino); // o proxy já cuida disso com 308; aqui é a rede de segurança
-  const filtros = limparFiltros(projetos, resultado.tipo === "ok" ? resultado.listagem.filtros : {});
-  const ordem = (resultado.tipo === "ok" && resultado.listagem.ordem) || ORDEM_PADRAO;
+  const filtros = limparFiltros(projetos, filtrosDaUrl);
+  const ordem = ordemDaUrl || ORDEM_PADRAO;
   const filtrados = ordenarProjetos(filtrarProjetos(projetos, filtros), ordem);
   const essenciais: ProjetoFiltravel[] = projetos.map(({ slug, tema, estilo, tecido, precoAPartirDe, prazoDiasUteis }) => ({
     slug,

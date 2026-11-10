@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
-import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { Resultado } from "@/loja/componentes/listagem/Resultado";
+import { ResultadoNaUrl } from "@/loja/componentes/listagem/ResultadoNaUrl";
 import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { blocosDaCategoria, LINHA_BLOCOS_CATEGORIA } from "@/loja/lib/catalogo/edicoes";
-import { filtrar, noCaminho } from "@/loja/lib/catalogo/listagem";
+import { filtrar, noCaminho, paraListagem } from "@/loja/lib/catalogo/listagem";
 import { REGRAS_SEO } from "@/loja/lib/seo/config";
 import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 
 // Listagem por categoria no modelo da Lululemon (shop.lululemon.com/c/women-puffer-jackets, nov/2026).
 // URL, facetas indexáveis no caminho, canonical e 404 vêm do motor (src/lib/seo/urls.ts); a forma
-// canônica é imposta com 308 no proxy. Cache Components: o topo de cada categoria é estático
-// (pré-gerado); a grade filtrada (searchParams) fica no <Suspense>.
+// canônica é imposta com 308 no proxy. A página inteira é estática por caminho (pré-gerada e servida
+// pela CDN, sem função a cada visita): filtros, ordem e página da query (?cor=…) são aplicados no
+// navegador (ResultadoNaUrl). Atualiza quando o ERP muda o catálogo (revalidateTag) ou a cada hora.
 
 type Props = PageProps<"/loja/[...categoria]">;
 
@@ -61,44 +62,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// params lido FORA do <Suspense> de propósito: categoria inexistente vira 404 com status 404 antes
-// do streaming (dentro do Suspense o Next já teria mandado 200). As categorias do build são
-// pré-geradas; só a grade filtrada (searchParams) fica dentro do Suspense.
-export default async function PaginaCategoria({ params, searchParams }: Props) {
-  const dados = await resolver((await params).categoria);
+export const revalidate = 3600;
+
+// Categoria inexistente vira 404 antes de qualquer streaming.
+export default async function PaginaCategoria({ params }: Props) {
+  const segmentos = (await params).categoria;
+  const dados = await resolver(segmentos);
   if (!dados) notFound();
+  const [arvore, catalogo] = await Promise.all([arvoreDaLoja(), catalogoDaLoja()]);
+  const caminho = `/${segmentos.join("/")}`;
+  const semQuery = interpretarUrlListagem(caminho, new URLSearchParams(), arvore.existentes, REGRAS_SEO);
+  if (semQuery.tipo !== "ok") notFound();
+  const categoria = semQuery.listagem.categoria;
+  const itensBase = noCaminho(catalogo.produtos, `/${categoria}`).map(paraListagem);
+  // Categorias principais com bloco editorial configurado (edicoes.ts), depois de 2 linhas de cards.
+  const blocos = blocosDaCategoria(categoria);
   return (
     <>
       <CabecalhoListagem trilha={dados.trilha} titulo={dados.titulo} total={dados.total} atalhos={dados.atalhos} />
-      <Suspense fallback={<EsqueletoGrade />}>
-        <Grade params={params} searchParams={searchParams} />
+      {/* Fallback = a 1ª página sem filtros da query, já no HTML estático (Google e sem JavaScript). */}
+      <Suspense
+        fallback={
+          <Resultado contexto={{ tipo: "categoria", categoria }} itensBase={itensBase} filtros={semQuery.listagem.filtros} ordem={ORDEM_PADRAO} pagina={1} blocos={blocos} primeiraLinhaBlocos={LINHA_BLOCOS_CATEGORIA} />
+        }
+      >
+        <ResultadoNaUrl caminho={caminho} existentes={[...arvore.existentes]} itensBase={itensBase} blocos={blocos} primeiraLinhaBlocos={LINHA_BLOCOS_CATEGORIA} />
       </Suspense>
       <ContinueExplorando base={dados.titulo} categorias={dados.relacionadas} />
     </>
-  );
-}
-
-async function Grade({ params, searchParams }: Props) {
-  const segmentos = (await params).categoria;
-  const busca = new URLSearchParams();
-  for (const [chave, valor] of Object.entries(await searchParams)) {
-    for (const item of Array.isArray(valor) ? valor : [valor ?? ""]) busca.append(chave, item);
-  }
-  const [arvore, catalogo] = await Promise.all([arvoreDaLoja(), catalogoDaLoja()]);
-  const resultado = interpretarUrlListagem(`/${segmentos.join("/")}`, busca, arvore.existentes, REGRAS_SEO);
-  if (resultado.tipo === "nao-encontrado") notFound();
-  if (resultado.tipo === "redirecionar") redirect(resultado.destino); // o proxy já cuida disso com 308; aqui é a rede de segurança
-  const categoria = resultado.listagem.categoria;
-  return (
-    <Resultado
-      contexto={{ tipo: "categoria", categoria }}
-      itensBase={noCaminho(catalogo.produtos, `/${categoria}`)}
-      filtros={resultado.listagem.filtros}
-      ordem={resultado.listagem.ordem ?? ORDEM_PADRAO}
-      pagina={resultado.listagem.pagina ?? 1}
-      // Categorias principais com bloco editorial configurado (edicoes.ts), depois de 2 linhas de cards.
-      blocos={blocosDaCategoria(categoria)}
-      primeiraLinhaBlocos={LINHA_BLOCOS_CATEGORIA}
-    />
   );
 }

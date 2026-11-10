@@ -285,3 +285,11 @@ function posicionarBlocos<T>(
   }
   return saida;
 }
+
+/**
+ * Produto só com o que a grade e os filtros usam (ficha, descrição e as listas da página do produto
+ * saem): é o que vai no payload da listagem filtrada no navegador.
+ */
+export function paraListagem<T extends { ficha: unknown[]; descricao: unknown[]; documentos: unknown[]; complementos: unknown[]; semelhantes: unknown[]; seo?: unknown }>(produto: T): T {
+  return { ...produto, ficha: [], descricao: [], documentos: [], complementos: [], semelhantes: [], seo: undefined };
+}

@@ -11,7 +11,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const tamanho = new URL(request.url).searchParams.get("tamanho") === "mini" ? "mini" : "grande";
   try {
     const foto = await arquivoDaImagem(id, tamanho, true,undefined,new URL(request.url).searchParams.get('formato')==='avif'?'avif':'webp');
-    const cabecalhos = { Vary:"Accept", ETag: foto.etag, "Cache-Control": "public, max-age=31536000, s-maxage=86400, immutable", "X-Content-Type-Options": "nosniff" };
+    // O endereço muda quando a foto muda (id próprio + ?v=hash + ?formato): a CDN guarda 1 ano e quase
+    // nunca chama esta função de novo. Sem Vary: o formato vem na URL, não no Accept (Vary por navegador
+    // só fragmentaria o cache da CDN). stale-if-error: se o banco ou a R2 caírem, a CDN segue servindo.
+    const cabecalhos = { ETag: foto.etag, "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable, stale-if-error=31536000", "X-Content-Type-Options": "nosniff" };
     if (request.headers.get("if-none-match") === foto.etag) return new Response(null, { status: 304, headers: cabecalhos });
     return new Response(new Uint8Array(foto.conteudo), {
       headers: { ...cabecalhos, "Content-Type": foto.tipo, "Content-Length": String(foto.conteudo.length), "Content-Disposition": "inline" },

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ATALHOS_PROJETOS } from "@/loja/componentes/casas/comuns";
-import { ListagemProjetos } from "@/loja/componentes/casas/ListagemProjetos";
+import { ResultadoProjetos } from "@/loja/componentes/casas/ListagemProjetos";
+import { ProjetosNaUrl } from "@/loja/componentes/casas/ProjetosNaUrl";
 import { ConviteMontador, DiferenciaisProjetos } from "@/loja/componentes/casas/secoes";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
-import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { JsonLd } from "@/loja/componentes/seo/JsonLd";
 import { listarProjetos, PRAZO_PRODUCAO } from "@/loja/lib/casas/catalogo";
 import { arvoreDaLoja } from "@/lib/loja/catalogo";
+import { CATEGORIAS_EXISTENTES } from "@/loja/lib/catalogo/categorias";
 import { schemaListagemProjetos, schemaTrilhaProjetos } from "@/loja/lib/seo/projetos";
 
 // Projetos (item "Projetos" do menu, como o SNKRS na Nike): quartos de bebê completos no mesmo padrão
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default async function PaginaProjetos({ searchParams }: PageProps<"/loja/personalizado">) {
+// Estática na CDN: filtros e ordem da query (?tema=…) são aplicados no navegador (ProjetosNaUrl).
+export default async function PaginaProjetos() {
   const { categoriasRelacionadas } = await arvoreDaLoja();
   const projetos = listarProjetos();
   return (
@@ -33,8 +35,8 @@ export default async function PaginaProjetos({ searchParams }: PageProps<"/loja/
       <JsonLd dados={schemaListagemProjetos("Personalizado", "/personalizado", projetos)} />
       <JsonLd dados={schemaTrilhaProjetos([{ rotulo: "Personalizado", href: "/personalizado" }])} />
       <CabecalhoListagem trilha={[]} titulo="Personalizado" total={projetos.length} unidade={["quartinho", "quartinhos"]} atalhos={ATALHOS_PROJETOS} />
-      <Suspense fallback={<EsqueletoGrade />}>
-        <ListagemProjetos projetos={projetos} categoria="personalizado" searchParams={searchParams} />
+      <Suspense fallback={<ResultadoProjetos projetos={projetos} categoria="personalizado" filtrosDaUrl={{}} />}>
+        <ProjetosNaUrl projetos={projetos} categoria="personalizado" existentes={[...CATEGORIAS_EXISTENTES]} />
       </Suspense>
       <ConviteMontador />
       <DiferenciaisProjetos />

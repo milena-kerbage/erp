@@ -7,7 +7,9 @@ import { botao } from "styled-system/recipes";
 import { ATALHOS_SELECOES } from "@/loja/componentes/casas/comuns";
 import { abasDoProjeto, fotosDaGaleria, pecasDoQuarto } from "@/loja/componentes/casas/dadosProjeto";
 import { GavetaProjeto } from "@/loja/componentes/casas/GavetaProjeto";
-import { ListagemProjetos } from "@/loja/componentes/casas/ListagemProjetos";
+import { ResultadoProjetos } from "@/loja/componentes/casas/ListagemProjetos";
+import { ProjetosNaUrl } from "@/loja/componentes/casas/ProjetosNaUrl";
+import { CATEGORIAS_EXISTENTES } from "@/loja/lib/catalogo/categorias";
 import { PainelProjeto, PilulaProjeto, ProjetoProvider } from "@/loja/componentes/casas/PainelProjeto";
 import {
   ConviteMontador,
@@ -21,7 +23,6 @@ import {
 import { RESPIRO_LATERAL } from "@/loja/componentes/layout/cabecalho/estilos";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
-import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { Galeria } from "@/loja/componentes/produto/Galeria";
 import { FaleComAtelie, PorQueVaiAmar, recuo } from "@/loja/componentes/produto/secoes";
 import { JsonLd } from "@/loja/componentes/seo/JsonLd";
@@ -95,14 +96,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PaginaSlugProjetos({ params, searchParams }: Props) {
+export default async function PaginaSlugProjetos({ params }: Props) {
   const dados = resolver((await params).slug);
   if (!dados) notFound();
   if ("projeto" in dados) return <PaginaProjeto projeto={dados.projeto} buscarVarios={(await indiceDaLoja()).buscarVarios} />;
   const { colecao } = dados;
   if (colecao.tipo === "conteudo") return <PaginaConteudo colecao={colecao} />;
   const relacionadas = (await arvoreDaLoja()).categoriasRelacionadas(["personalizado"]).filter((elo) => !elo.href.startsWith("/personalizado"));
-  return <PaginaSelecao colecao={colecao} searchParams={searchParams} relacionadas={relacionadas} />;
+  return <PaginaSelecao colecao={colecao} relacionadas={relacionadas} />;
 }
 
 // Página do projeto com a estrutura e as medidas da página de produto: no desktop, grade "1fr 440" com a
@@ -208,7 +209,7 @@ function CabecalhoColecao({ colecao }: { colecao: Colecao }) {
   );
 }
 
-function PaginaSelecao({ colecao, searchParams, relacionadas }: { colecao: Extract<Colecao, { tipo: "selecao" }>; searchParams: Props["searchParams"]; relacionadas: Elo[] }) {
+function PaginaSelecao({ colecao, relacionadas }: { colecao: Extract<Colecao, { tipo: "selecao" }>; relacionadas: Elo[] }) {
   const projetos = filtrarProjetos(listarProjetos(), colecao.filtros);
   const caminho = `/personalizado/${colecao.slug}`;
   return (
@@ -227,8 +228,9 @@ function PaginaSelecao({ colecao, searchParams, relacionadas }: { colecao: Extra
         unidade={["quartinho", "quartinhos"]}
         atalhos={ATALHOS_SELECOES.filter((atalho) => atalho.href !== caminho)}
       />
-      <Suspense fallback={<EsqueletoGrade />}>
-        <ListagemProjetos projetos={projetos} categoria={`personalizado/${colecao.slug}`} searchParams={searchParams} />
+      {/* Estática na CDN: filtros e ordem da query aplicados no navegador; o HTML já traz a grade sem filtros. */}
+      <Suspense fallback={<ResultadoProjetos projetos={projetos} categoria={`personalizado/${colecao.slug}`} filtrosDaUrl={{}} />}>
+        <ProjetosNaUrl projetos={projetos} categoria={`personalizado/${colecao.slug}`} existentes={[...CATEGORIAS_EXISTENTES]} />
       </Suspense>
       <ContinueExplorando base="Personalizado" categorias={relacionadas} />
     </>

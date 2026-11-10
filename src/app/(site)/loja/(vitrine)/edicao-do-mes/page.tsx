@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
-import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { Resultado } from "@/loja/componentes/listagem/Resultado";
+import { ResultadoDaQuery } from "@/loja/componentes/listagem/ResultadoDaQuery";
 import { arvoreDaLoja, indiceDaLoja } from "@/lib/loja/catalogo";
 import { EDICAO_ATUAL, ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
-import { filtrosDaQuery } from "@/loja/lib/catalogo/urlsListagem";
+import { paraListagem } from "@/loja/lib/catalogo/listagem";
 import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 import { edicaoComFotos } from "@/loja/lib/catalogo/apresentacao";
 
@@ -32,8 +32,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default async function PaginaEdicaoDoMes({ searchParams }: PageProps<"/loja/edicao-do-mes">) {
+// Estática na CDN: filtros, ordem e página da query aplicados no navegador (ResultadoDaQuery).
+export const revalidate = 3600;
+
+export default async function PaginaEdicaoDoMes() {
   const [{ pecas, edicao }, { categoriasRelacionadas }] = await Promise.all([pecasDaEdicao(), arvoreDaLoja()]);
+  const itens = pecas.map(paraListagem);
   const categorias = [...new Set(pecas.map((peca) => peca.caminho.split("/")[1]))].filter(Boolean);
   return (
     <>
@@ -47,29 +51,10 @@ export default async function PaginaEdicaoDoMes({ searchParams }: PageProps<"/lo
         total={pecas.length}
         atalhos={edicao.atalhos}
       />
-      <Suspense fallback={<EsqueletoGrade />}>
-        <Grade searchParams={searchParams} />
+      <Suspense fallback={<Resultado contexto={{ tipo: "categoria", categoria: CHAVE }} itensBase={itens} filtros={{}} ordem={ORDEM_PADRAO} pagina={1} blocos={edicao.blocos} primeiraLinhaBlocos={edicao.primeiraLinha ?? 0} />}>
+        <ResultadoDaQuery categoria={CHAVE} itensBase={itens} blocos={edicao.blocos} primeiraLinhaBlocos={edicao.primeiraLinha ?? 0} />
       </Suspense>
       <ContinueExplorando base="a edição do mês" categorias={categoriasRelacionadas(categorias)} />
     </>
-  );
-}
-
-async function Grade({ searchParams }: Pick<PageProps<"/loja/edicao-do-mes">, "searchParams">) {
-  const { pecas, edicao } = await pecasDaEdicao();
-  const busca = new URLSearchParams();
-  for (const [chave, valor] of Object.entries(await searchParams)) {
-    for (const item of Array.isArray(valor) ? valor : [valor ?? ""]) busca.append(chave, item);
-  }
-  return (
-    <Resultado
-      contexto={{ tipo: "categoria", categoria: CHAVE }}
-      itensBase={pecas}
-      filtros={filtrosDaQuery(busca)}
-      ordem={busca.get("ordem") ?? ORDEM_PADRAO}
-      pagina={Math.max(1, Math.min(500, Number(busca.get("pagina")) || 1))}
-      blocos={edicao.blocos}
-      primeiraLinhaBlocos={edicao.primeiraLinha ?? 0}
-    />
   );
 }

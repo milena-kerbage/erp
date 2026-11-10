@@ -8,6 +8,7 @@ import { ehHostDaLoja, nomeDoHost, ORIGEM_LOJA } from "@/lib/hosts";
 import { avatarDaCliente } from "@/lib/loja/avatar";
 import { gravacaoLojaPermitida } from "@/lib/loja/gestao/esquema";
 import { clienteDaSessao, type ContaCliente, ErroConta } from "@/lib/loja/contas";
+import { COOKIE_DICA_SESSAO } from "@/loja/lib/contas/regras";
 
 // Peças das rotas de conta da loja (/api/conta/* e /api/pedidos, no host da loja): cookie próprio,
 // conferência de origem, limites por IP e por e-mail (o mesmo limitador do login da equipe, em
@@ -145,12 +146,18 @@ export async function exigirCliente(request: Request) {
   return cliente;
 }
 
+/** Dica legível pelo navegador de que há sessão (sem o token). Ver COOKIE_DICA_SESSAO. */
+export function cookieDicaSessao(ativa: boolean) {
+  return `${COOKIE_DICA_SESSAO}=${ativa ? "1" : ""}; Path=/; SameSite=Lax${opcoesCookie.secure ? "; Secure" : ""}; Max-Age=${ativa ? MAX_AGE_SESSAO : 0}`;
+}
+
 /** Resposta JSON sem cache, com o cookie da sessão gravado (token) ou apagado (null). */
 export function comSessao(corpo: unknown, token: string | null | undefined, status = 200): Response {
   const headers = new Headers(SEM_CACHE);
   const atributos = `Path=/; HttpOnly; SameSite=Lax${opcoesCookie.secure ? "; Secure" : ""}`;
   if (token) headers.append("Set-Cookie", `${COOKIE_CLIENTE}=${token}; ${atributos}; Max-Age=${MAX_AGE_SESSAO}`);
   else if (token === null) headers.append("Set-Cookie", `${COOKIE_CLIENTE}=; ${atributos}; Max-Age=0`);
+  if (token !== undefined) headers.append("Set-Cookie", cookieDicaSessao(Boolean(token)));
   headers.set("Content-Type", "application/json");
   return new Response(JSON.stringify(corpo), { status, headers });
 }

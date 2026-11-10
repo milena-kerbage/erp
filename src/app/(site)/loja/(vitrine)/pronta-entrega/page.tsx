@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CabecalhoListagem } from "@/loja/componentes/listagem/CabecalhoListagem";
 import { ContinueExplorando } from "@/loja/componentes/listagem/ContinueExplorando";
-import { EsqueletoGrade } from "@/loja/componentes/listagem/Esqueleto";
 import { Resultado } from "@/loja/componentes/listagem/Resultado";
+import { ResultadoDaQuery } from "@/loja/componentes/listagem/ResultadoDaQuery";
 import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
-import { filtrar, slugificar } from "@/loja/lib/catalogo/listagem";
-import { filtrosDaQuery } from "@/loja/lib/catalogo/urlsListagem";
+import { filtrar, paraListagem, slugificar } from "@/loja/lib/catalogo/listagem";
 import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 
 // Pronta entrega (destaque do Instagram do ateliê): todas as peças com entrega=pronta-entrega, que
@@ -28,8 +27,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default async function PaginaProntaEntrega({ searchParams }: PageProps<"/loja/pronta-entrega">) {
+// Estática na CDN: filtros, ordem e página da query aplicados no navegador (ResultadoDaQuery).
+export const revalidate = 3600;
+
+export default async function PaginaProntaEntrega() {
   const [pecas, { categoriasRelacionadas }] = await Promise.all([pecasProntas(), arvoreDaLoja()]);
+  const itens = pecas.map(paraListagem);
   const categorias = [...new Set(pecas.map((peca) => peca.caminho.split("/")[1]))].filter(Boolean);
   return (
     <>
@@ -40,27 +43,11 @@ export default async function PaginaProntaEntrega({ searchParams }: PageProps<"/
         unidade={["peça", "peças"]}
         atalhos={categoriasRelacionadas(categorias, 6)}
       />
-      <Suspense fallback={<EsqueletoGrade />}>
-        <Grade searchParams={searchParams} />
+      <Suspense fallback={<Resultado contexto={{ tipo: "categoria", categoria: CHAVE }} itensBase={itens} filtros={{}} ordem={ORDEM_PADRAO} pagina={1} />}>
+        <ResultadoDaQuery categoria={CHAVE} itensBase={itens} ignorar={["entrega"]} />
       </Suspense>
       <ContinueExplorando base="a pronta entrega" categorias={categoriasRelacionadas([])} />
     </>
   );
 }
 
-async function Grade({ searchParams }: Pick<PageProps<"/loja/pronta-entrega">, "searchParams">) {
-  const busca = new URLSearchParams();
-  for (const [chave, valor] of Object.entries(await searchParams)) {
-    for (const item of Array.isArray(valor) ? valor : [valor ?? ""]) busca.append(chave, item);
-  }
-  const { entrega: _fixo, ...filtros } = filtrosDaQuery(busca);
-  return (
-    <Resultado
-      contexto={{ tipo: "categoria", categoria: CHAVE }}
-      itensBase={await pecasProntas()}
-      filtros={filtros}
-      ordem={busca.get("ordem") ?? ORDEM_PADRAO}
-      pagina={Math.max(1, Math.min(500, Number(busca.get("pagina")) || 1))}
-    />
-  );
-}

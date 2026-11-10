@@ -112,6 +112,17 @@ A hospedagem recebe resultados pequenos em vez de todos os documentos de negóci
 
 Fotos de avaliações, produtos, perfis e anexos raster agora passam pelo compressor nativo. Ele produz WebP e AVIF com miniaturas, usando compressão mais forte nas avaliações e qualidade maior nos produtos. No R2, o banco guarda referências e metadados; legados em BYTEA permanecem legíveis. Tamanhos e datas dos novos metadados usam BIGINT, sem converter imagens em Base64. Os parâmetros, a ativação da CDN, o CORS e os comandos de migração/limpeza estão no [guia de R2 e imagens](cloudflare-r2-e-imagens.md).
 
+## Loja servida pela CDN (sem função por visita)
+
+Toda página que a visitante abre na loja sai pronta da CDN da Vercel (`x-vercel-cache: HIT`), com `stale-while-revalidate`: se o banco cair, a CDN continua entregando a última versão.
+
+- **Listagens estáticas por caminho:** categorias, Personalizado, Pronta entrega e Edição do mês. Filtros, ordem e página da query (`?cor=…&ordem=…`) são aplicados no navegador (`ResultadoNaUrl`, `ProjetosNaUrl`, `ResultadoDaQuery`). O HTML pré-gerado traz a 1ª página sem filtros (SEO e sem JavaScript). Os produtos vão enxutos para o navegador (`paraListagem`: sem ficha, descrição e listas da página do produto).
+- **Continuam no servidor:** busca, detalhe de pedido da conta, o redirecionamento de `/personalizado/monte-o-seu` e `opensearch.xml` (acesso raro).
+- **Conta:** visitante sem login não chama `/api/conta/eu`. O cookie de dica `mk_sessao=1` (sem token) acompanha o cookie httpOnly da sessão. Em desenvolvimento a loja sempre pergunta (a resposta também diz se as contas gravam).
+- **Sacola sincronizada:** recarregar a página com a mesma sacola não reenvia (resumo na `sessionStorage`).
+- **Fotos do catálogo:** `s-maxage` de 1 ano e `stale-if-error` (o endereço muda quando a foto muda), sem `Vary: Accept` (o formato vem na URL). Fotos de avaliação ficam 1 dia na CDN, para uma exclusão a pedido sair rápido.
+- **Catálogo do banco:** leitura única por processo (quem chega durante uma leitura espera a mesma) e uma nova tentativa após 750 ms. Evita a fila de conexões que estourava o tempo limite quando muitas páginas regeneravam juntas (build ou invalidação pelo ERP).
+
 ## Validação
 
 O primeiro typecheck e build de produção passaram. Passaram também testes de autenticação, ERP, WhatsApp, loja, avaliações, contas, testes novos de polling/deduplicação/limite e testes isolados com PostgreSQL/PGlite. Os testes novos verificam concorrência do contador, reinício após expiração, uma instrução no caminho aquecido, idempotência dos índices, pausa offline/oculta, recuo em falhas e independência de cancelamento das requisições.

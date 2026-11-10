@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import type { ContaCliente, PedidoLoja, RespostaConta } from "@/lib/loja/contas";
-import type { CupomConta } from "@/loja/lib/contas/regras";
+import { COOKIE_DICA_SESSAO, type CupomConta } from "@/loja/lib/contas/regras";
 
 // Conta da cliente no navegador: o estado vem SEMPRE do servidor (/api/conta/eu, cookie httpOnly da
 // loja); aqui só fica a cópia em memória da página, compartilhada pelo cabeçalho, pela sacola, pelo
@@ -57,7 +57,21 @@ export async function chamarConta<T>(caminho: string, opcoes: { metodo?: "GET" |
   return dados;
 }
 
+/**
+ * Visita anônima em produção (sem o cookie de dica): já se sabe que não há conta, sem chamar o servidor.
+ * Em desenvolvimento sempre pergunta, porque a resposta também diz se as contas gravam (`gravacao`).
+ */
+function visitaAnonima() {
+  if (process.env.NODE_ENV !== "production" || typeof document === "undefined") return false;
+  return !document.cookie.split(";").some((parte) => parte.trim() === `${COOKIE_DICA_SESSAO}=1`);
+}
+
 export function recarregarConta(): Promise<void> {
+  if (visitaAnonima()) {
+    publicar({ situacao: "pronta", cliente: null, cupom: null, gravacao: true });
+    pedido = Promise.resolve();
+    return pedido;
+  }
   pedido = chamarConta<RespostaConta & { cliente: ContaCliente | null; gravacao: boolean }>("conta/eu")
     .then((dados) => publicar({ situacao: "pronta", cliente: dados.cliente, cupom: dados.cupom, gravacao: dados.gravacao !== false }))
     .catch((erro: unknown) => publicar({ situacao: "indisponivel", mensagem: erro instanceof Error ? erro.message : "Contas indisponíveis." }));

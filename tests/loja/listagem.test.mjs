@@ -175,3 +175,20 @@ test("intercalarPropagandas usa as primeiras da lista quando cabem menos anúnci
   }
   assert.ok(comAnuncio > 0);
 });
+
+test("paraListagem tira só o que a página do produto usa e mantém o que a grade e os filtros precisam", async () => {
+  const { paraListagem, filtrar, ordenar } = await import("../../src/loja/lib/catalogo/listagem.ts");
+  const produto = {
+    slug: "kit-teste", nome: "Kit teste", marca: "Ateliê", caminho: "/kit-berco/kits", preco: "100.00",
+    atributos: { cor: ["Rosê"] }, selo: "Novo", imagens: [{ src: "/x.webp", alt: "x", tipo: "principal" }],
+    ficha: [{ titulo: "Tecido", itens: [] }], descricao: ["texto longo"], documentos: [{ rotulo: "d", href: "/d" }],
+    complementos: ["a"], semelhantes: ["b"], seo: { titulo: "t" },
+  };
+  const enxuto = paraListagem(produto);
+  assert.deepEqual([enxuto.ficha, enxuto.descricao, enxuto.documentos, enxuto.complementos, enxuto.semelhantes], [[], [], [], [], []]);
+  assert.equal(enxuto.seo, undefined);
+  for (const campo of ["slug", "nome", "marca", "caminho", "preco", "atributos", "selo", "imagens"]) assert.deepEqual(enxuto[campo], produto[campo]);
+  assert.deepEqual(filtrar([enxuto], { cor: ["rose"] }).length, filtrar([produto], { cor: ["rose"] }).length);
+  assert.equal(ordenar([enxuto], "menor-preco")[0].slug, "kit-teste");
+  assert.equal(produto.ficha.length, 1, "o original não muda");
+});
