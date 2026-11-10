@@ -43,5 +43,14 @@ export async function publishUpload(key:string,publicKey:string,type:string,etag
 }
 export async function readPrefix(key:string){keyValid(key);const config=configuration();try{const data=await client().send(new GetObjectCommand({Bucket:config.bucket,Key:key,Range:'bytes=0-63'}));if(!data.Body)throw new Error();const bytes=await data.Body.transformToByteArray();if(bytes.length>64)throw new Error();return{bytes:Buffer.from(bytes),etag:data.ETag};}catch{throw new StorageError();}}
 export async function listPrivateObjects(cursor?:string){const {ListObjectsV2Command}=await import('@aws-sdk/client-s3');const config=configuration();try{const page=await client().send(new ListObjectsV2Command({Bucket:config.bucket,MaxKeys:1000,ContinuationToken:cursor}));return{objects:(page.Contents??[]).map(object=>({key:object.Key??'',modified:object.LastModified?.getTime()??Date.now(),size:Number(object.Size??0)})),cursor:page.NextContinuationToken};}catch{throw new StorageError();}}
+/** Cópia pública da biblioteca de mídia (bucket público). Só chaves vitrine/midia/. */
+export async function removePublicBinary(key:string){if(!/^vitrine\/midia\/[a-zA-Z0-9_-]+\.(avif|webp|jpg|png|mp4|webm)$/.test(key))throw new StorageError('Chave pública inválida.');const config=configuration();if(!config.publicBucket)throw new StorageError('Configure R2_PUBLIC_BUCKET.');try{await client().send(new DeleteObjectCommand({Bucket:config.publicBucket,Key:key}));}catch{throw new StorageError();}}
+/** Chave pública a partir da URL publicada (origem da mídia + /vitrine/midia/…). */
+export function publicKeyFromUrl(url:unknown){if(typeof url!=='string'||!url)return null;try{const key=new URL(url).pathname.slice(1);return /^vitrine\/midia\//.test(key)?key:null;}catch{return null;}}
+/**
+ * Arquivos enviados ANTES da transação que os referencia: se a gravação falhar (limite, conflito de
+ * revisão, banco), são apagados na hora em vez de ficarem órfãos ocupando espaço até o GC.
+ */
+export async function discardOnFailure<T>(keys:(string|null|undefined)[],operation:()=>Promise<T>):Promise<T>{try{return await operation();}catch(error){await discardBinaries(keys);throw error;}}
 /** A referência já foi removida numa transação confirmada. Falhas são retomadas pelo GC. */
 export async function discardBinaries(keys:(string|null|undefined)[]){const result=await Promise.allSettled([...new Set(keys.filter((key):key is string=>Boolean(key)))].map(removeBinary));if(result.some(item=>item.status==='rejected'))console.warn('Há arquivos externos removidos da aplicação aguardando limpeza no storage.');}

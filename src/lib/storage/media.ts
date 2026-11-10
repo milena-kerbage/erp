@@ -1,9 +1,9 @@
 import {compressImage} from './images.ts';
-import {prepareImageVariants,saveImageVariants,variantsDb,discardBinaries} from './variants.ts';
+import {prepareImageVariants,saveImageVariants,variantsDb,variantsTable,variantKeys,discardBinaries} from './variants.ts';
 import {randomUUID} from 'node:crypto';
 import {erpDB} from '../erp/core.ts';
 import {ApiError,type Actor} from '../erp/access.ts';
-import {storageStatus,presignUpload,inspectUpload,publishUpload,readPrefix,readBinary} from './r2.ts';
+import {storageStatus,presignUpload,inspectUpload,publishUpload,readPrefix,readBinary,removePublicBinary,publicKeyFromUrl} from './r2.ts';
 const schema=`CREATE TABLE IF NOT EXISTS media_uploads(id TEXT PRIMARY KEY,actor TEXT NOT NULL,object_key TEXT NOT NULL UNIQUE,mime TEXT NOT NULL,size INTEGER NOT NULL,created INTEGER NOT NULL,status TEXT NOT NULL,public_url TEXT);CREATE INDEX IF NOT EXISTS media_uploads_actor ON media_uploads(actor,created DESC);`;
 function db(){const database=erpDB();database.registerSqliteSchema(schema);return database;}
 const types:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/avif':'avif','image/webp':'webp','video/mp4':'mp4','video/webm':'webm'};
@@ -15,6 +15,7 @@ export async function createMediaUpload(input:Record<string,unknown>,actor:Actor
   if(!types[type]||!Number.isSafeInteger(size)||size<1||size>(type.startsWith('image/')?12*1024*1024:max))throw new ApiError(400,'Envie JPG, PNG, WebP, MP4 ou WebM de até 128 MiB.','INVALID_UPLOAD');
   const database=db(),id=randomUUID(),key=`uploads/${id}.${types[type]}`;
   const uploadUrl=await presignUpload(key,type,size);
+  await purgeExpiredUploads();
   // Limite de reserva persistente para impedir uma quantidade ilimitada de URLs válidas.
   await database.transaction(async()=>{
     if(database.backend==='postgres')await database.prepare('SELECT pg_advisory_xact_lock(hashtextextended(?,0))').get('media-upload-reservation');
@@ -45,18 +46,24 @@ export async function finalizeMedia(id:string,actor:Actor){
   if(String(row.mime).startsWith('image/')){
     const compressed=await compressImage(await readBinary(String(row.object_key),12*1024*1024),'general');
     const variants=await prepareImageVariants('asset',id,compressed);
-    for(const variant of variants){
-      if(!variant.key)throw new ApiError(503,'Armazenamento externo não está ativo.');
-      const metadata=await inspectUpload(variant.key);if(!metadata.etag)throw new ApiError(503,'Não foi possível verificar o arquivo.');
-      variant.publicUrl=await publishUpload(variant.key,`vitrine/midia/${id}-${variant.variant}.${variant.format}`,`image/${variant.format}`,metadata.etag);
+    const privateKeys=variantKeys(variants),database=variantsDb(db());
+    let url='';
+    try{
+      for(const variant of variants){
+        if(!variant.key)throw new ApiError(503,'Armazenamento externo não está ativo.');
+        const metadata=await inspectUpload(variant.key);if(!metadata.etag)throw new ApiError(503,'Não foi possível verificar o arquivo.');
+        variant.publicUrl=await publishUpload(variant.key,`vitrine/midia/${id}-${variant.variant}.${variant.format}`,`image/${variant.format}`,metadata.etag);
+      }
+      url=variants.find(v=>v.format==='webp'&&v.variant==='large')!.publicUrl!;
+      await database.transaction(async()=>{
+        await saveImageVariants(database,variants.map(variant=>({...variant,key:null,bytes:Buffer.alloc(0)})));
+        await database.prepare("UPDATE media_uploads SET status='published',public_url=?,mime='image/webp' WHERE id=? AND actor=?").run(url,id,actor.id);
+      });
+    }catch(error){
+      // Falhou no meio: nada de cópias convertidas esquecidas (o original segue para uma nova tentativa).
+      await discardBinaries(privateKeys);await discardPublic(variants.map(variant=>publicKeyFromUrl(variant.publicUrl)));
+      throw error;
     }
-    const url=variants.find(v=>v.format==='webp'&&v.variant==='large')!.publicUrl!;
-    const privateKeys=variants.map(v=>v.key);
-    const database=variantsDb(db());
-    await database.transaction(async()=>{
-      await saveImageVariants(database,variants.map(variant=>({...variant,key:null,bytes:Buffer.alloc(0)})));
-      await database.prepare("UPDATE media_uploads SET status='published',public_url=?,mime='image/webp' WHERE id=? AND actor=?").run(url,id,actor.id);
-    });
     await discardBinaries([String(row.object_key),...privateKeys]);
     return{id,url,avifUrl:variants.find(v=>v.format==='avif'&&v.variant==='large')!.publicUrl,compression:{originalBytes:compressed.originalBytes,webpBytes:compressed.webp.large.length,avifBytes:compressed.avif.large.length}};
   }
@@ -64,4 +71,26 @@ export async function finalizeMedia(id:string,actor:Actor){
   await db().prepare("UPDATE media_uploads SET status='published',public_url=? WHERE id=? AND actor=?").run(url,id,actor.id);
   await discardBinaries([String(row.object_key)]);
   return{id,url};
+}
+
+async function discardPublic(keys:(string|null)[]){const result=await Promise.allSettled([...new Set(keys.filter((key):key is string=>Boolean(key)))].map(removePublicBinary));if(result.some(item=>item.status==='rejected'))console.warn('Há arquivos públicos removidos da biblioteca aguardando limpeza no storage.');}
+/** Reservas não concluídas em 1 hora (a URL assinada já expirou): o arquivo enviado e a linha saem. */
+export async function purgeExpiredUploads(now=Date.now()){
+  const database=db(),rows=await database.prepare("DELETE FROM media_uploads WHERE status='pending' AND created<? RETURNING object_key").all(now-3600000);
+  await discardBinaries(rows.map(row=>String(row.object_key)));
+  return rows.length;
+}
+/** Exclusão definitiva de uma mídia da biblioteca: tira do bucket público (todos os formatos) e do banco. */
+export async function deleteMedia(id:string,actor:Actor){
+  if(actor.permission!=='admin'&&actor.permission!=='manager')throw new ApiError(403,'Apenas gestão pode excluir mídia.');
+  if(!/^[a-f0-9-]{36}$/.test(id))throw new ApiError(404,'Mídia não encontrada.');
+  const database=variantsDb(db());
+  const removed=await database.transaction(async()=>{
+    const row=await database.prepare('DELETE FROM media_uploads WHERE id=? RETURNING object_key,public_url').get(id);
+    if(!row)throw new ApiError(404,'Mídia não encontrada.');
+    const variants=await database.prepare(`DELETE FROM ${variantsTable(database)} WHERE kind='asset' AND owner_id=? RETURNING object_key,public_url`).all(id);
+    return{privateKeys:[String(row.object_key),...variants.map(variant=>variant.object_key?String(variant.object_key):null)],publicKeys:[publicKeyFromUrl(row.public_url),...variants.map(variant=>publicKeyFromUrl(variant.public_url))]};
+  });
+  await discardBinaries(removed.privateKeys);await discardPublic(removed.publicKeys);
+  return{deleted:true};
 }

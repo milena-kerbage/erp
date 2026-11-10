@@ -95,3 +95,40 @@ test('duplicar produto conserva WebP/AVIF sem duplicar objetos e exclusão liber
  assert.ok(keys.every(key=>!objects.has('private-test/'+key)),'última exclusão libera todos os formatos');
  assert.equal((await erpDB().prepare('SELECT COUNT(*) AS total FROM image_variants WHERE kind=? AND owner_id IN (?,?)').get('product',sourceId,copyId)).total,0);
 });
+
+test('trocar a foto de perfil apaga a anterior em todos os formatos',async()=>{
+ const sharp=(await import('sharp')).default,{storePhoto,deletePhoto}=await import('../src/lib/erp/files.ts');
+ const foto=cor=>sharp({create:{width:300,height:300,channels:3,background:cor}}).png().toBuffer();
+ const perfil=()=>[...objects.keys()].filter(key=>key.startsWith('private-test/private/images/profile/'));
+ await storePhoto(await foto('#789d82'),actor);const primeira=perfil();assert.equal(primeira.length,4,'WebP e AVIF, grande e mini');
+ await storePhoto(await foto('#927849'),actor);const segunda=perfil();assert.equal(segunda.length,4,'só a foto atual fica guardada');assert.ok(primeira.every(key=>!segunda.includes(key)));
+ await deletePhoto(actor);assert.equal(perfil().length,0);
+});
+test('envio de foto que falha na gravação não deixa arquivo no storage',async()=>{
+ const sharp=(await import('sharp')).default,{criarCategoria}=await import('../src/lib/loja/gestao/categorias.ts'),{criarProduto}=await import('../src/lib/loja/gestao/produtos.ts'),{enviarImagem}=await import('../src/lib/loja/gestao/imagens.ts');
+ const categoria=(await criarCategoria({slug:'fotos-falha',nome:'Falha'},actor)).categoria;
+ const produto=(await criarProduto({slug:'produto-falha',sku:'STORAGE-2',nome:'Produto',precoCentavos:100,categoriaId:categoria.id},actor)).produto;
+ const image=await sharp({create:{width:320,height:200,channels:3,background:'#5b6f8c'}}).png().toBuffer(),antes=objects.size;
+ await assert.rejects(enviarImagem(produto.id,{conteudo:image,revisao:produto.revisao+5},actor),{status:409});
+ assert.equal(objects.size,antes,'as variantes enviadas antes da transação foram apagadas');
+});
+test('excluir mídia tira todos os formatos do bucket público e reservas vencidas são limpas',async()=>{
+ const sharp=(await import('sharp')).default,{deleteMedia,purgeExpiredUploads}=await import('../src/lib/storage/media.ts');
+ const bytes=await sharp({create:{width:640,height:480,channels:3,background:'#c9a38a'}}).png().toBuffer();
+ const reservation=await createMediaUpload({type:'image/png',size:bytes.length},actor),row=await erpDB().prepare('SELECT object_key FROM media_uploads WHERE id=?').get(reservation.id);
+ objects.set(`private-test/${row.object_key}`,{bytes,type:'image/png'});await finalizeMedia(reservation.id,actor);
+ const publicas=()=>[...objects.keys()].filter(key=>key.startsWith(`public-test/vitrine/midia/${reservation.id}-`));
+ assert.equal(publicas().length,4);
+ await assert.rejects(deleteMedia(reservation.id,{...actor,permission:'member'}),{status:403});
+ assert.deepEqual(await deleteMedia(reservation.id,actor),{deleted:true});
+ assert.equal(publicas().length,0);
+ assert.equal(await erpDB().prepare('SELECT id FROM media_uploads WHERE id=?').get(reservation.id),undefined);
+ assert.equal((await erpDB().prepare('SELECT COUNT(*) AS total FROM image_variants WHERE kind=? AND owner_id=?').get('asset',reservation.id)).total,0);
+ await assert.rejects(deleteMedia(reservation.id,actor),{status:404});
+ const pendente=await createMediaUpload({type:'video/mp4',size:32},actor),pendenteRow=await erpDB().prepare('SELECT object_key FROM media_uploads WHERE id=?').get(pendente.id);
+ objects.set(`private-test/${pendenteRow.object_key}`,{bytes:Buffer.alloc(32),type:'video/mp4'});
+ await erpDB().prepare('UPDATE media_uploads SET created=? WHERE id=?').run(Date.now()-2*3600000,pendente.id);
+ assert.ok(await purgeExpiredUploads()>=1);
+ assert.equal(objects.has(`private-test/${pendenteRow.object_key}`),false);
+ assert.equal(await erpDB().prepare('SELECT id FROM media_uploads WHERE id=?').get(pendente.id),undefined);
+});

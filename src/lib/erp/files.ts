@@ -1,6 +1,6 @@
 import {compressImage} from '../storage/images.ts';
-import {prepareImageVariants,saveImageVariants,imageVariant,deleteImageVariants,variantsDb} from '../storage/variants.ts';
-import {storeBinary,readBinary,discardBinaries} from '../storage/r2.ts';
+import {prepareImageVariants,saveImageVariants,imageVariant,deleteImageVariants,variantsDb,variantKeys} from '../storage/variants.ts';
+import {storeBinary,readBinary,discardBinaries,discardOnFailure} from '../storage/r2.ts';
 import { randomUUID } from 'node:crypto';
 import { databaseFor } from '../database.ts';
 import { accessDb, ApiError, currentMember, patchMemberMetadata, type Actor } from './access.ts';
@@ -22,11 +22,15 @@ export async function storePhoto(bytes: Buffer,actor:Actor) {
   checkSize(bytes);imageMime(bytes);
   const compressed=await compressImage(bytes,'profile'),database=variantsDb(accessDb());
   const variants=await prepareImageVariants('profile',actor.id,compressed),objectKey=variants.find(v=>v.format==='webp'&&v.variant==='large')!.key;
-  await database.transaction(async()=>{
+  // Trocar a foto apaga a anterior (todos os formatos) depois do commit: o storage guarda só a atual.
+  const replaced=await discardOnFailure(variantKeys(variants),()=>database.transaction(async()=>{
+    const previous=await database.prepare('SELECT object_key FROM profile_photos WHERE user_id = ?').get(actor.id);
     await database.prepare('INSERT INTO profile_photos (user_id,content,mime_type,updated,object_key) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET content = excluded.content, mime_type = excluded.mime_type, updated = excluded.updated, object_key=excluded.object_key').run(actor.id,objectKey?Buffer.alloc(0):compressed.webp.large,'image/webp',Date.now(),objectKey);
-    await saveImageVariants(database,variants);
+    const oldVariants=await saveImageVariants(database,variants);
     await patchMemberMetadata(actor.id,{avatarUrl:`/api/erp/profile/photo?userId=${encodeURIComponent(actor.id)}&v=${Date.now()}`});
-  });
+    return [previous?.object_key?String(previous.object_key):null,...oldVariants].filter((key):key is string=>Boolean(key)&&key!==objectKey);
+  }));
+  await discardBinaries(replaced);
   return {currentUser:await currentMember(actor)};
 }
 export async function deletePhoto(actor:Actor) {
@@ -57,7 +61,7 @@ export async function storeAttachment(leadId:string,name:string,mime:string,byte
   const database=variantsDb(filesDb()),id=randomUUID(),created=Date.now(),filename=compressed?normalizedFilename(name).replace(/\.[^.]+$/,'')+'.webp':normalizedFilename(name),type=compressed?'image/webp':/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(mime)?mime:'application/octet-stream';
   const variants=compressed?await prepareImageVariants('attachment',id,compressed):null;
   const objectKey=variants?variants.find(v=>v.format==='webp'&&v.variant==='large')!.key:await storeBinary(`private/attachments/${id}`,bytes,type);
-  await database.transaction(async()=>{
+  await discardOnFailure(variants?variantKeys(variants):[objectKey],()=>database.transaction(async()=>{
     await lockErpCore();
     await activeLead(leadId);
     const size=await database.prepare('SELECT COALESCE(SUM(size),0) AS bytes, COUNT(*) AS count FROM lead_attachments WHERE lead_id = ?').get(leadId) as {bytes:number;count:number};
@@ -68,7 +72,7 @@ export async function storeAttachment(leadId:string,name:string,mime:string,byte
     const details=JSON.parse(lead.details_json);details.history.push({id:randomUUID(),type:'file',fileName:filename,at:new Date(created).toISOString(),by:actor?.name || 'Sistema'});
     await database.prepare('UPDATE leads SET details_json = ?, updated = ? WHERE id = ?').run(JSON.stringify(details),created,leadId);
     await database.prepare('INSERT INTO erp_audit VALUES (?, ?, ?, ?, ?, ?)').run(randomUUID(),actor?.id || 'system','file_attached','leads',leadId,created);
-  });
+  }));
   return {attachment:{id,name:filename,size:bytes.length,type,addedAt:new Date(created).toISOString(),url:`/api/erp/leads/${encodeURIComponent(leadId)}/attachments/${id}`,...(duration!==undefined?{duration}:{})}};
 }
 export async function getAttachment(leadId:string,id:string,formato:'webp'|'avif'='webp') {

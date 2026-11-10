@@ -1,7 +1,7 @@
-import {storeBinary,readBinary,discardBinaries} from '../storage/r2.ts';
+import {readBinary,discardBinaries,discardOnFailure} from '../storage/r2.ts';
 import { createHmac, randomUUID } from 'node:crypto';
 import {compressImage,ImageCompressionError,type CompressedImage} from '../storage/images.ts';
-import {prepareImageVariants,saveImageVariants,imageVariant,deleteImageVariants,variantsDb} from '../storage/variants.ts';
+import {prepareImageVariants,saveImageVariants,imageVariant,deleteImageVariants,variantsDb,variantKeys} from '../storage/variants.ts';
 import { erpDB } from '../erp/core.ts';
 import { ApiError, type Actor } from '../erp/access.ts';
 import { imageMime, MAX_FILE_BYTES } from '../erp/files.ts';
@@ -96,7 +96,8 @@ export async function criarAvaliacao(entrada: EntradaAvaliacao, opcoes: OpcoesAv
   variantsDb(database);
   const photoIds=fotos.map(()=>randomUUID());
   const objects=await Promise.all(fotos.map((foto,index)=>prepareImageVariants('review',photoIds[index],foto.compressed)));
-  await database.transaction(async () => {
+  // Limite por IP ou falha do banco: as fotos já enviadas ao storage são apagadas, não ficam órfãs.
+  await discardOnFailure(objects.flatMap(variantKeys), () => database.transaction(async () => {
     await travar();
     await database.prepare("UPDATE loja_avaliacoes SET ip_hash = '' WHERE ip_hash <> '' AND criada < ?").run(agora - 24 * 60 * 60 * 1000);
     const recentes = await database.prepare('SELECT COUNT(*) AS total FROM loja_avaliacoes WHERE ip_hash = ? AND criada > ?').get(ip, agora - LIMITES_AVALIACAO.janelaIpMs) as {total: number};
@@ -109,7 +110,7 @@ export async function criarAvaliacao(entrada: EntradaAvaliacao, opcoes: OpcoesAv
       await saveImageVariants(database,objects[posicao]);
     }
     await auditar('loja', 'created', id);
-  });
+  }));
   return {situacao: 'recebida', id};
 }
 

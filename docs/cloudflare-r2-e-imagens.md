@@ -6,9 +6,9 @@ A hospedagem atual foi mantida. O sistema possui integração S3/R2 no servidor,
 
 1. Criar dois buckets **R2 Standard** diferentes: um privado e outro público. Os dois compartilham a franquia gratuita da conta; considerar miniaturas e os dois formatos no volume armazenado.
 2. No privado, manter domínio público e `r2.dev` desativados. Ele recebe originais de uploads diretos, arquivos internos e imagens que precisam de autorização/moderação.
-3. No público, conectar `midia.ateliemilenakerbage.com.br` como Custom Domain. Somente arquivos publicados pela gestão na biblioteca de mídia são copiados para ele. [Documentação de domínio e cache](https://developers.cloudflare.com/r2/buckets/public-buckets/).
+3. No público, ativar o endereço `r2.dev` (escolha atual: o DNS do domínio está na Vercel, e o Custom Domain da R2 exige a zona na Cloudflare). Endereço em uso: `https://pub-c1d02ae652d84fb0ab74b8d4ed672919.r2.dev`. Somente arquivos publicados pela gestão na biblioteca de mídia são copiados para ele. O `r2.dev` tem limite de requisições e não passa pelo cache da Cloudflare: serve para homologação e volume baixo; antes de tráfego real, trocar por Custom Domain (`midia.ateliemilenakerbage.com.br`, o que exige mover o DNS para a Cloudflare). [Documentação de domínio e cache](https://developers.cloudflare.com/r2/buckets/public-buckets/).
 4. Configurar CORS usando [r2-private-cors.json](../infra/cloudflare/r2-private-cors.json) e [r2-public-cors.json](../infra/cloudflare/r2-public-cors.json). Se o ERP estiver em um domínio de prévia, acrescentar sua origem HTTPS exata ao CORS privado.
-5. Gerar credenciais S3 restritas à leitura/escrita dos dois buckets. Definir no ambiente **do servidor**: `MEDIA_STORAGE_DRIVER=r2`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_BUCKET`. Definir a URL pública `NEXT_PUBLIC_LOJA_MEDIA_ORIGIN=https://midia.ateliemilenakerbage.com.br` e fazer novo build. As credenciais não devem usar prefixo `NEXT_PUBLIC_`.
+5. Gerar credenciais S3 restritas à leitura/escrita dos dois buckets. Definir no ambiente **do servidor**: `MEDIA_STORAGE_DRIVER=r2`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_BUCKET`. Definir a URL pública `NEXT_PUBLIC_LOJA_MEDIA_ORIGIN=https://pub-c1d02ae652d84fb0ab74b8d4ed672919.r2.dev` (ou o Custom Domain, quando houver) e fazer novo build. As credenciais não devem usar prefixo `NEXT_PUBLIC_`.
 6. Abrir Configurações → Fotos e vídeos e publicar um arquivo de teste. O vídeo vai diretamente do navegador ao bucket privado por URL assinada de cinco minutos. A finalização verifica dono, tamanho, MIME, assinatura inicial do arquivo e ETag antes da cópia pública. Fotos são convertidas em WebP e AVIF antes da publicação.
 
 Produção usa R2 por padrão. Se a configuração estiver incompleta, novos uploads retornam erro de armazenamento; o sistema não passa silenciosamente a gravar os bytes no banco. O modo `MEDIA_STORAGE_DRIVER=database` existe para testes e uma transição explícita. Arquivos legados no banco continuam legíveis.
@@ -43,6 +43,17 @@ Ao duplicar um produto, suas fotos compartilham os objetos imutáveis e recebem 
 `erp_core.image_variants` mantém perfil, formato, dimensões, tamanho original, tamanho comprimido, chave do objeto e data. Tamanhos e datas usam **BIGINT de 64 bits** no PostgreSQL; dimensões e pequenos estados usam inteiros menores quando suficientes. O adaptador valida inteiros recebidos para evitar perda silenciosa de precisão no JavaScript.
 
 Não se grava Base64 de imagens em linhas de texto. Ele aumenta o volume em aproximadamente um terço. Com R2 ativo, o banco mantém referências e metadados; os bytes permanecem no storage. O fallback de testes/transição usa BYTEA/BLOB, sem codificação Base64.
+
+## Só a versão atual fica guardada
+
+Para o espaço não crescer à toa, nenhum arquivo substituído ou removido fica no storage:
+
+- Trocar a foto de perfil apaga a anterior (WebP e AVIF, grande e miniatura) logo depois de gravar a nova.
+- Remover uma foto de produto, excluir o produto, a avaliação ou o anexo do lead apaga os arquivos na hora. Em produtos duplicados, o arquivo só sai quando a última cópia deixa de usá-lo.
+- A biblioteca de mídia tem **Excluir**, que tira o arquivo do bucket público em todos os formatos.
+- Se a gravação falhar depois do envio (limite de fotos, revisão desatualizada, limite de avaliações), os arquivos recém-enviados são apagados.
+- Reservas de upload não concluídas em 1 hora são limpas no próximo envio da biblioteca.
+- Se a própria exclusão no R2 falhar, o arquivo fica sem referência e o GC abaixo o remove.
 
 ## Migração e limpeza
 

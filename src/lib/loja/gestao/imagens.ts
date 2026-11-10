@@ -1,7 +1,7 @@
-import {storeBinary,readBinary,discardBinaries} from '../../storage/r2.ts';
+import {readBinary,discardBinaries,discardOnFailure} from '../../storage/r2.ts';
 import { createHash } from 'node:crypto';
 import {compressImage,ImageCompressionError} from '../../storage/images.ts';
-import {prepareImageVariants,saveImageVariants,imageVariant,deleteImageVariants,variantsDb,variantsTable} from '../../storage/variants.ts';
+import {prepareImageVariants,saveImageVariants,imageVariant,deleteImageVariants,variantsDb,variantsTable,variantKeys} from '../../storage/variants.ts';
 import { ApiError, type Actor } from '../../erp/access.ts';
 import { imageMime, MAX_FILE_BYTES } from '../../erp/files.ts';
 import type { ImagemProdutoGestao, RespostaImagensProduto, TipoImagemProduto } from './tipos.ts';
@@ -77,7 +77,8 @@ export async function enviarImagem(produtoId: string, entrada: EntradaUpload, at
   const database = gestaoDb(), id = novoId();
   variantsDb(database);const variants=await prepareImageVariants('product',id,foto.compressed);
   const grandeKey=variants.find(v=>v.format==='webp'&&v.variant==='large')!.key,miniKey=variants.find(v=>v.format==='webp'&&v.variant==='small')!.key;
-  await database.transaction(async () => {
+  // Os arquivos sobem antes da transação: se ela falhar (limite de fotos, revisão desatualizada), saem do storage.
+  await discardOnFailure(variantKeys(variants), () => database.transaction(async () => {
     await travarGestao();
     await produtoParaEditar(produtoId, revisao);
     const atual = await database.prepare('SELECT COUNT(*) AS total, COALESCE(MAX(posicao), -1) AS ultima FROM loja_produto_imagens WHERE produto_id = ?').get(produtoId);
@@ -88,7 +89,7 @@ export async function enviarImagem(produtoId: string, entrada: EntradaUpload, at
     await saveImageVariants(database,variants);
     await tocarProduto(produtoId);
     await auditarGestao(ator.id, 'file_attached', 'loja_produtos', produtoId);
-  });
+  }));
   return respostaImagens(produtoId);
 }
 
