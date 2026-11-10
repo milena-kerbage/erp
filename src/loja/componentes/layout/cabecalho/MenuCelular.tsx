@@ -253,7 +253,7 @@ function GradeCards({ cards, aoNavegar }: { cards: CardMenu[]; aoNavegar: () => 
       {cards.map((card) => (
         <li key={card.href}>
           <Link href={card.href} onClick={aoNavegar} className={cx("group", cardLink)}>
-            <Midia src={card.src} tom={card.tom} icone={card.icone} zoom sizes="50vw" className={css({ aspectRatio: "[5 / 6]" })} />
+            <Midia src={card.src} alt={card.alt ?? card.rotulo} tom={card.tom} icone={card.icone} zoom sizes="50vw" className={css({ aspectRatio: "[5 / 6]" })} />
             <span className={css({ display: "block", pt: "4", fontSize: "lg", fontWeight: "medium", lineHeight: "texto", color: "escuro" })}>
               {card.rotulo}
             </span>

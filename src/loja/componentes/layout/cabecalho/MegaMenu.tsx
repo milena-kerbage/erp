@@ -35,11 +35,11 @@ export function PainelMegaMenu({
     // biome-ignore lint/a11y/noStaticElementInteractions: idem
     <div id={id} className={painelEstilo} onClick={(evento) => (evento.target as HTMLElement).closest("a") && aoNavegar()}>
       {painel.tipo === "cards" ? (
-        <ul aria-label={item.rotulo} className={listaCards}>
+        <ul aria-label={item.rotulo} className={cx(listaCards, painel.cards.length <= 2 && css({ w: "full", maxW: "[640px]", mx: "auto" }))}>
           {painel.cards.map((card) => (
             <li key={card.href} className={classeColuna} style={atraso()}>
               <Link href={card.href} className={cx("group", css({ display: "block" }))}>
-                <Midia src={card.src} tom={card.tom} icone={card.icone} zoom sizes="20vw" className={css({ aspectRatio: "[5 / 6]" })} />
+                <Midia src={card.src} alt={card.alt ?? card.rotulo} tom={card.tom} icone={card.icone} zoom sizes="20vw" className={css({ aspectRatio: "[5 / 6]" })} />
                 <span className={legendaCard}>{card.rotulo}</span>
               </Link>
             </li>
@@ -63,6 +63,7 @@ export function PainelMegaMenu({
             <Link href={painel.promo.href} className={cx("group", promo, classeColuna)} style={atraso()}>
               <Midia
                 src={painel.promo.src}
+                alt={painel.promo.alt ?? painel.promo.titulo}
                 tom={painel.promo.tom}
                 icone={painel.promo.icone}
                 zoom
@@ -131,7 +132,7 @@ function CardsNoEspaco({
       {painel.cards.slice(0, livres).map((card) => (
         <li key={card.href}>
           <Link href={card.href} className={cx("group", css({ display: "block", _focusVisible: { outline: "none", boxShadow: "anelFoco" } }))}>
-            <Midia src={card.src} tom={card.tom} icone={card.icone} zoom sizes="15vw" className={css({ aspectRatio: "[5 / 6]" })} />
+            <Midia src={card.src} alt={card.alt ?? card.rotulo} tom={card.tom} icone={card.icone} zoom sizes="15vw" className={css({ aspectRatio: "[5 / 6]" })} />
             <span className={legendaCard}>{card.rotulo}</span>
           </Link>
         </li>

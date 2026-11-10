@@ -10,7 +10,7 @@ import { useSugestoes } from "@/loja/componentes/busca/useSugestoes";
 import { MagnifyingGlass, X } from "@/loja/componentes/icones";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import type { TomMidia } from "@/loja/componentes/inicio/Midia";
-import { destacar, type EloSugerido, type RespostaSugestoes } from "@/loja/lib/catalogo/sugestoes";
+import { destacar, type EloSugerido, type ProdutoSugerido, type RespostaSugestoes } from "@/loja/lib/catalogo/sugestoes";
 import { montarUrlBusca, normalizarBusca } from "@/loja/lib/seo/urls";
 import { Gaveta, useGaveta } from "./Gaveta";
 
@@ -22,7 +22,7 @@ import { Gaveta, useGaveta } from "./Gaveta";
 // Teclado (combobox ARIA): ↑/↓ percorrem os termos (aria-activedescendant, o foco fica no campo),
 // Enter busca o termo ativo ou o digitado (/busca?q=) e fecha a gaveta, Esc limpa o campo e, vazio,
 // fecha. A contagem é anunciada numa região viva. Sem JavaScript, o botão é um link para /busca.
-export function GavetaBusca({ termos }: { termos: string[] }) {
+export function GavetaBusca({ termos, destaques = [] }: { termos: string[]; destaques?: ProdutoSugerido[] }) {
   const { aberta, abrir, fechar } = useGaveta();
   const router = useRouter();
   const campo = useRef<HTMLInputElement>(null);
@@ -249,7 +249,19 @@ export function GavetaBusca({ termos }: { termos: string[] }) {
                   <ListaTermos termos={recentes} aoNavegar={aoNavegar} />
                 </div>
               )}
-              <h2 className={tituloBloco}>Mais buscados</h2>
+              {!digitando && destaques.length > 0 && <section aria-labelledby={`${id}-destaques`} className={css({ pt: "8" })}>
+                <h2 id={`${id}-destaques`} className={tituloBloco}>Peças do ateliê</h2>
+                <ul className={gradePecas}>
+                  {destaques.map(produto => <li key={produto.slug}>
+                    <Link href={produto.href} onClick={() => aoNavegar()} className={cx("group", cardPeca)}>
+                      <FotoProduto foto={produto.foto} sizes="(min-width: 768px) 196px, 50vw" className={fotoPeca} />
+                      <span className={nomePeca}>{produto.base}{produto.variacao && <span className={css({ color: "textoSuave" })}> {produto.variacao}</span>}</span>
+                      <span className={precoPeca}>{produto.preco}</span>
+                    </Link>
+                  </li>)}
+                </ul>
+              </section>}
+              <h2 className={cx(tituloBloco, !digitando && destaques.length > 0 && css({ pt: "8" }))}>Explore o ateliê</h2>
               <ListaTermos termos={termos} aoNavegar={aoNavegar} />
             </>
           )}

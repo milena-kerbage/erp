@@ -8,6 +8,7 @@ import { arvoreDaLoja, indiceDaLoja } from "@/lib/loja/catalogo";
 import { EDICAO_ATUAL, ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
 import { filtrosDaQuery } from "@/loja/lib/catalogo/urlsListagem";
 import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
+import { edicaoComFotos } from "@/loja/lib/catalogo/apresentacao";
 
 // Edição do mês (a "Monthly Edit" da shop.lululemon.com, lululemon-animacoes-edicao.md §3): a mesma
 // listagem das categorias (topo, pílula "Ver" e filtros) com blocos editoriais grandes intercalados
@@ -18,19 +19,21 @@ import { ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 const CHAVE = ROTA_EDICAO.slice(1);
 
 async function pecasDaEdicao() {
-  return (await indiceDaLoja()).buscarVarios(EDICAO_ATUAL.produtos);
+  const indice = await indiceDaLoja();
+  const edicao = edicaoComFotos(indice.catalogo);
+  return { pecas: indice.buscarVarios(edicao.produtos), edicao };
 }
 
 export const metadata: Metadata = {
   title: `Edição do mês: ${EDICAO_ATUAL.titulo}`,
-  description: EDICAO_ATUAL.descricao,
+  description: "A seleção do ateliê para os primeiros dias: kits de berço, tecidos e bordados para receber o bebê.",
   alternates: { canonical: ROTA_EDICAO },
   // Catálogo de exemplo (preços fictícios): fora do índice até a API de catálogo existir.
   robots: { index: false, follow: true },
 };
 
 export default async function PaginaEdicaoDoMes({ searchParams }: PageProps<"/loja/edicao-do-mes">) {
-  const [pecas, { categoriasRelacionadas }] = await Promise.all([pecasDaEdicao(), arvoreDaLoja()]);
+  const [{ pecas, edicao }, { categoriasRelacionadas }] = await Promise.all([pecasDaEdicao(), arvoreDaLoja()]);
   const categorias = [...new Set(pecas.map((peca) => peca.caminho.split("/")[1]))].filter(Boolean);
   return (
     <>
@@ -42,7 +45,7 @@ export default async function PaginaEdicaoDoMes({ searchParams }: PageProps<"/lo
         ]}
         titulo={EDICAO_ATUAL.titulo}
         total={pecas.length}
-        atalhos={EDICAO_ATUAL.atalhos}
+        atalhos={edicao.atalhos}
       />
       <Suspense fallback={<EsqueletoGrade />}>
         <Grade searchParams={searchParams} />
@@ -53,6 +56,7 @@ export default async function PaginaEdicaoDoMes({ searchParams }: PageProps<"/lo
 }
 
 async function Grade({ searchParams }: Pick<PageProps<"/loja/edicao-do-mes">, "searchParams">) {
+  const { pecas, edicao } = await pecasDaEdicao();
   const busca = new URLSearchParams();
   for (const [chave, valor] of Object.entries(await searchParams)) {
     for (const item of Array.isArray(valor) ? valor : [valor ?? ""]) busca.append(chave, item);
@@ -60,12 +64,12 @@ async function Grade({ searchParams }: Pick<PageProps<"/loja/edicao-do-mes">, "s
   return (
     <Resultado
       contexto={{ tipo: "categoria", categoria: CHAVE }}
-      itensBase={await pecasDaEdicao()}
+      itensBase={pecas}
       filtros={filtrosDaQuery(busca)}
       ordem={busca.get("ordem") ?? ORDEM_PADRAO}
       pagina={Math.max(1, Math.min(500, Number(busca.get("pagina")) || 1))}
-      blocos={EDICAO_ATUAL.blocos}
-      primeiraLinhaBlocos={EDICAO_ATUAL.primeiraLinha ?? 0}
+      blocos={edicao.blocos}
+      primeiraLinhaBlocos={edicao.primeiraLinha ?? 0}
     />
   );
 }

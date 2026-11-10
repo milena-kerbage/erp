@@ -13,6 +13,7 @@ import { MenuCelular } from "./MenuCelular";
 import type { ItemMenu } from "./menu";
 import type { LinkUtilitario } from "./navegacao";
 import { SacolaCabecalho } from "./SacolaCabecalho";
+import type { ProdutoSugerido } from "@/loja/lib/catalogo/sugestoes";
 
 // Cabeçalho da loja.
 // Desktop (≥ 992): <header> sticky de altura 0; a pílula sálvia-linho translúcida de 48 px (desfoque de 40 px)
@@ -26,11 +27,13 @@ import { SacolaCabecalho } from "./SacolaCabecalho";
 export function BarraCabecalho({
   menu,
   termos,
+  destaques = [],
   servico,
   linksGaveta,
 }: {
   menu: ItemMenu[];
   termos: string[];
+  destaques?: ProdutoSugerido[];
   servico: LinkUtilitario[];
   linksGaveta: LinkUtilitario[];
 }) {
@@ -162,7 +165,7 @@ export function BarraCabecalho({
           </nav>
 
           <div className={utilidades}>
-            <GavetaBusca termos={termos} />
+            <GavetaBusca termos={termos} destaques={destaques} />
             {/* Conta: a inicial do nome e o menu curto quando logada (MenuConta). */}
             <MenuConta />
             <SacolaCabecalho />

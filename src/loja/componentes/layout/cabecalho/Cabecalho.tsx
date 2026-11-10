@@ -1,8 +1,8 @@
 import { css } from "styled-system/css";
 import { BarraCabecalho } from "./BarraCabecalho";
-import { menuDaLoja } from "@/lib/loja/catalogo";
+import { catalogoDaLoja, menuDaLoja } from "@/lib/loja/catalogo";
 import { LINKS_GAVETA, LINKS_SERVICO } from "./menu";
-import { TERMOS_MAIS_BUSCADOS } from "./navegacao";
+import { menuComFotos, produtosEmDestaque, sugestaoDoProduto, termosDaCuradoria } from "@/loja/lib/catalogo/curadoria";
 
 // Cabeçalho da loja: link para pular ao conteúdo e a barra (pílula flutuante no desktop, barra clara
 // que some ao descer no celular). Sem faixa promocional acima: a pílula é a primeira coisa da página.
@@ -10,12 +10,14 @@ import { TERMOS_MAIS_BUSCADOS } from "./navegacao";
 // partes interativas são Client Components.
 // Fora da home, o <main> reserva o topo com `reservaDoCabecalho` (estilos.ts).
 export async function Cabecalho() {
+  const catalogo = await catalogoDaLoja();
+  const menu = menuComFotos(await menuDaLoja(), catalogo);
   return (
     <>
       <a href="#conteudo" className={pularConteudo}>
         Pular para o conteúdo
       </a>
-      <BarraCabecalho menu={await menuDaLoja()} termos={TERMOS_MAIS_BUSCADOS} servico={LINKS_SERVICO} linksGaveta={LINKS_GAVETA} />
+      <BarraCabecalho menu={menu} termos={termosDaCuradoria(catalogo)} destaques={produtosEmDestaque(catalogo, 4).map(sugestaoDoProduto)} servico={LINKS_SERVICO} linksGaveta={LINKS_GAVETA} />
     </>
   );
 }

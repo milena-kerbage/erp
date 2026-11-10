@@ -6,6 +6,7 @@ export type ItemListavel = {
   slug: string;
   nome: string;
   marca: string;
+  resumo?: string;
   caminho: string;
   caminhosExtras?: string[]; // categorias extras (cadastro do ERP)
   preco: string; // decimal em string
@@ -130,13 +131,13 @@ export function contarFacetas(itens: ItemListavel[], filtros: Record<string, str
 // Atributos que não descrevem a peça ("retirada: Sim") ficam fora do texto de busca.
 const ATRIBUTOS_FORA_DA_BUSCA = new Set(["retirada"]);
 
-// Texto pesquisável da peça: nome, marca, caminho e os rótulos das facetas (cor, tecido, tema,
+// Texto pesquisável da peça: nome, resumo, marca, caminho e os rótulos das facetas (cor, tecido, tema,
 // "para"…), para "verde", "menina" ou "pronta entrega" acharem as peças certas. Sem acento e sem caixa.
 export function textoDeBusca(item: ItemListavel): string {
   const atributos = Object.entries(item.atributos)
     .filter(([chave]) => !ATRIBUTOS_FORA_DA_BUSCA.has(chave))
     .flatMap(([, valores]) => valores);
-  return slugificar(`${item.nome} ${item.marca} ${item.caminho.replace(/\//g, " ")} ${atributos.join(" ")}`);
+  return slugificar(`${item.nome} ${item.marca} ${item.resumo ?? ""} ${item.caminho.replace(/\//g, " ")} ${atributos.join(" ")}`);
 }
 
 // Busca simples por termos (todos precisam aparecer), sem acento e sem caixa.

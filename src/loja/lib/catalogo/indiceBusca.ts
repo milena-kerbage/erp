@@ -5,7 +5,7 @@ import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { listarProjetos } from "@/loja/lib/casas/catalogo";
 import type { ArvoreCategorias } from "@/loja/lib/catalogo/categorias";
 import type { Produto } from "@/loja/lib/catalogo/exemplos";
-import { buscarTexto } from "@/loja/lib/catalogo/listagem";
+import { buscarTexto, noCaminho } from "@/loja/lib/catalogo/listagem";
 import {
   type EloSugerido,
   MINIMO_CARACTERES,
@@ -17,6 +17,7 @@ import {
   type TermoIndice,
 } from "@/loja/lib/catalogo/sugestoes";
 import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { termosDaCuradoria } from "./curadoria";
 
 // Índice das sugestões da busca, montado no servidor a partir do catálogo (uma vez por processo) e
 // respondido pela rota /api/busca/sugestoes. Fontes dos termos: mais buscados, categorias, cores,
@@ -42,7 +43,7 @@ function minusculo(texto: string): string {
 function montarIndice(produtos: Produto[], arvore: ArvoreCategorias, destaques: string[]): Indice {
   const { buscarCategoria, existentes: CATEGORIAS_EXISTENTES } = arvore;
   const candidatos: TermoIndice[] = [
-    ...TERMOS_MAIS_BUSCADOS.map((texto) => ({ texto, fonte: "popular" as const })),
+    ...[...TERMOS_MAIS_BUSCADOS, ...termosDaCuradoria({ produtos })].map((texto) => ({ texto, fonte: "popular" as const })),
     ...[...CATEGORIAS_EXISTENTES].map((chave) => ({ texto: minusculo(buscarCategoria(chave)?.rotulo ?? ""), fonte: "categoria" as const })),
     ...produtos.flatMap((produto) =>
       ATRIBUTOS_TERMO.flatMap((chave) => (produto.atributos[chave] ?? []).map((valor) => ({ texto: minusculo(valor), fonte: "atributo" as const }))),
@@ -59,7 +60,7 @@ function montarIndice(produtos: Produto[], arvore: ArvoreCategorias, destaques: 
   });
   const categorias = [...CATEGORIAS_EXISTENTES]
     .map((chave) => ({ rotulo: buscarCategoria(chave)?.rotulo ?? chave, href: `/${chave}` }))
-    .filter((categoria) => categoria.rotulo);
+    .filter((categoria) => categoria.rotulo && produtos.some(produto => noCaminho([produto], categoria.href).length > 0));
   const projetos = listarProjetos().map((projeto) => ({
     rotulo: projeto.nome,
     href: `/personalizado/${projeto.slug}`,

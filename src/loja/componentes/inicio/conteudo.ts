@@ -1,8 +1,8 @@
 // Conteúdo da home do Ateliê Milena Kerbage, módulo a módulo, na ordem da página. Textos do ateliê;
 // links internos pela URL pública.
-// FOTOS: ainda não há. Cada mídia aceita `src` (foto .webp/.jpg ou vídeo .mp4/.webm). Os arquivos
-// entram em public/vitrine/home/<módulo>/… (caminhos sugeridos nos comentários); enquanto `src`
-// estiver vazio, a mídia desenha a composição de espera nos tons da marca (Midia.tsx).
+// Cada mídia aceita `src` de campanha. Os espaços sem imagem são completados pelas fotos do
+// catálogo ativo em lib/catalogo/apresentacao.ts, usando a mesma curadoria do menu e da busca.
+// Sem uma foto compatível, Midia.tsx mantém a composição nos tons da marca.
 
 import { LINKS_UTILITARIOS } from "@/loja/componentes/layout/cabecalho/navegacao";
 import { EDICAO_ATUAL, ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";

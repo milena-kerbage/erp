@@ -10,8 +10,8 @@ import { ImagemSuave } from "./ImagemSuave";
 // fundo de estúdio com o ícone de bebê em sálvia suave, no centro.
 // Quem usa define o formato pela className (aspectRatio ou w/h) e diz em `sizes` a largura real
 // que a foto ocupa, para o next/image não baixar a versão de 1600 px numa miniatura.
-// Em moldura mais alta que larga (cards 5:6 da listagem) a foto fica inteira e centrada: a moldura tem
-// o mesmo tom do fundo da foto (token fundoProduto), então não aparece emenda.
+// A foto preenche toda a moldura com recorte centralizado, inclusive quando as proporções diferem,
+// sem deixar faixas do fundo nas laterais ou no topo.
 // `segunda`: a 2ª foto, que entra por cima no hover do card (classe "group"), só onde há mouse.
 // `cor`: tom do tecido no bloco de espera (cards): cada cor da peça tem o seu, então trocar a cor no
 // card troca a "foto" mesmo antes das fotos reais. A foto real entra com fade quando carrega.
@@ -42,14 +42,15 @@ export function FotoProduto({
   }
   return (
     <div className={cx(moldura, brilhoAoCarregar, className)}>
-      <ImagemSuave src={foto.src} alt={foto.alt} fill sizes={sizes} preload={preload} className={css({ objectFit: "contain" })} />
+      <ImagemSuave src={foto.src} alt={foto.alt} fill sizes={sizes} preload={preload} className={css({ objectFit: "cover", objectPosition: "center" })} />
       {segunda && <Image src={segunda.src} alt="" fill sizes={sizes} unoptimized={ehFotoDoCatalogo(segunda.src)} className={fotoHover} />}
     </div>
   );
 }
 
 const fotoHover = css({
-  objectFit: "contain",
+  objectFit: "cover",
+  objectPosition: "center",
   opacity: "0",
   transition: "opacity",
   transitionDuration: "lenta",

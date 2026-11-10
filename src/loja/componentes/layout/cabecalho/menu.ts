@@ -10,8 +10,8 @@ import { LINKS_UTILITARIOS, type LinkUtilitario, NAVEGACAO } from "./navegacao";
 
 export type LinkMenu = { rotulo: string; href: string; externo?: boolean };
 export type ColunaMenu = { titulo: string; href: string; links: LinkMenu[] };
-export type CardMenu = { rotulo: string; href: string; tom: TomMidia; icone: NomeIcone; src?: string };
-export type PromoMenu = { titulo: string; descricao: string; href: string; tom: TomMidia; icone: NomeIcone; src?: string };
+export type CardMenu = { rotulo: string; href: string; tom: TomMidia; icone: NomeIcone; src?: string; alt?: string };
+export type PromoMenu = { titulo: string; descricao: string; href: string; tom: TomMidia; icone: NomeIcone; src?: string; alt?: string };
 
 // "colunas": coluna de destaques + colunas de links (variante A) e, no espaço que sobra, a mídia:
 // o bloco editorial 16:9 (variante B, quando há `promo`) ou os cards 5:6 (variante C). No celular, os
