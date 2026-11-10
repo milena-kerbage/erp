@@ -131,7 +131,7 @@ export function ManagerConfigTab({ configuration, overview, onSaved }: { configu
       <TextField label="WhatsApp Business Account ID (WABA)" value={values.businessAccountId} maxLength={30} inputMode="numeric" disabled={!editable || saving} onChange={(event) => change("businessAccountId", event.target.value)} />
     </FieldGrid></ManagerCard>
     <ManagerCard><h4>Ambiente e retenção</h4><FieldGrid>
-      <TextField label="Origem pública HTTPS" value={values.publicBaseUrl} type="url" placeholder="https://erp.ateliemilenakerbage.com.br" disabled={!editable || saving} onChange={(event) => change("publicBaseUrl", event.target.value)} hint="Use a origem sem caminho, credenciais, query ou fragmento. Os callbacks e políticas são montados com esta origem." />
+      <TextField label="Origem pública HTTPS" value={values.publicBaseUrl} type="url" placeholder="https://app.ateliemilenakerbage.com.br" disabled={!editable || saving} onChange={(event) => change("publicBaseUrl", event.target.value)} hint="Use a origem sem caminho, credenciais, query ou fragmento. Os callbacks e políticas são montados com esta origem." />
       <TextField label="Retenção de mensagens, em dias" value={values.retentionDays} type="number" min={1} max={3650} disabled={!editable || saving} onChange={(event) => change("retentionDays", Number(event.target.value))} hint="Escolha um prazo coerente com a política de privacidade e a necessidade do atendimento." />
     </FieldGrid></ManagerCard>
     <ManagerCard><h4>Identificação e canais públicos de contato</h4><FieldGrid>

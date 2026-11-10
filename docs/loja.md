@@ -7,7 +7,7 @@ A loja e o ERP rodam no **mesmo projeto Next.js e no mesmo deploy da Vercel**, s
 | Host | Abre | Observações |
 |---|---|---|
 | `ateliemilenakerbage.com.br` e `www.ateliemilenakerbage.com.br` | Loja | Pública e indexável. Origem canônica: `https://www.ateliemilenakerbage.com.br` |
-| `erp.ateliemilenakerbage.com.br` | ERP | Login obrigatório, `noindex`. `AUTH_ORIGIN` e `PUBLIC_BASE_URL` apontam para cá |
+| `app.ateliemilenakerbage.com.br` | ERP | Login obrigatório, `noindex`. `AUTH_ORIGIN` e `PUBLIC_BASE_URL` apontam para cá |
 | Qualquer outro (`localhost`, `127.0.0.1`, IP da rede, prévias `*.vercel.app`) | ERP | Para abrir a loja numa prévia, inclua o host em `LOJA_HOSTS` |
 
 A lista de hosts fica em [`src/lib/hosts.ts`](../src/lib/hosts.ts). Ela é a fonte única usada pelo proxy, pelo `next.config.ts` (cabeçalhos por host) e pelo `robots.txt`.

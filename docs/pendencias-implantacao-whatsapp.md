@@ -20,7 +20,7 @@ Na verificação anterior da integração WhatsApp, passaram a checagem de tipos
 | Endereço informado | Rua Professor Heraclito, 233, Vicente Pinzon, Fortaleza - CE, CEP 60181-245 |
 | E-mail confirmado de suporte e privacidade | `milenakerbageatelie@gmail.com` |
 | Domínio autorizado | `ateliemilenakerbage.com.br` e subdomínios necessários |
-| URL planejada | `https://erp.ateliemilenakerbage.com.br` |
+| URL planejada | `https://app.ateliemilenakerbage.com.br` |
 | Hospedagem | Vercel |
 | Banco de produção | Supabase PostgreSQL; acesso somente pelo servidor |
 | Políticas | Privacidade, termos, exclusão, cookies, comunicação e índice público |
@@ -91,7 +91,7 @@ Entrega esperada: P01–P05 definidos, acesso administrativo autorizado e canais
 3. Conferir que os esquemas do ERP não estão expostos ao navegador via Data API e que `anon`/`authenticated` não receberam acesso indevido. O app usa autenticação própria, não Supabase Auth.
 4. Copiar do painel Connect a conexão adequada ao ambiente serverless, com host/usuário/porta corretos; configurar TLS e credencial privada em `DATABASE_URL`.
 5. Configurar a Vercel com projeto e ambientes separados, chave `INTEGRATION_ENCRYPTION_KEY` de 32 bytes em base64, allowlist `INTEGRATION_MANAGER_EMAILS` e origem de autenticação `AUTH_ORIGIN`. Preview não deve usar o banco de clientes automaticamente.
-6. Publicar `erp.ateliemilenakerbage.com.br`, configurar DNS conforme os valores exibidos pela Vercel e verificar HTTPS. Não inventar IP ou CNAME.
+6. Publicar `app.ateliemilenakerbage.com.br`, configurar DNS conforme os valores exibidos pela Vercel e verificar HTTPS. Não inventar IP ou CNAME.
 7. Criar o usuário interno inicial no ambiente correto e verificar login, logout e persistência do banco.
 8. Conferir build, logs sem segredos e acesso público às políticas.
 
@@ -122,7 +122,7 @@ Execute os testes da seção 7 com contato autorizado. Teste a recusa e a exclus
 - Acompanhamento e teste de recebimento/resposta da caixa confirmada `milenakerbageatelie@gmail.com`, utilizada para suporte e privacidade.
 - Telefone oficial com DDI e identificação do número usado no teste.
 - Horário de atendimento, responsável pela fila e caminho para atendimento humano.
-- Confirmação da origem `https://erp.ateliemilenakerbage.com.br`.
+- Confirmação da origem `https://app.ateliemilenakerbage.com.br`.
 - Decisões de retenção e categorias de mensagem autorizadas.
 
 ### Privadas, pelo ambiente apropriado
@@ -141,19 +141,19 @@ O documento contém os **nomes** das variáveis, sem seus valores secretos. Inse
 
 | Campo ou finalidade | URL |
 | --- | --- |
-| App URL | `https://erp.ateliemilenakerbage.com.br/` |
-| Login de avaliação | `https://erp.ateliemilenakerbage.com.br/login` |
-| Conversas | `https://erp.ateliemilenakerbage.com.br/conversas` |
-| Diagnóstico da integração | `https://erp.ateliemilenakerbage.com.br/configuracoes/whatsapp` |
-| Webhook WhatsApp | `https://erp.ateliemilenakerbage.com.br/api/whatsapp/webhook` |
-| Privacy Policy URL | `https://erp.ateliemilenakerbage.com.br/privacidade` |
-| Terms URL | `https://erp.ateliemilenakerbage.com.br/termos` |
-| Instruções de exclusão | `https://erp.ateliemilenakerbage.com.br/exclusao-de-dados` |
-| Callback de exclusão Meta | `https://erp.ateliemilenakerbage.com.br/api/meta/data-deletion` |
-| Retorno OAuth opcional | `https://erp.ateliemilenakerbage.com.br/api/whatsapp/management/oauth/callback` |
-| Central de políticas | `https://erp.ateliemilenakerbage.com.br/politicas` |
-| Cookies | `https://erp.ateliemilenakerbage.com.br/cookies` |
-| Comunicação | `https://erp.ateliemilenakerbage.com.br/politica-de-comunicacao` |
+| App URL | `https://app.ateliemilenakerbage.com.br/` |
+| Login de avaliação | `https://app.ateliemilenakerbage.com.br/login` |
+| Conversas | `https://app.ateliemilenakerbage.com.br/conversas` |
+| Diagnóstico da integração | `https://app.ateliemilenakerbage.com.br/configuracoes/whatsapp` |
+| Webhook WhatsApp | `https://app.ateliemilenakerbage.com.br/api/whatsapp/webhook` |
+| Privacy Policy URL | `https://app.ateliemilenakerbage.com.br/privacidade` |
+| Terms URL | `https://app.ateliemilenakerbage.com.br/termos` |
+| Instruções de exclusão | `https://app.ateliemilenakerbage.com.br/exclusao-de-dados` |
+| Callback de exclusão Meta | `https://app.ateliemilenakerbage.com.br/api/meta/data-deletion` |
+| Retorno OAuth opcional | `https://app.ateliemilenakerbage.com.br/api/whatsapp/management/oauth/callback` |
+| Central de políticas | `https://app.ateliemilenakerbage.com.br/politicas` |
+| Cookies | `https://app.ateliemilenakerbage.com.br/cookies` |
+| Comunicação | `https://app.ateliemilenakerbage.com.br/politica-de-comunicacao` |
 
 Esses endereços são a configuração planejada e precisam ser publicados/testados. O acompanhamento de exclusão recebe um protocolo privado aleatório, gerado pelo callback; não há um código padrão a publicar.
 

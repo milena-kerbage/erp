@@ -1,6 +1,6 @@
 [
   {
-    "AllowedOrigins": ["https://erp.ateliemilenakerbage.com.br"],
+    "AllowedOrigins": ["https://app.ateliemilenakerbage.com.br"],
     "AllowedMethods": ["PUT", "GET", "HEAD"],
     "AllowedHeaders": ["Content-Type"],
     "ExposeHeaders": ["ETag"],

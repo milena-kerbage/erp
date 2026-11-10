@@ -1,6 +1,6 @@
 # Ateliê Milena Kerbage — Sistema interno e loja
 
-ERP em Next.js (App Router) + TypeScript + Emotion, em `erp.ateliemilenakerbage.com.br`.
+ERP em Next.js (App Router) + TypeScript + Emotion, em `app.ateliemilenakerbage.com.br`.
 A loja virtual (Panda CSS) roda no mesmo projeto, em `www.ateliemilenakerbage.com.br` e no domínio principal: veja [docs/loja.md](docs/loja.md).
 
 O WhatsApp Cloud API tem backend persistente, caixa de entrada real em `/conversas`, diagnóstico em `/configuracoes/whatsapp` e políticas públicas em `/politicas`. A implantação escolhida é Vercel com PostgreSQL do Supabase; SQLite permanece para desenvolvimento e testes locais. A conta Meta, o número e os projetos remotos ainda precisam ser configurados.

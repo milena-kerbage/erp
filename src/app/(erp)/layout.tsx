@@ -9,7 +9,7 @@ import "@/styles/reset.css";
 const APP_NAME = "Ateliê Milena Kerbage";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://erp.ateliemilenakerbage.com.br"),
+  metadataBase: new URL("https://app.ateliemilenakerbage.com.br"),
   applicationName: APP_NAME,
   title: {
     default: APP_NAME,

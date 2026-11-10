@@ -64,7 +64,7 @@ Dados informados pelo responsável pelo projeto, sem consulta cadastral independ
 | CNPJ informado | 13.592.162/0001-08 |
 | Endereço informado | Rua Professor Heraclito, 233, Vicente Pinzon, Fortaleza - CE, CEP 60181-245 |
 | Domínio confirmado pelo usuário | `ateliemilenakerbage.com.br` |
-| Origem proposta para a aplicação | `https://erp.ateliemilenakerbage.com.br` |
+| Origem proposta para a aplicação | `https://app.ateliemilenakerbage.com.br` |
 | Canal eletrônico de privacidade confirmado | `milenakerbageatelie@gmail.com` |
 | Canal de suporte confirmado | `milenakerbageatelie@gmail.com`; telefone oficial ainda a confirmar |
 
@@ -76,22 +76,22 @@ Use a origem pública real configurada, sem usuário/senha, query ou fragmento. 
 
 | Finalidade | Caminho | URL proposta |
 | --- | --- | --- |
-| Sistema / App URL | `/` | `https://erp.ateliemilenakerbage.com.br/` |
-| Login da equipe | `/login` | `https://erp.ateliemilenakerbage.com.br/login` |
-| Caixa de atendimento | `/conversas` | `https://erp.ateliemilenakerbage.com.br/conversas` |
-| Painel de gestão da integração | `/configuracoes/integracoes` | `https://erp.ateliemilenakerbage.com.br/configuracoes/integracoes` |
-| Diagnóstico e teste de atendimento | `/configuracoes/whatsapp` | `https://erp.ateliemilenakerbage.com.br/configuracoes/whatsapp` |
-| Webhook WhatsApp | `/api/whatsapp/webhook` | `https://erp.ateliemilenakerbage.com.br/api/whatsapp/webhook` |
-| Privacy Policy URL | `/privacidade` | `https://erp.ateliemilenakerbage.com.br/privacidade` |
-| Terms of Service URL | `/termos` | `https://erp.ateliemilenakerbage.com.br/termos` |
-| Instruções de exclusão | `/exclusao-de-dados` | `https://erp.ateliemilenakerbage.com.br/exclusao-de-dados` |
-| Data Deletion Callback URL | `/api/meta/data-deletion` | `https://erp.ateliemilenakerbage.com.br/api/meta/data-deletion` |
+| Sistema / App URL | `/` | `https://app.ateliemilenakerbage.com.br/` |
+| Login da equipe | `/login` | `https://app.ateliemilenakerbage.com.br/login` |
+| Caixa de atendimento | `/conversas` | `https://app.ateliemilenakerbage.com.br/conversas` |
+| Painel de gestão da integração | `/configuracoes/integracoes` | `https://app.ateliemilenakerbage.com.br/configuracoes/integracoes` |
+| Diagnóstico e teste de atendimento | `/configuracoes/whatsapp` | `https://app.ateliemilenakerbage.com.br/configuracoes/whatsapp` |
+| Webhook WhatsApp | `/api/whatsapp/webhook` | `https://app.ateliemilenakerbage.com.br/api/whatsapp/webhook` |
+| Privacy Policy URL | `/privacidade` | `https://app.ateliemilenakerbage.com.br/privacidade` |
+| Terms of Service URL | `/termos` | `https://app.ateliemilenakerbage.com.br/termos` |
+| Instruções de exclusão | `/exclusao-de-dados` | `https://app.ateliemilenakerbage.com.br/exclusao-de-dados` |
+| Data Deletion Callback URL | `/api/meta/data-deletion` | `https://app.ateliemilenakerbage.com.br/api/meta/data-deletion` |
 | Acompanhamento de exclusão | `/exclusao-de-dados/status?code=…` | Página pública gerada pelo callback, com protocolo aleatório |
 | Acompanhamento via API | `/api/meta/data-deletion/status?code=…` | Resposta JSON pública limitada ao protocolo |
-| Central de políticas | `/politicas` | `https://erp.ateliemilenakerbage.com.br/politicas` |
-| Cookies | `/cookies` | `https://erp.ateliemilenakerbage.com.br/cookies` |
-| Regras de comunicação | `/politica-de-comunicacao` | `https://erp.ateliemilenakerbage.com.br/politica-de-comunicacao` |
-| Callback OAuth condicional | `/api/whatsapp/management/oauth/callback` | `https://erp.ateliemilenakerbage.com.br/api/whatsapp/management/oauth/callback` |
+| Central de políticas | `/politicas` | `https://app.ateliemilenakerbage.com.br/politicas` |
+| Cookies | `/cookies` | `https://app.ateliemilenakerbage.com.br/cookies` |
+| Regras de comunicação | `/politica-de-comunicacao` | `https://app.ateliemilenakerbage.com.br/politica-de-comunicacao` |
+| Callback OAuth condicional | `/api/whatsapp/management/oauth/callback` | `https://app.ateliemilenakerbage.com.br/api/whatsapp/management/oauth/callback` |
 
 As páginas legais, os dois métodos do webhook e o callback/consulta de exclusão devem funcionar sem sessão. As demais APIs verificam a sessão dentro dos handlers. A exceção pública precisa ser exata: não liberar indiscriminadamente todo `/api/whatsapp` ou `/api/meta` no proxy.
 
@@ -461,7 +461,7 @@ O banco recebe apenas HMAC do identificador Meta com domínio de uso próprio, n
 
 ```json
 {
-  "url": "https://erp.ateliemilenakerbage.com.br/exclusao-de-dados/status?code=<48-hex-aleatorios>",
+  "url": "https://app.ateliemilenakerbage.com.br/exclusao-de-dados/status?code=<48-hex-aleatorios>",
   "confirmation_code": "<mesmo-protocolo>"
 }
 ```
