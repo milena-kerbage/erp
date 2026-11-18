@@ -49,6 +49,16 @@ export function condicoesDaLoja(centavos: number) {
   return { pix, desconto: DESCONTO_PIX_PERCENTUAL, parcelas: Math.max(1, parcelas), valorParcela: parcelas >= 2 ? Math.ceil(centavos / parcelas) : centavos };
 }
 
+/** Relevância na loja (1–5): 5 aparece primeiro nas listagens, na home e na busca; 1 vai para o fim. */
+export const RELEVANCIAS = [
+  { value: "5", label: "5 · Vitrine (os melhores)", curto: "★★★★★" },
+  { value: "4", label: "4 · Alta", curto: "★★★★☆" },
+  { value: "3", label: "3 · Normal", curto: "★★★☆☆" },
+  { value: "2", label: "2 · Baixa", curto: "★★☆☆☆" },
+  { value: "1", label: "1 · Por último", curto: "★☆☆☆☆" },
+] as const;
+export type ValorRelevancia = (typeof RELEVANCIAS)[number]["value"];
+
 export const STATUS_PRODUTO: Record<StatusProduto, { rotulo: string; tom: "green" | "yellow" | "neutral"; descricao: string }> = {
   ativo: { rotulo: "Ativo", tom: "green", descricao: "Aparece na loja" },
   rascunho: { rotulo: "Rascunho", tom: "yellow", descricao: "Só no ERP, fora da loja" },

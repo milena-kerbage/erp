@@ -19,7 +19,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { startNavigationProgress } from "@/components/layout/NavigationProgress";
 import { Card, Notice, Page, PageHeader, Pill } from "@/features/operations/components/ui";
 import type { ColecaoGestao, Disponibilidade, OrdenacaoProdutos, ProdutoResumoGestao, RespostaCategorias, RespostaProdutos, StatusProduto } from "@/features/ecommerce/types";
-import { DISPONIBILIDADE, dataHora, erpRequest, loja, reais, requestError, STATUS_PRODUTO, trilhasDeCategorias } from "./api";
+import { DISPONIBILIDADE, RELEVANCIAS, type ValorRelevancia, dataHora, erpRequest, loja, reais, requestError, STATUS_PRODUTO, trilhasDeCategorias } from "./api";
 import { AcoesCabecalho, AvisoSomenteLeitura, Confirmar, Sub, usePodeEditar, useRecurso } from "./comum";
 
 type Aba = StatusProduto | "todos";
@@ -27,7 +27,7 @@ type Acao = { tipo: "arquivar" | "excluir"; produto: ProdutoResumoGestao } | nul
 const PAGINA = 50;
 
 const ORDENACOES: Record<OrdenacaoProdutos, string> = {
-  ordem: "Ordem da loja", nome: "Nome (A a Z)", preco: "Menor preço", "-preco": "Maior preço", recentes: "Editados recentemente", sku: "SKU",
+  ordem: "Ordem manual", relevancia: "Relevância na loja", nome: "Nome (A a Z)", preco: "Menor preço", "-preco": "Maior preço", recentes: "Editados recentemente", sku: "SKU",
 };
 
 /**
@@ -87,6 +87,15 @@ export function ProdutosLista({ origemLoja }: { origemLoja: string }) {
   const mudarStatus = (produto: ProdutoResumoGestao, status: StatusProduto) => executar(produto, produto.nome,
     () => erpRequest(loja(`produtos/${produto.id}`), { method: "PATCH", body: { revisao: produto.revisao, status } }),
     status === "ativo" ? `“${produto.nome}” está na loja.` : `“${produto.nome}” voltou para rascunho.`);
+  const mudarRelevancia = (produto: ProdutoResumoGestao, relevancia: number) => executar(produto, produto.nome,
+    () => erpRequest(loja(`produtos/${produto.id}`), { method: "PATCH", body: { revisao: produto.revisao, relevancia } }),
+    `“${produto.nome}”: relevância ${relevancia}.`);
+  const relevancia = (produto: ProdutoResumoGestao) => podeEditar
+    ? <Select<ValorRelevancia> label={`Relevância de ${produto.nome}`} heading="Relevância na loja" width="15rem" value={String(produto.relevancia) as ValorRelevancia}
+      onChange={(valor) => { if (Number(valor) !== produto.relevancia) void mudarRelevancia(produto, Number(valor)); }}
+      options={RELEVANCIAS.map((opcao) => ({ value: opcao.value, label: opcao.label }))}
+      trigger={({ open: _open, ...props }) => <BotaoRelevancia type="button" {...props} disabled={ocupado === produto.id} aria-label={`Relevância: ${produto.relevancia} de 5`}>{RELEVANCIAS.find((opcao) => Number(opcao.value) === produto.relevancia)?.curto}</BotaoRelevancia>} />
+    : <Sub title={`Relevância ${produto.relevancia} de 5`}>{RELEVANCIAS.find((opcao) => Number(opcao.value) === produto.relevancia)?.curto}</Sub>;
   const arquivar = (produto: ProdutoResumoGestao) => executar(produto, produto.nome,
     () => erpRequest(loja(`produtos/${produto.id}/arquivar`), { method: "POST", body: { revisao: produto.revisao } }), `“${produto.nome}” foi arquivado e saiu da loja.`);
   const excluir = (produto: ProdutoResumoGestao) => executar(produto, produto.nome,
@@ -179,13 +188,14 @@ export function ProdutosLista({ origemLoja }: { origemLoja: string }) {
           </EmptyState>
         ) : <>
           <TabelaRolagem><Tabela>
-            <thead><tr><th aria-label="Foto" /><th>Produto</th><th>SKU</th><th>Categoria</th><th>Preço</th><th>Situação</th><th>Disponibilidade</th><th>Atualizado</th><th aria-label="Ações" /></tr></thead>
+            <thead><tr><th aria-label="Foto" /><th>Produto</th><th>SKU</th><th>Categoria</th><th>Preço</th><th>Relevância</th><th>Situação</th><th>Disponibilidade</th><th>Atualizado</th><th aria-label="Ações" /></tr></thead>
             <tbody>{produtos.map((produto) => <tr key={produto.id} aria-busy={ocupado === produto.id || undefined}>
               <td>{foto(produto)}</td>
               <td><Nome href={`/ecommerce/produtos/${produto.id}`}>{produto.nome}</Nome>{produto.destaque && <Destaque>Destaque</Destaque>}{produto.selo && <Destaque>{produto.selo}</Destaque>}<Sub>/produto/{produto.slug}</Sub></td>
               <td><Codigo>{produto.sku}</Codigo></td>
               <td><span title={produto.caminho}>{produto.categoriaNome}</span></td>
               <td>{preco(produto)}</td>
+              <td>{relevancia(produto)}</td>
               <td>{status(produto)}</td>
               <td>{entrega(produto)}</td>
               <td><Sub title={dataHora(produto.atualizadoEm)}>{dataCurta(produto.atualizadoEm)}</Sub></td>
@@ -197,7 +207,7 @@ export function ProdutosLista({ origemLoja }: { origemLoja: string }) {
             <div>
               <Nome href={`/ecommerce/produtos/${produto.id}`}>{produto.nome}</Nome>
               <Sub>{produto.sku} · {produto.categoriaNome}</Sub>
-              {preco(produto)}
+              {preco(produto)} {relevancia(produto)}
               <Etiquetas>{status(produto)}{entrega(produto)}</Etiquetas>
             </div>
             {acoes(produto)}
@@ -359,4 +369,11 @@ const EsqueletoLista = styled.div`
 
     > div { display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(1.5)}; }
   }
+`;
+
+const BotaoRelevancia = styled.button`
+  border: 0; background: transparent; padding: 4px 6px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+  color: ${({ theme }) => theme.colors.warning}; font-size: ${({ theme }) => theme.fontSizes.sm}; letter-spacing: 1px; line-height: 1;
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.scrollbar.thumb}; }
+  &:disabled { opacity: 0.5; cursor: progress; }
 `;

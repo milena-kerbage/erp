@@ -82,6 +82,8 @@ export type ProdutoResumoGestao = {
   categoriaNome: string;
   caminho: string;
   ordem: number;
+  /** Relevância na loja: 5 aparece primeiro, 1 por último (padrão 3). Empate: `ordem`. */
+  relevancia: number;
   /** Miniatura da 1ª foto (prévia do ERP) ou null. */
   imagem: string | null;
   revisao: number;
@@ -150,6 +152,7 @@ export type EntradaProduto = {
   linhaCores?: string;
   cor?: string;
   ordem?: number;
+  relevancia?: number; // 1 a 5
   complementos?: string[]; // ids, em ordem
   semelhantes?: string[]; // ids, em ordem (vazio: a loja calcula pela categoria)
   grupos?: string[]; // ids dos grupos de opções, em ordem
@@ -334,7 +337,7 @@ export type LeadVinculado = { leadId: string; nome: string; funil: string; etapa
 // ---------------------------------------------------------------- Telas do catálogo no ERP (acréscimos)
 
 /** ?ordenar= da lista de produtos (padrão: ordem da loja). */
-export type OrdenacaoProdutos = "ordem" | "nome" | "preco" | "-preco" | "recentes" | "sku";
+export type OrdenacaoProdutos = "ordem" | "relevancia" | "nome" | "preco" | "-preco" | "recentes" | "sku";
 /** Filtros extras da lista de produtos: coleção (id) e ordenação. */
 export type FiltrosProdutosCatalogo = FiltrosProdutos & { colecao?: string; ordenar?: OrdenacaoProdutos };
 /** Respostas das rotas de fotos: a lista e a revisão nova do produto (mexer nas fotos conta como edição). */

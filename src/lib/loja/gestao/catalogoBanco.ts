@@ -68,7 +68,11 @@ export async function lerCatalogoDoBanco(): Promise<CatalogoLoja | null> {
 
 async function lerCatalogo(): Promise<CatalogoLoja | null> {
   const database = gestaoDb();
-  const produtosLinhas = await database.prepare("SELECT * FROM loja_produtos WHERE status = 'ativo' ORDER BY ordem, criado, slug").all();
+  // Relevância (1–5, migração 016) primeiro e, no empate, a ordem manual. Ordenado aqui (sort estável) para
+  // a loja seguir funcionando antes da 016: sem a coluna, todos valem 3 e fica só a ordem manual.
+  const relevancia = (linha: Linha) => { const valor = Number(linha.relevancia); return Number.isInteger(valor) && valor >= 1 && valor <= 5 ? valor : 3; };
+  const produtosLinhas = (await database.prepare("SELECT * FROM loja_produtos WHERE status = 'ativo' ORDER BY ordem, criado, slug").all())
+    .sort((a, b) => relevancia(b) - relevancia(a));
   if (!produtosLinhas.length) return null;
   const [categoriasLinhas, extrasLinhas, relacionadosLinhas, imagensLinhas, gruposLinhas, opcoesLinhas, colecoesLinhas, colecaoProdutosLinhas, menuLinhas, cupons] = [
     await database.prepare('SELECT * FROM loja_categorias').all(),

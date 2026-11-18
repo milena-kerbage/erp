@@ -20,7 +20,7 @@ import { renderIcon, type IconSource } from "@/lib/icons";
 import type {
   ColecaoGestao, Disponibilidade, EntradaProduto, GrupoOpcoesComUso, ProdutoGestao, ReferenciaProduto, RespostaCategorias, RespostaImagensProduto, StatusProduto,
 } from "@/features/ecommerce/types";
-import {
+import { RELEVANCIAS, type ValorRelevancia,
   condicoesDaLoja, conflito, dataHora, DISPONIBILIDADE, erpRequest, loja, reais, requestError, SLUG, slugificar, STATUS_PRODUTO, tamanho, trilhasDeCategorias,
 } from "./api";
 import { AcoesCabecalho, Atencao, AvisoSomenteLeitura, CampoReais, Confirmar, Contador, Linha, Sub, useAvisoAoSair, usePodeEditar, useRecurso } from "./comum";
@@ -37,7 +37,7 @@ type Formulario = {
   nome: string; slug: string; sku: string; marca: string; resumo: string; descricao: ItemTexto[];
   preco: number | null; precoDe: number | null; unidade: string;
   status: StatusProduto; disponibilidade: Disponibilidade; prazoMin: string; prazoMax: string;
-  categoriaId: string; categoriasExtras: string[]; selo: string; destaque: boolean; linhaCores: string; cor: string; atributos: Atributo[];
+  categoriaId: string; categoriasExtras: string[]; selo: string; destaque: boolean; relevancia: number; linhaCores: string; cor: string; atributos: Atributo[];
   grupos: string[]; pecas: ItemTexto[]; personalizacao: string; ficha: GrupoFicha[];
   complementos: ReferenciaProduto[]; semelhantes: ReferenciaProduto[]; seoTitulo: string; seoDescricao: string;
 };
@@ -54,7 +54,7 @@ function formularioDe(produto?: ProdutoGestao): Formulario {
     status: produto?.status ?? "rascunho", disponibilidade: produto?.disponibilidade ?? "sob_encomenda",
     prazoMin: produto?.prazoMinDias === null || produto?.prazoMinDias === undefined ? "" : String(produto.prazoMinDias),
     prazoMax: produto?.prazoMaxDias === null || produto?.prazoMaxDias === undefined ? "" : String(produto.prazoMaxDias),
-    categoriaId: produto?.categoriaId ?? "", categoriasExtras: produto?.categoriasExtras ?? [], selo: produto?.selo ?? "", destaque: produto?.destaque ?? false,
+    categoriaId: produto?.categoriaId ?? "", categoriasExtras: produto?.categoriasExtras ?? [], selo: produto?.selo ?? "", destaque: produto?.destaque ?? false, relevancia: produto?.relevancia ?? 3,
     linhaCores: produto?.linhaCores ?? "", cor: produto?.cor ?? "",
     atributos: Object.entries(produto?.atributos ?? {}).map(([chave, valores]) => ({ id: novaChave(), chave, valores: valores.join(", ") })),
     grupos: (produto?.grupos ?? []).map((grupo) => grupo.grupoId), pecas: paraItens(produto?.pecas ?? []), personalizacao: produto?.personalizacao ?? "",
@@ -72,7 +72,7 @@ function corpoDe(form: Formulario): EntradaProduto {
     nome: form.nome.trim(), slug: form.slug.trim(), sku: form.sku.trim().toUpperCase(), marca: form.marca.trim() || "Milena Kerbage", resumo: form.resumo.trim(),
     descricao: form.descricao.map((item) => item.texto.trim()).filter(Boolean), precoCentavos: form.preco ?? undefined, precoDeCentavos: form.precoDe, unidade: form.unidade.trim() || "peça",
     status: form.status, disponibilidade: form.disponibilidade, prazoMinDias: prazo(form.prazoMin), prazoMaxDias: prazo(form.prazoMax),
-    categoriaId: form.categoriaId, categoriasExtras: form.categoriasExtras.filter((extra) => extra !== form.categoriaId), selo: form.selo.trim(), destaque: form.destaque,
+    categoriaId: form.categoriaId, categoriasExtras: form.categoriasExtras.filter((extra) => extra !== form.categoriaId), selo: form.selo.trim(), destaque: form.destaque, relevancia: form.relevancia,
     linhaCores: form.linhaCores.trim(), cor: form.cor.trim(),
     atributos: Object.fromEntries(form.atributos.filter((atributo) => atributo.chave.trim()).map((atributo) => [atributo.chave.trim(), valores(atributo.valores)])),
     grupos: form.grupos, pecas: form.pecas.map((item) => item.texto.trim()).filter(Boolean), personalizacao: form.personalizacao.trim(),
@@ -340,6 +340,9 @@ export function EditorProduto({ id, origemLoja, copia = false, criado = false }:
           <TextField label="Selo (opcional)" value={form.selo} maxLength={40} onChange={(event) => mudar("selo", event.target.value)} placeholder="Ex.: Novidade" hint="Etiqueta curta no card." />
           <div><ToggleRow title="Destaque" description="Aparece primeiro nas vitrines automáticas." checked={form.destaque} onChange={(valor) => mudar("destaque", valor)} disabled={!podeEditar} /></div>
         </FieldGrid>
+        <Select<ValorRelevancia> label="Relevância na loja" value={String(form.relevancia) as ValorRelevancia} onChange={(valor) => mudar("relevancia", Number(valor))}
+          options={RELEVANCIAS.map((opcao) => ({ value: opcao.value, label: opcao.label, meta: opcao.curto }))}
+          hint="Define a ordem “Relevância” das listagens, da home e da busca: 5 aparece primeiro, 1 vai para o fim. No empate vale a ordem manual." />
         <FieldGrid>
           <TextField label="Linha de cores (opcional)" value={form.linhaCores} maxLength={80} error={erros.linhaCores} onChange={(event) => mudar("linhaCores", event.target.value.toLowerCase().replace(/\s/g, "-"))} placeholder="kit-berco-jardim" hint="Produtos com a mesma linha aparecem como “outras cores”." />
           <TextField label="Cor desta peça" value={form.cor} maxLength={40} error={erros.cor} onChange={(event) => mudar("cor", event.target.value)} placeholder="Ex.: Rosê" />

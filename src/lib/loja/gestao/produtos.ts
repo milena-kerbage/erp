@@ -12,6 +12,9 @@ import {
 
 const STATUS: readonly StatusProduto[] = ['rascunho', 'ativo', 'arquivado'];
 const DISPONIBILIDADES: readonly Disponibilidade[] = ['pronta_entrega', 'sob_encomenda'];
+/** Relevância 1–5 (padrão 3; linha antiga sem a coluna também vale 3). */
+const relevanciaDe = (linha?: Linha) => { const valor = Number(linha?.relevancia); return Number.isInteger(valor) && valor >= 1 && valor <= 5 ? valor : 3; };
+
 const SKU = /^[A-Z0-9][A-Z0-9._-]{0,39}$/;
 // Facetas derivadas: `entrega` vem da disponibilidade e `retirada` da pronta entrega.
 const ATRIBUTOS_DERIVADOS = new Set(['entrega', 'retirada']);
@@ -19,7 +22,7 @@ const MAX_PRECO = 100_000_000;
 
 const CAMPOS = [
   'slug', 'sku', 'nome', 'marca', 'resumo', 'descricao', 'precoCentavos', 'precoDeCentavos', 'unidade', 'selo', 'pecas', 'personalizacao', 'ficha', 'atributos', 'disponibilidade',
-  'prazoMinDias', 'prazoMaxDias', 'status', 'destaque', 'categoriaId', 'categoriasExtras', 'linhaCores', 'cor', 'ordem', 'complementos', 'semelhantes', 'grupos', 'seoTitulo', 'seoDescricao',
+  'prazoMinDias', 'prazoMaxDias', 'status', 'destaque', 'categoriaId', 'categoriasExtras', 'linhaCores', 'cor', 'ordem', 'relevancia', 'complementos', 'semelhantes', 'grupos', 'seoTitulo', 'seoDescricao',
 ] as const;
 
 function fichaCampo(valor: unknown): GrupoFichaGestao[] {
@@ -52,7 +55,7 @@ function atributosCampo(valor: unknown): Record<string, string[]> {
 type Dados = {
   slug: string; sku: string; nome: string; marca: string; resumo: string; descricao: string[]; preco: number; precoDe: number | null; unidade: string; selo: string; pecas: string[];
   personalizacao: string; ficha: GrupoFichaGestao[]; atributos: Record<string, string[]>; disponibilidade: Disponibilidade; prazoMin: number | null; prazoMax: number | null; status: StatusProduto;
-  destaque: boolean; categoriaId: string; linhaCores: string; cor: string; ordem: number | null; seoTitulo: string; seoDescricao: string;
+  destaque: boolean; categoriaId: string; linhaCores: string; cor: string; ordem: number | null; relevancia: number; seoTitulo: string; seoDescricao: string;
   extras?: string[]; complementos?: string[]; semelhantes?: string[]; grupos?: string[];
 };
 
@@ -92,6 +95,7 @@ function validar(campos: Record<string, unknown>, atual?: Linha): Dados {
     status: tem('status') ? opcaoCampo(campos.status, 'Situação', STATUS) : ((texto(atual?.status) || 'rascunho') as StatusProduto),
     destaque: tem('destaque') ? booleanoCampo(campos.destaque, 'Destaque') : booleano(atual?.destaque),
     ordem: tem('ordem') ? inteiroCampo(campos.ordem, 'Ordem', 0, 1_000_000) : atual ? Number(atual.ordem) : null,
+    relevancia: tem('relevancia') ? inteiroCampo(campos.relevancia, 'Relevância', 1, 5) : relevanciaDe(atual),
     seoTitulo: tem('seoTitulo') ? textoCampo(campos.seoTitulo, 'Título SEO', 70) : texto(atual?.seo_titulo),
     seoDescricao: tem('seoDescricao') ? textoCampo(campos.seoDescricao, 'Descrição SEO', 170) : texto(atual?.seo_descricao),
     ...(tem('categoriasExtras') ? { extras: listaIds(campos.categoriasExtras, 'Categorias extras', 10) } : {}),
@@ -155,7 +159,7 @@ function resumo(linha: Linha): ProdutoResumoGestao {
     id: texto(linha.id), slug: texto(linha.slug), sku: texto(linha.sku), nome: texto(linha.nome), precoCentavos: Number(linha.preco_centavos),
     precoDeCentavos: linha.preco_de_centavos === null || linha.preco_de_centavos === undefined ? null : Number(linha.preco_de_centavos),
     status: texto(linha.status) as StatusProduto, disponibilidade: texto(linha.disponibilidade) as Disponibilidade, destaque: booleano(linha.destaque), selo: texto(linha.selo),
-    categoriaId: texto(linha.categoria_id), categoriaNome: texto(linha.categoria_nome), caminho: `/${texto(linha.categoria_caminho)}`, ordem: Number(linha.ordem),
+    categoriaId: texto(linha.categoria_id), categoriaNome: texto(linha.categoria_nome), caminho: `/${texto(linha.categoria_caminho)}`, ordem: Number(linha.ordem), relevancia: relevanciaDe(linha),
     imagem: linha.imagem_id ? `/api/erp/loja/produtos/${texto(linha.id)}/imagens/${texto(linha.imagem_id)}?tamanho=mini&v=${texto(linha.imagem_hash).slice(0, 12)}` : null,
     revisao: Number(linha.revisao), atualizadoEm: iso(linha.atualizado),
   };
@@ -163,7 +167,7 @@ function resumo(linha: Linha): ProdutoResumoGestao {
 
 // ?ordenar= da lista do ERP (o desempate mantém a ordem da loja).
 const ORDENACOES: Record<OrdenacaoProdutos, string> = {
-  ordem: 'p.ordem, p.criado, p.slug', nome: 'LOWER(p.nome), p.slug', preco: 'p.preco_centavos, p.ordem, p.slug', '-preco': 'p.preco_centavos DESC, p.ordem, p.slug',
+  ordem: 'p.ordem, p.criado, p.slug', relevancia: 'p.relevancia DESC, p.ordem, p.criado, p.slug', nome: 'LOWER(p.nome), p.slug', preco: 'p.preco_centavos, p.ordem, p.slug', '-preco': 'p.preco_centavos DESC, p.ordem, p.slug',
   recentes: 'p.atualizado DESC, p.slug', sku: 'p.sku',
 };
 
@@ -236,11 +240,11 @@ export async function obterProduto(id: string, origemLoja = ''): Promise<{ produ
 async function inserir(id: string, dados: Dados, agora: number) {
   const database = gestaoDb();
   const ordem = dados.ordem ?? Number((await database.prepare('SELECT COALESCE(MAX(ordem), -10) + 10 AS proxima FROM loja_produtos').get())?.proxima ?? 0);
-  await database.prepare(`INSERT INTO loja_produtos (id, slug, sku, nome, marca, resumo, descricao_json, preco_centavos, preco_de_centavos, unidade, selo, pecas_json, personalizacao, ficha_json, atributos_json, disponibilidade, prazo_min_dias, prazo_max_dias, status, destaque, categoria_id, linha_cores, cor, ordem, seo_titulo, seo_descricao, revisao, criado, atualizado)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`).run(
+  await database.prepare(`INSERT INTO loja_produtos (id, slug, sku, nome, marca, resumo, descricao_json, preco_centavos, preco_de_centavos, unidade, selo, pecas_json, personalizacao, ficha_json, atributos_json, disponibilidade, prazo_min_dias, prazo_max_dias, status, destaque, categoria_id, linha_cores, cor, ordem, relevancia, seo_titulo, seo_descricao, revisao, criado, atualizado)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`).run(
     id, dados.slug, dados.sku, dados.nome, dados.marca, dados.resumo, JSON.stringify(dados.descricao), dados.preco, dados.precoDe, dados.unidade, dados.selo, JSON.stringify(dados.pecas), dados.personalizacao,
     JSON.stringify(dados.ficha), JSON.stringify(dados.atributos), dados.disponibilidade, dados.prazoMin, dados.prazoMax, dados.status, dados.destaque ? 1 : 0, dados.categoriaId, dados.linhaCores, dados.cor,
-    Math.min(ordem, 1_000_000), dados.seoTitulo, dados.seoDescricao, agora, agora,
+    Math.min(ordem, 1_000_000), dados.relevancia, dados.seoTitulo, dados.seoDescricao, agora, agora,
   );
 }
 
@@ -268,10 +272,10 @@ export async function atualizarProduto(id: string, entradaBruta: unknown, ator: 
     if (Number(atual.revisao) !== esperada) throw conflito();
     const dados = validar(campos, atual);
     await conferirReferencias(id, dados);
-    await database.prepare(`UPDATE loja_produtos SET slug = ?, sku = ?, nome = ?, marca = ?, resumo = ?, descricao_json = ?, preco_centavos = ?, preco_de_centavos = ?, unidade = ?, selo = ?, pecas_json = ?, personalizacao = ?, ficha_json = ?, atributos_json = ?, disponibilidade = ?, prazo_min_dias = ?, prazo_max_dias = ?, status = ?, destaque = ?, categoria_id = ?, linha_cores = ?, cor = ?, ordem = ?, seo_titulo = ?, seo_descricao = ?, revisao = revisao + 1, atualizado = ? WHERE id = ? AND revisao = ?`).run(
+    await database.prepare(`UPDATE loja_produtos SET slug = ?, sku = ?, nome = ?, marca = ?, resumo = ?, descricao_json = ?, preco_centavos = ?, preco_de_centavos = ?, unidade = ?, selo = ?, pecas_json = ?, personalizacao = ?, ficha_json = ?, atributos_json = ?, disponibilidade = ?, prazo_min_dias = ?, prazo_max_dias = ?, status = ?, destaque = ?, categoria_id = ?, linha_cores = ?, cor = ?, ordem = ?, relevancia = ?, seo_titulo = ?, seo_descricao = ?, revisao = revisao + 1, atualizado = ? WHERE id = ? AND revisao = ?`).run(
       dados.slug, dados.sku, dados.nome, dados.marca, dados.resumo, JSON.stringify(dados.descricao), dados.preco, dados.precoDe, dados.unidade, dados.selo, JSON.stringify(dados.pecas), dados.personalizacao,
       JSON.stringify(dados.ficha), JSON.stringify(dados.atributos), dados.disponibilidade, dados.prazoMin, dados.prazoMax, dados.status, dados.destaque ? 1 : 0, dados.categoriaId, dados.linhaCores, dados.cor,
-      dados.ordem ?? Number(atual.ordem), dados.seoTitulo, dados.seoDescricao, Date.now(), id, esperada,
+      dados.ordem ?? Number(atual.ordem), dados.relevancia, dados.seoTitulo, dados.seoDescricao, Date.now(), id, esperada,
     );
     await gravarRelacoes(id, dados);
     await auditarGestao(ator.id, dados.status === 'arquivado' && texto(atual.status) !== 'arquivado' ? 'archived' : 'updated', 'loja_produtos', id);
