@@ -212,7 +212,7 @@ test("opcionais e preço da escolha (pacote + opcionais), variação do título 
 test("propagandas: dados completos, link dentro de /personalizado e números batem com o catálogo", async () => {
   const { PROPAGANDAS_PROJETOS, CATEGORIAS_PROPAGANDAS_PROJETOS } = await import("../../src/loja/lib/casas/propagandas.ts");
   assert.ok(PROPAGANDAS_PROJETOS.length >= 2 && PROPAGANDAS_PROJETOS.length <= 3);
-  assert.deepEqual([...CATEGORIAS_PROPAGANDAS_PROJETOS], ["kit-berco", "quarto"]);
+  assert.deepEqual([...CATEGORIAS_PROPAGANDAS_PROJETOS], ["kit-berco", "kit-cama-kids"]);
   assert.ok(PROPAGANDAS_PROJETOS[0].apoio.includes(`${listarProjetos().length} quartinhos`));
   const navegacao = readFileSync(new URL("../../src/loja/componentes/layout/cabecalho/navegacao.ts", import.meta.url), "utf8");
   for (const propaganda of PROPAGANDAS_PROJETOS) {

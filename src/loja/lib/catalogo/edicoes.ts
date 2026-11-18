@@ -54,7 +54,7 @@ export const EDICOES: Record<string, Edicao> = {
   "primeiros-dias": {
     chave: "primeiros-dias",
     titulo: "Primeiros dias",
-    subtitulo: "O enxoval das primeiras semanas em casa, feito à mão no ateliê.",
+    subtitulo: "O enxoval das primeiras semanas em casa, bordado no ateliê.",
     descricao:
       "Edição do mês do Ateliê Milena Kerbage: paninhos, mantas, saídas de maternidade e o berço pronto para os primeiros dias do bebê.",
     atalhos: [
@@ -137,48 +137,43 @@ export const BLOCOS_POR_CATEGORIA: Record<string, BlocoEditorial[]> = {
       // public/vitrine/edicoes/categorias/kit-berco-quartinho.webp
       id: "kit-berco-quartinho",
       titulo: "Monte o quartinho completo",
-      subtitulo: "Kit berço, cortina, tapete e enfeites no mesmo tema.",
+      subtitulo: "Kit berço e complementares no mesmo tema. Qualquer item pode ser personalizado.",
       href: "/personalizado",
       acao: "Conhecer os quartinhos",
-      midia: { alt: "Quarto de bebê montado com kit berço sálvia e cortina de linho", tom: "salvia", icone: "berco" },
+      midia: { alt: "Quarto de bebê montado com kit berço sálvia e almofadas bordadas", tom: "salvia", icone: "berco" },
     },
   ],
-  enxoval: [
+  "kit-maternidade": [
     {
-      // public/vitrine/edicoes/categorias/enxoval-edicao.webp
-      id: "enxoval-edicao",
-      titulo: EDICAO_ATUAL.titulo,
-      subtitulo: "A edição do mês: o enxoval das primeiras semanas em casa.",
-      href: ROTA_EDICAO,
-      acao: "Ver a edição do mês",
-      midia: { alt: "Paninhos bordados empilhados ao lado de uma manta de tricô", tom: "aconchego", icone: "coracao" },
+      // public/vitrine/edicoes/categorias/kit-maternidade-paninhos.webp
+      id: "kit-maternidade-paninhos",
+      titulo: "Paninhos com o nome",
+      subtitulo: "Cueiro, fralda, pano de boca e toalha com capuz, bordados para a maternidade.",
+      href: "/kit-paninhos",
+      acao: "Ver kit paninhos",
+      midia: { alt: "Paninhos bordados com o nome pendurados na escada de madeira", tom: "aconchego", icone: "coracao" },
     },
   ],
-  quarto: [
+  "itens-complementares": [
     {
-      // public/vitrine/edicoes/categorias/quarto-projetos.webp
-      id: "quarto-projetos",
-      titulo: "Quartinhos prontos",
-      subtitulo: "O ateliê desenha o quarto no tema que você escolher.",
-      href: "/personalizado",
-      acao: "Conhecer os quartinhos",
-      midia: { alt: "Quarto de bebê com berço, mosquiteiro de dossel e tapete de crochê", tom: "musgo", icone: "nuvem" },
-    },
-    {
-      // (b) foto de campanha: public/vitrine/edicoes/categorias/quarto-luz.webp
-      id: "quarto-luz",
-      midia: { alt: "Luz da tarde atravessando a cortina de voal sobre o berço", tom: "verde", icone: "folha" },
+      // public/vitrine/edicoes/categorias/complementares-quartinhos.webp
+      id: "complementares-quartinhos",
+      titulo: "Tudo no mesmo tema",
+      subtitulo: "Ninho, trocador e almofada de amamentação combinando com o kit berço.",
+      href: "/kit-berco/kits",
+      acao: "Ver kits de berço",
+      midia: { alt: "Ninho e almofada de amamentação bordados com o nome do bebê", tom: "musgo", icone: "nuvem" },
     },
   ],
-  maternidade: [
+  "kit-paninhos": [
     {
-      // public/vitrine/edicoes/categorias/maternidade-mala.webp
-      id: "maternidade-mala",
-      titulo: "A mala pronta",
-      subtitulo: "Bolsa, saída e enfeite de porta com o nome bordado.",
+      // public/vitrine/edicoes/categorias/paninhos-bordado.webp
+      id: "paninhos-bordado",
+      titulo: "Com o nome bordado",
+      subtitulo: "O bordado é combinado com o ateliê: nome, cor da linha e desenho.",
       href: "/busca?q=bordado",
       acao: "Ver peças com bordado",
-      midia: { alt: "Bolsa maternidade de linho aberta com a saída de tricô dobrada dentro", tom: "noite", icone: "bolsa" },
+      midia: { alt: "Detalhe do bordado floral rosê com o nome do bebê", tom: "noite", icone: "agulha" },
     },
   ],
 };

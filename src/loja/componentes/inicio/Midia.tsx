@@ -102,6 +102,11 @@ export function tomEscuro(tom: TomMidia): boolean {
 
 const VIDEO = /\.(mp4|webm)$/i;
 
+/** Vídeos da loja (public/vitrine/videos) têm a capa .webp ao lado: aparece antes do 1º quadro. */
+export function capaDoVideo(src: string): string | undefined {
+  return src.startsWith("/vitrine/videos/") ? src.replace(VIDEO, ".webp") : undefined;
+}
+
 export function Midia({
   src,
   alt = "",
@@ -132,7 +137,7 @@ export function Midia({
     <div className={cx(moldura, src && brilhoAoCarregar, parallax && linhaDoTempo, className)}>
       <div data-parallax={parallax || undefined} className={cx(camada, zoom && comZoom, parallax && comParallax)}>
         {src && VIDEO.test(src) ? (
-          <video src={src} autoPlay muted loop playsInline preload="metadata" aria-label={alt || undefined} className={cobrir} />
+          <video src={src} poster={capaDoVideo(src)} autoPlay muted loop playsInline preload="metadata" aria-label={alt || undefined} className={cobrir} />
         ) : src ? (
           <ImagemSuave src={src} alt={alt} fill sizes={sizes} preload={preload} className={cobrir} />
         ) : (

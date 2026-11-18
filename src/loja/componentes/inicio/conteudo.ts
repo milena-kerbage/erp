@@ -39,14 +39,13 @@ export const SLIDES: Slide[] = [
   },
   {
     id: "kit-berco",
-    titulo: "Kit berço feito à mão",
-    subtitulo: "Percal, tricô e bordado, peça por peça, no ateliê em Fortaleza.",
+    titulo: "Kit berço do seu jeito",
+    subtitulo: "Percal 230 fios ou 400 fios egípcios, com bordado. Qualquer peça pode ser personalizada.",
     acoes: [
       { rotulo: "Ver kits de berço", href: "/kit-berco" },
       { rotulo: "Mais vendidos", href: categoria("kit-berco", {}, "mais-vendidos") },
     ],
-    // public/vitrine/home/hero/kit-berco.mp4 (ou .webp)
-    midia: { tom: "salvia", icone: "berco" },
+    midia: { src: "/vitrine/videos/kit-berco-menina.mp4", alt: "Kit berço rosê com almofada bordada", tom: "salvia", icone: "berco" },
   },
   {
     id: "projetos",
@@ -58,6 +57,16 @@ export const SLIDES: Slide[] = [
     ],
     // public/vitrine/home/hero/projetos.webp
     midia: { tom: "musgo", icone: "nuvem" },
+  },
+  {
+    id: "kit-cama-kids",
+    titulo: "Kit cama kids",
+    subtitulo: "Almofadões, rolos e edredom no mesmo tema, para a cama de solteiro ou casal.",
+    acoes: [
+      { rotulo: "Ver kit cama kids", href: "/kit-cama-kids" },
+      { rotulo: "Combinar pelo WhatsApp", href: WHATSAPP, externo: true },
+    ],
+    midia: { src: "/vitrine/videos/kit-cama-kids.mp4", alt: "Cama kids com almofadas bordadas e rolo com laço", tom: "linho", icone: "nuvem" },
   },
   {
     id: "pronta-entrega",
@@ -78,20 +87,18 @@ export const PAR_EDITORIAL: Editorial[] = [
   {
     id: "menina",
     titulo: "Para ela",
-    texto: "Rosê, floral e laços: kits com bordado delicado e acabamento à mão.",
+    texto: "Rosê, floral e laços: kits com bordado delicado e babados.",
     acao: { rotulo: "Kits para menina", href: "/kit-berco/kits/menina" },
     atalho: { rotulo: "Ver peças para menina", href: "/kit-berco/kits/menina" },
-    // public/vitrine/home/par/menina.webp
-    midia: { tom: "rose", icone: "flor" },
+    midia: { src: "/vitrine/videos/kit-berco-menina.mp4", alt: "Kit berço para menina com babados e bordado", tom: "rose", icone: "flor" },
   },
   {
     id: "menino",
     titulo: "Para ele",
-    texto: "Azul bebê, nuvens e safári: o enxoval leve que acompanha o quartinho.",
+    texto: "Verde, azul e bordado com o nome: kits que acompanham o quartinho.",
     acao: { rotulo: "Kits para menino", href: "/kit-berco/kits/menino" },
     atalho: { rotulo: "Ver peças para menino", href: "/kit-berco/kits/menino" },
-    // public/vitrine/home/par/menino.webp
-    midia: { tom: "azul", icone: "nuvem" },
+    midia: { src: "/vitrine/videos/kit-berco-menino.mp4", alt: "Kit berço verde com almofada bordada com o nome Benjamin", tom: "azul", icone: "nuvem" },
   },
 ];
 
@@ -113,26 +120,17 @@ export const NOVIDADES: Grade = {
       cards: [
         card("Kits para menina", "/kit-berco/kits/menina", "rose", "flor"),
         card("Kits para menino", "/kit-berco/kits/menino", "azul", "nuvem"),
-        card("Kits neutros", "/kit-berco/kits/neutro", "cru", "folha"),
-        card("Protetores de berço", categoria("kit-berco/protetores", {}, "lancamentos"), "salviaClara", "novelo"),
-      ],
-    },
-    {
-      rotulo: "Enxoval",
-      cards: [
-        card("Fraldas de boca", categoria("enxoval/paninhos/fraldas-de-boca", {}, "lancamentos"), "branco", "agulha"),
-        card("Cueiros", categoria("enxoval/paninhos/cueiros", {}, "lancamentos"), "verde", "folha"),
-        card("Toalhas com capuz", categoria("enxoval/toalhas", {}, "lancamentos"), "azul", "nuvem"),
-        card("Mantas e cobertores", categoria("enxoval/mantas", {}, "lancamentos"), "cru", "novelo"),
+        card("Kits unissex", "/kit-berco/kits/unissex", "cru", "folha"),
+        card("Itens complementares", "/itens-complementares", "salviaClara", "novelo"),
       ],
     },
     {
       rotulo: "Maternidade",
       cards: [
-        card("Bolsas de maternidade", categoria("maternidade/bolsas", {}, "lancamentos"), "areia", "bolsa"),
-        card("Saídas de maternidade", categoria("maternidade/saidas", {}, "lancamentos"), "rose", "coracao"),
-        card("Enfeites de porta", categoria("maternidade/enfeites-de-porta", {}, "lancamentos"), "linho", "estrela"),
-        card("Kits maternidade", categoria("maternidade/kits", {}, "lancamentos"), "salviaClara", "presente"),
+        card("Kits maternidade", categoria("kit-maternidade", {}, "lancamentos"), "areia", "presente"),
+        card("Kit paninhos", categoria("kit-paninhos", {}, "lancamentos"), "branco", "agulha"),
+        card("Para presentear", categoria("para-presentear", {}, "lancamentos"), "rose", "coracao"),
+        card("Kit cama kids", categoria("kit-cama-kids", {}, "lancamentos"), "linho", "nuvem"),
       ],
     },
   ],
@@ -156,30 +154,28 @@ export const POR_COR: Grade = {
   colunas: 6,
   abas: [
     { rotulo: "Kit berço", cards: porCor("kit-berco") },
-    { rotulo: "Enxoval", cards: porCor("enxoval") },
-    { rotulo: "Quarto", cards: porCor("quarto") },
   ],
 };
 
-// 7. Quarto de bebê (6 cards).
+// 7. Linhas do ateliê (6 cards). O id segue "quarto" para a página não mudar de lugar.
 export const QUARTO: Grade = {
   id: "quarto",
-  titulo: "Quarto de bebê",
+  titulo: "Encontre pela linha",
   colunas: 6,
   abas: [
     {
-      rotulo: "Por peça",
+      rotulo: "Linhas",
       cards: [
-        card("Cortinas", "/quarto/cortinas", "linho", "pena"),
-        card("Tapetes", "/quarto/tapetes", "cru", "novelo"),
-        card("Almofadas e nichos", "/quarto/almofadas", "azul", "nuvem"),
-        card("Mosquiteiros", "/quarto/mosquiteiros", "branco", "lua"),
-        card("Kit mini cama", "/quarto/mini-cama", "verde", "berco"),
-        card("Capas de trocador", "/quarto/trocador", "areia", "coracao"),
+        card("Kit berço", "/kit-berco/kits", "salviaClara", "berco"),
+        card("Kit cama kids", "/kit-cama-kids", "linho", "nuvem"),
+        card("Kit maternidade", "/kit-maternidade", "areia", "presente"),
+        card("Kit paninhos", "/kit-paninhos", "branco", "agulha"),
+        card("Para presentear", "/para-presentear", "rose", "coracao"),
+        card("Complementares", "/itens-complementares", "cru", "novelo"),
       ],
     },
     {
-      rotulo: "Por tema",
+      rotulo: "Quartinhos por tema",
       cards: [
         card("Floral", "/personalizado/floral", "rose", "flor"),
         card("Safári", "/personalizado/safari", "cru", "folha"),
@@ -192,32 +188,21 @@ export const QUARTO: Grade = {
   ],
 };
 
-// 11. Enxoval (6 cards).
+// 11. Complementares e presentes (6 cards). O id segue "enxoval".
 export const ENXOVAL: Grade = {
   id: "enxoval",
-  titulo: "Monte o enxoval",
+  titulo: "Complete o enxoval",
   colunas: 6,
   abas: [
     {
-      rotulo: "Enxoval",
+      rotulo: "Complementares",
       cards: [
-        card("Fraldas de boca", "/enxoval/paninhos/fraldas-de-boca", "branco", "agulha"),
-        card("Cueiros", "/enxoval/paninhos/cueiros", "verde", "folha"),
-        card("Babadores", "/enxoval/paninhos/babadores", "rose", "coracao"),
-        card("Toalhas com capuz", "/enxoval/toalhas", "azul", "nuvem"),
-        card("Mantas e cobertores", "/enxoval/mantas", "cru", "novelo"),
-        card("Kits de enxoval", "/enxoval/kits", "salviaClara", "presente"),
-      ],
-    },
-    {
-      rotulo: "Kit berço",
-      cards: [
-        card("Kits completos", "/kit-berco/kits", "salviaClara", "berco"),
-        card("Protetores", "/kit-berco/protetores", "cru", "novelo"),
-        card("Lençóis e fronhas", "/kit-berco/lencois", "branco", "pena"),
-        card("Edredons e colchas", "/kit-berco/edredons", "rose", "nuvem"),
-        card("Saias de berço", "/kit-berco/saias", "linho", "tulipa"),
-        card("Travesseiros e rolinhos", "/kit-berco/travesseiros", "azul", "lua"),
+        card("Ninhos", montarUrlBusca("ninho"), "branco", "nuvem"),
+        card("Trocadores", montarUrlBusca("trocador"), "salviaClara", "coracao"),
+        card("Almofadas de amamentação", montarUrlBusca("amamentação"), "rose", "lua"),
+        card("Embalagem maternidade", montarUrlBusca("embalagem"), "linho", "presente"),
+        card("Kit paninhos", "/kit-paninhos", "cru", "agulha"),
+        card("Para presentear", "/para-presentear", "areia", "estrela"),
       ],
     },
   ],
@@ -230,29 +215,26 @@ export const FEATURE_PROJETOS: Feature = {
   id: "feature-projetos",
   titulo: "Quartinho personalizado: o ateliê planeja cada detalhe com você",
   acoes: [{ rotulo: "Conhecer os quartinhos", href: "/personalizado" }],
-  // public/vitrine/home/features/projetos.mp4
-  midia: { tom: "salvia", icone: "berco" },
+  midia: { src: "/vitrine/videos/kit-berco-menino.mp4", alt: "Kit berço verde montado no berço", tom: "salvia", icone: "berco" },
 };
 
 export const FEATURE_MATERNIDADE: Feature = {
   id: "feature-maternidade",
-  titulo: "Bolsa e saída de maternidade para o grande dia",
-  acoes: [{ rotulo: "Ver maternidade", href: "/maternidade" }],
-  atalho: { rotulo: "Ver as peças do look", href: "/maternidade/saidas" },
-  // public/vitrine/home/features/maternidade.webp
-  midia: { tom: "musgo", icone: "bolsa" },
+  titulo: "Kit maternidade: ninho, manta e paninhos para o grande dia",
+  acoes: [{ rotulo: "Ver kits maternidade", href: "/kit-maternidade" }],
+  atalho: { rotulo: "Ver itens complementares", href: "/itens-complementares" },
+  midia: { src: "/vitrine/videos/ninho.mp4", alt: "Ninho bordado com o nome do bebê", tom: "musgo", icone: "bolsa" },
 };
 
 export const FEATURE_BORDADO: Feature = {
   id: "feature-bordado",
-  titulo: "Bordado com o nome do bebê, feito à mão",
+  titulo: "Bordado com o nome do bebê, do seu jeito",
   centro: true,
   acoes: [
     { rotulo: "Peças com bordado", href: montarUrlBusca("bordado") },
     { rotulo: "Combinar pelo WhatsApp", href: WHATSAPP, externo: true },
   ],
-  // public/vitrine/home/features/bordado.mp4
-  midia: { tom: "noite", icone: "agulha" },
+  midia: { src: "/vitrine/videos/bordado-nome.mp4", alt: "Bordado do nome Arthur com barco e baleia", tom: "noite", icone: "agulha" },
 };
 
 // 6 e 9. Carrosséis de produtos.

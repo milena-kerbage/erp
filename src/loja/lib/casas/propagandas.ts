@@ -17,7 +17,7 @@ export type PropagandaProjeto = {
 export type PropagandaCasa = PropagandaProjeto;
 
 // Onde fazem sentido: quem procura kit berço e decoração de quarto pode querer o quarto inteiro.
-export const CATEGORIAS_PROPAGANDAS_PROJETOS = ["kit-berco", "quarto"] as const;
+export const CATEGORIAS_PROPAGANDAS_PROJETOS = ["kit-berco", "kit-cama-kids"] as const;
 
 export const PROPAGANDAS_PROJETOS: PropagandaProjeto[] = [
   {

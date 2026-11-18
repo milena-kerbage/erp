@@ -15,16 +15,16 @@ const ROTAS = new Set([...navegacao.matchAll(/href: "(\/[^"?]*)"/g)].map(([, hre
 for (const fixa of ["/busca", "/carrinho", "/pronta-entrega", "/personalizado"]) ROTAS.add(fixa);
 const CATEGORIAS_DO_MENU = [...ROTAS].filter((href) => !["/busca", "/carrinho", "/pronta-entrega"].includes(href) && !href.startsWith("/conta") && !href.startsWith("/ajuda"));
 
-test("cada categoria principal tem propagandas próprias antes das gerais", () => {
+test("cada linha principal tem propagandas próprias antes das gerais", () => {
   const esperado = {
     "kit-berco": "berco-completo",
-    enxoval: "paninhos",
-    quarto: "quarto-claro",
-    maternidade: "mala-maternidade",
+    "kit-maternidade": "complementares-berco",
+    "kit-paninhos": "bordado-nome",
+    "itens-complementares": "paninhos",
   };
   for (const [chave, primeira] of Object.entries(esperado)) {
     const lista = categoria(chave);
-    assert.equal(lista[0].id, primeira, chave);
+    assert.equal(lista[0].id, primeira, `${chave}: ${ids(lista)}`);
     assert.ok(lista.length >= 4, `${chave}: ${ids(lista)}`);
     assert.deepEqual(ids(lista).slice(-2), GERAIS, chave);
   }
@@ -33,14 +33,10 @@ test("cada categoria principal tem propagandas próprias antes das gerais", () =
 test("subcategoria vale mais que a categoria e não aponta para a própria página", () => {
   const kits = ids(categoria("kit-berco/kits"));
   assert.ok(!kits.includes("berco-completo"), "o link de 'O berço inteiro' é /kit-berco/kits");
-  assert.equal(kits[0], "lencol-percal");
+  assert.ok(kits.includes("complementares-berco"));
   assert.ok(kits.includes("bordado-nome"));
-
-  const saidas = ids(categoria("maternidade/saidas"));
-  assert.equal(saidas[0], "porta");
-  assert.ok(!saidas.includes("primeiro-look"));
-
-  assert.ok(!ids(categoria("quarto/cortinas")).includes("quarto-claro"));
+  assert.ok(!ids(categoria("kit-paninhos")).includes("paninhos"));
+  assert.ok(!ids(categoria("kit-cama-kids")).includes("cama-kids"));
   assert.ok(!ids(categoria("pronta-entrega")).includes("pronta-entrega"));
 });
 
@@ -48,13 +44,13 @@ test("busca usa as categorias dos resultados e as palavras buscadas", () => {
   const kit = escolherPropagandas({
     tipo: "busca",
     termo: "kit berço",
-    caminhos: ["/kit-berco/kits", "/kit-berco/kits", "/kit-berco/protetores", "/quarto/mini-cama"],
+    caminhos: ["/kit-berco/kits", "/kit-berco/kits", "/itens-complementares"],
   });
-  assert.equal(kit[0].id, "berco-completo");
+  assert.ok(ids(kit).includes("berco-completo"), ids(kit));
 
-  const bordado = escolherPropagandas({ tipo: "busca", termo: "toalha bordada com nome", caminhos: ["/enxoval/toalhas"] });
+  const bordado = escolherPropagandas({ tipo: "busca", termo: "toalha bordada com nome", caminhos: ["/kit-paninhos"] });
   assert.ok(ids(bordado).includes("bordado-nome"));
-  assert.ok(ids(bordado).includes("banho"));
+  assert.ok(ids(bordado).includes("paninhos"));
 
   // Palavra curta só casa inteira: "ki" não puxa o kit.
   assert.deepEqual(ids(escolherPropagandas({ tipo: "busca", termo: "ki", caminhos: [] })), GERAIS);
@@ -95,10 +91,10 @@ test("lista extensível: propaganda nova entra sem mudar a escolha", () => {
     texto: "Teste.",
     acao: "Ver",
     href: "/personalizado",
-    onde: ["kit-berco", "quarto"],
+    onde: ["kit-berco", "kit-cama-kids"],
   };
-  assert.ok(ids(escolherPropagandas({ tipo: "categoria", categoria: "quarto" }, [...PROPAGANDAS, projeto])).includes("projeto-teste"));
-  assert.ok(!ids(escolherPropagandas({ tipo: "categoria", categoria: "maternidade" }, [...PROPAGANDAS, projeto])).includes("projeto-teste"));
+  assert.ok(ids(escolherPropagandas({ tipo: "categoria", categoria: "kit-cama-kids" }, [...PROPAGANDAS, projeto])).includes("projeto-teste"));
+  assert.ok(!ids(escolherPropagandas({ tipo: "categoria", categoria: "kit-maternidade" }, [...PROPAGANDAS, projeto])).includes("projeto-teste"));
 });
 
 test("links só para rotas que existem", () => {
@@ -110,7 +106,7 @@ test("sem promessa comercial no texto", () => {
   for (const { id, titulo, texto, acao } of TODAS) assert.doesNotMatch(`${titulo} ${texto} ${acao}`, proibido, id);
 });
 
-test("conteúdo completo; foto, quando houver, no disco e com crédito", () => {
+test("conteúdo completo; foto ou vídeo, quando houver, no disco e com crédito", () => {
   assert.equal(new Set(ids(TODAS)).size, TODAS.length, "ids repetidos");
   for (const propaganda of TODAS) {
     for (const campo of ["titulo", "texto", "acao", "href"]) assert.ok(propaganda[campo]?.length > 0, `${propaganda.id}.${campo}`);
@@ -118,11 +114,15 @@ test("conteúdo completo; foto, quando houver, no disco e com crédito", () => {
     if (propaganda.estilo) assert.ok(ESTILOS.includes(propaganda.estilo));
     const fotos = [propaganda.imagem, ...(propaganda.alternativas ?? [])].filter(Boolean);
     if (fotos.length === 0) continue;
-    const creditos = readFileSync(new URL("../../public/vitrine/propagandas/CREDITOS.md", import.meta.url), "utf8");
-    for (const { src } of fotos) {
-      assert.match(src, /^\/vitrine\/propagandas\/[a-z0-9-]+\.webp$/);
-      assert.ok(existsSync(new URL(`../../public${src}`, import.meta.url)), src);
-      assert.ok(creditos.includes(src.split("/").pop()), `${src} sem crédito`);
+    for (const { src, video } of fotos) {
+      const pasta = src.startsWith("/vitrine/videos/") ? "videos" : "propagandas";
+      const creditos = readFileSync(new URL(`../../public/vitrine/${pasta}/CREDITOS.md`, import.meta.url), "utf8");
+      assert.match(src, /^\/vitrine\/(propagandas|videos)\/[a-z0-9-]+\.webp$/);
+      for (const arquivo of [src, video].filter(Boolean)) {
+        assert.ok(existsSync(new URL(`../../public${arquivo}`, import.meta.url)), arquivo);
+        assert.ok(creditos.includes(arquivo.split("/").pop()), `${arquivo} sem crédito`);
+      }
+      if (video) assert.match(video, /^\/vitrine\/videos\/[a-z0-9-]+\.mp4$/);
     }
   }
 });

@@ -18,7 +18,20 @@ export function CardPropaganda({ propaganda, estilo }: { propaganda: Propaganda;
       className={cx("group", card, imagem ? VARIANTES[estilo] : SEM_FOTO[estilo])}
       {...(externo ? { target: "_blank", rel: "noopener" } : {})}
     >
-      {imagem ? (
+      {imagem?.video ? (
+        <video
+          src={imagem.video}
+          poster={imagem.src}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden
+          className={cx(foto, css({ position: "absolute", inset: "0", w: "full", h: "full" }))}
+          style={imagem.posicao ? { objectPosition: imagem.posicao } : undefined}
+        />
+      ) : imagem ? (
         <Image
           src={imagem.src}
           alt=""
