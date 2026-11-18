@@ -45,7 +45,7 @@ export const SLIDES: Slide[] = [
       { rotulo: "Ver kits de berço", href: "/kit-berco" },
       { rotulo: "Mais vendidos", href: categoria("kit-berco", {}, "mais-vendidos") },
     ],
-    midia: { src: "/vitrine/videos/kit-berco-menina.mp4", alt: "Kit berço rosê com almofada bordada", tom: "salvia", icone: "berco" },
+    midia: { alt: "Kit berço rosê com almofada bordada", tom: "salvia", icone: "berco" },
   },
   {
     id: "projetos",
@@ -66,7 +66,7 @@ export const SLIDES: Slide[] = [
       { rotulo: "Ver kit cama kids", href: "/kit-cama-kids" },
       { rotulo: "Combinar pelo WhatsApp", href: WHATSAPP, externo: true },
     ],
-    midia: { src: "/vitrine/videos/kit-cama-kids.mp4", alt: "Cama kids com almofadas bordadas e rolo com laço", tom: "linho", icone: "nuvem" },
+    midia: { alt: "Cama kids com almofadas bordadas e rolo com laço", tom: "linho", icone: "nuvem" },
   },
   {
     id: "pronta-entrega",
@@ -90,7 +90,7 @@ export const PAR_EDITORIAL: Editorial[] = [
     texto: "Rosê, floral e laços: kits com bordado delicado e babados.",
     acao: { rotulo: "Kits para menina", href: "/kit-berco/kits/menina" },
     atalho: { rotulo: "Ver peças para menina", href: "/kit-berco/kits/menina" },
-    midia: { src: "/vitrine/videos/kit-berco-menina.mp4", alt: "Kit berço para menina com babados e bordado", tom: "rose", icone: "flor" },
+    midia: { alt: "Kit berço para menina com babados e bordado", tom: "rose", icone: "flor" },
   },
   {
     id: "menino",
@@ -98,7 +98,7 @@ export const PAR_EDITORIAL: Editorial[] = [
     texto: "Verde, azul e bordado com o nome: kits que acompanham o quartinho.",
     acao: { rotulo: "Kits para menino", href: "/kit-berco/kits/menino" },
     atalho: { rotulo: "Ver peças para menino", href: "/kit-berco/kits/menino" },
-    midia: { src: "/vitrine/videos/kit-berco-menino.mp4", alt: "Kit berço verde com almofada bordada com o nome Benjamin", tom: "azul", icone: "nuvem" },
+    midia: { alt: "Kit berço verde com almofada bordada com o nome Benjamin", tom: "azul", icone: "nuvem" },
   },
 ];
 
@@ -215,7 +215,7 @@ export const FEATURE_PROJETOS: Feature = {
   id: "feature-projetos",
   titulo: "Quartinho personalizado: o ateliê planeja cada detalhe com você",
   acoes: [{ rotulo: "Conhecer os quartinhos", href: "/personalizado" }],
-  midia: { src: "/vitrine/videos/kit-berco-menino.mp4", alt: "Kit berço verde montado no berço", tom: "salvia", icone: "berco" },
+  midia: { alt: "Kit berço verde montado no berço", tom: "salvia", icone: "berco" },
 };
 
 export const FEATURE_MATERNIDADE: Feature = {
@@ -223,7 +223,7 @@ export const FEATURE_MATERNIDADE: Feature = {
   titulo: "Kit maternidade: ninho, manta e paninhos para o grande dia",
   acoes: [{ rotulo: "Ver kits maternidade", href: "/kit-maternidade" }],
   atalho: { rotulo: "Ver itens complementares", href: "/itens-complementares" },
-  midia: { src: "/vitrine/videos/ninho.mp4", alt: "Ninho bordado com o nome do bebê", tom: "musgo", icone: "bolsa" },
+  midia: { alt: "Ninho bordado com o nome do bebê", tom: "musgo", icone: "bolsa" },
 };
 
 export const FEATURE_BORDADO: Feature = {
@@ -234,7 +234,7 @@ export const FEATURE_BORDADO: Feature = {
     { rotulo: "Peças com bordado", href: montarUrlBusca("bordado") },
     { rotulo: "Combinar pelo WhatsApp", href: WHATSAPP, externo: true },
   ],
-  midia: { src: "/vitrine/videos/bordado-nome.mp4", alt: "Bordado do nome Arthur com barco e baleia", tom: "noite", icone: "agulha" },
+  midia: { alt: "Bordado do nome Arthur com barco e baleia", tom: "noite", icone: "agulha" },
 };
 
 // 6 e 9. Carrosséis de produtos.

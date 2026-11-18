@@ -146,7 +146,7 @@ Testes: `npm run test:contas` (SQLite) e `npm run test:contas:postgres` (PGlite 
 - **Kit cama:** o item do menu "Kit cama" reúne Kit cama kids (`/kit-cama-kids`) e Kit cama adulto (`/kit-cama-adulto`).
 - **Relevância** (migração `016_loja_relevancia.sql`): nota de 1 a 5 por produto (padrão 3), editável no editor e direto na lista de produtos do ERP. A ordem "Relevância" das listagens, da home e da busca é relevância (maior primeiro) e, no empate, a ordem manual.
 - **Personalização:** a página de produto sempre avisa que qualquer item pode ser personalizado ou modificado.
-- **Vídeos:** `public/vitrine/videos/` (720 px, sem áudio, ~3 MB no total, capa `.webp` ao lado; créditos em `CREDITOS.md`). Ficam no deploy, fora do banco e do storage. `Midia` e as propagandas da listagem (`imagem.video`) tocam em loop, mudos.
+- **Vídeos:** `public/vitrine/videos/` (720 px, sem áudio, ~3 MB no total, capa `.webp` ao lado; créditos em `CREDITOS.md`). Ficam no deploy, fora do banco e do storage. Entram **só nas listagens das segmentações** (blocos de `BLOCOS_POR_CATEGORIA` em `edicoes.ts` e propagandas com `imagem.video`), em loop e mudos. A home não usa vídeo: as mídias dela vêm das fotos do catálogo.
 
 ## Gestão do e-commerce no ERP
 

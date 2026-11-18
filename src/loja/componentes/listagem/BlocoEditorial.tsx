@@ -117,7 +117,7 @@ const link = css({
   alignItems: "flex-end",
   color: "superficie",
   _focusVisible: { outline: "[2px solid token(colors.superficie)]", outlineOffset: "[-6px]" },
-  "&:hover .chamada-bloco": { bg: "superficieSuave" },
+  "&:hover .chamada-bloco": { bg: "marcaContraste" },
 });
 
 // Texto no canto inferior esquerdo (padding 40 no desktop). Sem link, fica sobre a mídia sem capturar

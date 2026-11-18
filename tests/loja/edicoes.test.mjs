@@ -92,7 +92,7 @@ test("edição atual: produtos do catálogo, sem repetir, e os 3 tipos de bloco"
   assert.ok(EDICAO_ATUAL.blocos.some((b) => b.titulo && b.href && b.acao), "(c) clicável");
 });
 
-test("blocos: links para rotas que existem, alt em toda mídia e src local em /vitrine/edicoes", () => {
+test("blocos: links para rotas que existem, alt em toda mídia e src local em /vitrine/edicoes ou /vitrine/videos", () => {
   const todos = [...Object.values(EDICOES).flatMap((edicao) => edicao.blocos), ...Object.values(BLOCOS_POR_CATEGORIA).flat()];
   const ids = todos.map((bloco) => bloco.id);
   assert.equal(new Set(ids).size, ids.length, "id repetido");
@@ -103,7 +103,7 @@ test("blocos: links para rotas que existem, alt em toda mídia e src local em /v
       assert.ok(ROTAS.has(bloco.href.split("?")[0]), `${bloco.id}: rota inexistente ${bloco.href}`);
     }
     if (bloco.midia.src) {
-      assert.match(bloco.midia.src, /^\/vitrine\/edicoes\/[a-z0-9-]+\/[\w.-]+\.(webp|jpg|mp4|webm)$/, bloco.id);
+      assert.match(bloco.midia.src, /^\/vitrine\/(edicoes\/[a-z0-9-]+|videos)\/[\w.-]+\.(webp|jpg|mp4|webm)$/, bloco.id);
       assert.ok(existsSync(new URL(`../../public${bloco.midia.src}`, import.meta.url)), `${bloco.id}: arquivo ${bloco.midia.src}`);
     }
   }

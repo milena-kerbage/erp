@@ -127,56 +127,120 @@ export const EDICOES: Record<string, Edicao> = {
 
 export const EDICAO_ATUAL: Edicao = EDICOES["primeiros-dias"];
 
-// Categorias principais com 1 ou 2 blocos discretos, depois das 2 primeiras linhas de cards (só na
+// Categorias principais com 1 ou 2 blocos (vídeos do ateliê), depois das 2 primeiras linhas de cards (só na
 // 1ª página). Chave = categoria exata (as subcategorias não herdam).
 export const LINHA_BLOCOS_CATEGORIA = 2;
 
-export const BLOCOS_POR_CATEGORIA: Record<string, BlocoEditorial[]> = {
-  "kit-berco": [
+// Vídeos curtos do ateliê (public/vitrine/videos, 720 px, mudos, capa .webp ao lado): entram nas
+// listagens das segmentações, não na home.
+const V = (nome: string) => `/vitrine/videos/${nome}.mp4`;
+
+const QUARTINHO: BlocoEditorial = {
+  id: "kit-berco-quartinho",
+  titulo: "Monte o quartinho completo",
+  subtitulo: "Kit berço e complementares no mesmo tema. Qualquer item pode ser personalizado.",
+  href: "/personalizado",
+  acao: "Conhecer os quartinhos",
+  midia: { src: V("kit-berco-menino"), alt: "Kit berço verde montado, com almofada bordada com o nome", tom: "salvia", icone: "berco" },
+};
+
+const MENINA: BlocoEditorial = {
+  id: "kit-berco-menina",
+  titulo: "Babados, flores e o nome",
+  subtitulo: "Kits para menina em percal 230 fios ou 400 fios egípcios.",
+  href: "/kit-berco/kits/menina",
+  acao: "Ver kits para menina",
+  midia: { src: V("kit-berco-menina"), alt: "Kit berço rosê com babados e almofada bordada", tom: "rose", icone: "flor" },
+};
+
+const BORDADO: BlocoEditorial = {
+  id: "bordado-nome",
+  titulo: "Com o nome bordado",
+  subtitulo: "Nome, cor da linha e desenho combinados com o ateliê.",
+  href: "/busca?q=bordado",
+  acao: "Ver peças com bordado",
+  midia: { src: V("bordado-nome"), alt: "Bordado do nome do bebê sendo feito no ateliê", tom: "noite", icone: "agulha" },
+};
+
+const COMPLEMENTARES: BlocoEditorial = {
+  id: "complementares-ninho",
+  titulo: "Tudo no mesmo tema",
+  subtitulo: "Ninho, trocador e almofada de amamentação combinando com o kit berço.",
+  href: "/itens-complementares",
+  acao: "Ver complementares",
+  midia: { src: V("ninho"), alt: "Ninho bordado com o nome do bebê", tom: "musgo", icone: "nuvem" },
+};
+
+const BLOCOS_BASE: Record<string, BlocoEditorial[]> = {
+  "kit-berco": [QUARTINHO, MENINA],
+  "kit-berco/kits": [COMPLEMENTARES, BORDADO],
+  "kit-cama-kids": [
     {
-      // public/vitrine/edicoes/categorias/kit-berco-quartinho.webp
-      id: "kit-berco-quartinho",
-      titulo: "Monte o quartinho completo",
-      subtitulo: "Kit berço e complementares no mesmo tema. Qualquer item pode ser personalizado.",
+      id: "kit-cama-kids",
+      titulo: "A cama no mesmo tema",
+      subtitulo: "Almofadões, almofadas bordadas, rolo e edredom. Qualquer item pode ser personalizado.",
       href: "/personalizado",
-      acao: "Conhecer os quartinhos",
-      midia: { alt: "Quarto de bebê montado com kit berço sálvia e almofadas bordadas", tom: "salvia", icone: "berco" },
+      acao: "Montar com o ateliê",
+      midia: { src: V("kit-cama-kids"), alt: "Cama kids com almofadas bordadas e rolo com laço", tom: "linho", icone: "nuvem" },
     },
+    BORDADO,
   ],
   "kit-maternidade": [
     {
-      // public/vitrine/edicoes/categorias/kit-maternidade-paninhos.webp
       id: "kit-maternidade-paninhos",
       titulo: "Paninhos com o nome",
       subtitulo: "Cueiro, fralda, pano de boca e toalha com capuz, bordados para a maternidade.",
       href: "/kit-paninhos",
       acao: "Ver kit paninhos",
-      midia: { alt: "Paninhos bordados com o nome pendurados na escada de madeira", tom: "aconchego", icone: "coracao" },
+      midia: { src: V("kit-paninhos"), alt: "Paninhos bordados com o nome do bebê", tom: "aconchego", icone: "coracao" },
+    },
+    {
+      id: "kit-maternidade-amamentacao",
+      titulo: "Para amamentar com conforto",
+      subtitulo: "Almofada de amamentação no mesmo tema do enxoval.",
+      href: "/itens-complementares",
+      acao: "Ver complementares",
+      midia: { src: V("almofada-amamentacao"), alt: "Almofada de amamentação bordada", tom: "rose", icone: "coracao" },
     },
   ],
   "itens-complementares": [
+    { ...COMPLEMENTARES, href: "/kit-berco/kits", acao: "Ver kits de berço" },
     {
-      // public/vitrine/edicoes/categorias/complementares-quartinhos.webp
-      id: "complementares-quartinhos",
-      titulo: "Tudo no mesmo tema",
-      subtitulo: "Ninho, trocador e almofada de amamentação combinando com o kit berço.",
-      href: "/kit-berco/kits",
-      acao: "Ver kits de berço",
-      midia: { alt: "Ninho e almofada de amamentação bordados com o nome do bebê", tom: "musgo", icone: "nuvem" },
+      id: "complementares-amamentacao",
+      titulo: "Para amamentar com conforto",
+      subtitulo: "Almofada de amamentação bordada, combinando com o quartinho.",
+      href: "/kit-maternidade",
+      acao: "Ver kit maternidade",
+      midia: { src: V("almofada-amamentacao"), alt: "Almofada de amamentação bordada", tom: "rose", icone: "coracao" },
     },
   ],
   "kit-paninhos": [
     {
-      // public/vitrine/edicoes/categorias/paninhos-bordado.webp
-      id: "paninhos-bordado",
-      titulo: "Com o nome bordado",
-      subtitulo: "O bordado é combinado com o ateliê: nome, cor da linha e desenho.",
-      href: "/busca?q=bordado",
-      acao: "Ver peças com bordado",
-      midia: { alt: "Detalhe do bordado floral rosê com o nome do bebê", tom: "noite", icone: "agulha" },
+      id: "paninhos-maternidade",
+      titulo: "Do jeito da família",
+      subtitulo: "Monte o kit com as peças, o tecido e o bordado que fizerem sentido.",
+      href: "/kit-maternidade",
+      acao: "Ver kit maternidade",
+      midia: { src: V("kit-paninhos"), alt: "Paninhos bordados com o nome do bebê", tom: "aconchego", icone: "coracao" },
+    },
+    BORDADO,
+  ],
+  "para-presentear": [
+    {
+      id: "presentear-paninhos",
+      titulo: "Presente com o nome",
+      subtitulo: "Paninhos e toalhas bordados, embalados pelo ateliê.",
+      href: "/kit-paninhos",
+      acao: "Ver kit paninhos",
+      midia: { src: V("kit-paninhos"), alt: "Paninhos bordados com o nome do bebê", tom: "aconchego", icone: "presente" },
     },
   ],
 };
+
+// O mesmo vídeo pode aparecer em mais de uma segmentação: o id ganha a categoria para ficar único.
+export const BLOCOS_POR_CATEGORIA: Record<string, BlocoEditorial[]> = Object.fromEntries(
+  Object.entries(BLOCOS_BASE).map(([chave, blocos]) => [chave, blocos.map((bloco) => ({ ...bloco, id: `${chave.replace("/", "-")}--${bloco.id}` }))]),
+);
 
 export function blocosDaCategoria(chave: string): BlocoEditorial[] {
   return BLOCOS_POR_CATEGORIA[chave] ?? [];
