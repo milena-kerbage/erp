@@ -13,7 +13,7 @@ import { botaoContorno, botaoEscuro, largo, linkAcao, tituloBloco, tituloPagina 
 import { type AlvoEdicao, PainelEditar, personalizacaoPadrao } from "@/loja/componentes/carrinho/PainelEditar";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 
 // Favoritos deste aparelho (localStorage `mk_favoritos`, os mesmos da sacola e do coração da página de
 // produto), com "Mover para a sacola" e "Remover", como os itens salvos da sacola. Peça com tamanho
@@ -95,7 +95,7 @@ export function FavoritosAparelho({
               </Link>
               <p className={css({ mt: "1", mb: "4", fontSize: "sm", color: "escuro" })}>
                 <span className={css({ fontSize: "xs", color: "textoSuave" })}>a partir de </span>
-                {formatarPreco(produto.preco)}
+                {precoOuConsulta(produto.preco)}
               </p>
               <button type="button" onClick={() => mover(produto)} className={cx(botaoContorno, largo, css({ mt: "auto", px: "3" }))}>
                 Mover para a sacola

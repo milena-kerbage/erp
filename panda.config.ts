@@ -282,9 +282,9 @@ export default defineConfig({
           veu: { value: "rgba(18, 20, 17, 0.4)" }, // escurece a página atrás de menus e painéis
           superficie: { value: "#FFFFFF" },
           superficieSuave: { value: "#EEEFE8" }, // neutral 100
-          escuro: { value: "#1D1F1B" }, // neutral 900
-          texto: { value: "#2F322C" }, // neutral 800
-          textoSuave: { value: "#5F6459" }, // neutral 600
+          escuro: { value: "#3C4435" }, // sage 800: títulos, menu e ícones no verde da marca
+          texto: { value: "#434B3B" }, // sage 750: texto corrido em verde-sálvia escuro (contraste 9:1 sobre o fundo)
+          textoSuave: { value: "#5E6852" }, // sage 650: texto secundário (contraste 5,8:1)
           textoSobreEscuro: { value: "#D2D5C9" }, // neutral 300
           divisoria: { value: "rgba(29, 31, 27, 0.08)" }, // linha fina sobre fundo claro (rodapé)
           // Blocos no lugar das fotos até as fotos reais do ateliê chegarem.

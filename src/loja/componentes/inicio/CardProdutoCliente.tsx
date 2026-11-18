@@ -5,22 +5,22 @@ import { useState } from "react";
 import { css, cx } from "styled-system/css";
 import { balao } from "@/loja/componentes/listagem/CardListagem";
 import { classeDaCor } from "@/loja/componentes/produto/cores";
-import { SeloFeitoAMao, temSeloFeitoAMao } from "@/loja/componentes/produto/SeloFeitoAMao";
+import { SeloTecido } from "@/loja/componentes/produto/SeloTecido";
 import type { CorProduto, FotoGaleria, VarianteCor } from "@/loja/componentes/produto/dados";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import { DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
 import type { Foto } from "@/loja/lib/catalogo/fotos";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta, semPreco } from "@/loja/lib/formatacao/moeda";
 
-export type DadosCardProduto = VarianteCor & { cores: CorProduto[]; feitoAMao?: boolean };
+export type DadosCardProduto = VarianteCor & { cores: CorProduto[]; tecido?: string };
 
 const ROTULO_PIX = `${DESCONTO_PIX_PERCENTUAL}% OFF no Pix`;
 
 const comoFoto = (foto?: FotoGaleria): Foto | undefined => (foto?.src ? { src: foto.src, alt: foto.alt } : undefined);
 
 // Card de produto dos carrosséis: sem borda, o link cobre o card inteiro; foto 5:6 com cantos de
-// 12 px (a 2ª foto entra no hover, quando houver), selo no canto inferior esquerdo ("Feito à mão" no
-// superior, nas peças sob encomenda), nome 16/500 em até 2 linhas e preço 14 à direita (no celular 14 e 12, empilhados) e o selo
+// 12 px (a 2ª foto entra no hover, quando houver), selo no canto inferior esquerdo (o tecido no
+// superior), nome 16/500 em até 2 linhas e preço 14 à direita (no celular 14 e 12, empilhados) e o selo
 // "5% OFF no Pix". Amostras de cor de 24 px, que aparecem no hover do card no desktop; no celular, sem
 // bolinhas, só "N cores" (lululemon-animacoes-edicao.md §2).
 // Troca de cor: hover numa bolinha mostra o balão com o nome; o clique troca a foto pela do
@@ -47,7 +47,7 @@ export function CardProdutoCliente({ dados, sizes }: { dados: DadosCardProduto; 
           />
         </div>
         {atual.selo && <span className={selo}>{atual.selo}</span>}
-        {temSeloFeitoAMao(dados.feitoAMao, atual.selo) && <SeloFeitoAMao />}
+        {dados.tecido && <SeloTecido tecido={dados.tecido} />}
       </div>
       <div className={info}>
         <h3 className={nome}>
@@ -56,8 +56,8 @@ export function CardProdutoCliente({ dados, sizes }: { dados: DadosCardProduto; 
           </Link>
         </h3>
         <p className={preco}>
-          {formatarPreco(atual.preco)}
-          <span className={pix}>{ROTULO_PIX}</span>
+          {precoOuConsulta(atual.preco)}
+          {!semPreco(atual.preco) && <span className={pix}>{ROTULO_PIX}</span>}
         </p>
       </div>
       <p className={nCores}>{dados.cores.length > 1 ? `${dados.cores.length} cores` : corEscolhida}</p>

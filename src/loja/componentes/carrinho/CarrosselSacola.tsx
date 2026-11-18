@@ -5,7 +5,7 @@ import { css, cx } from "styled-system/css";
 import { Carrossel } from "@/loja/componentes/inicio/Carrossel";
 import { FotoProduto } from "@/loja/componentes/produto/FotoProduto";
 import type { ProdutoCarrinho } from "@/loja/lib/carrinho/catalogo";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import { tituloBloco } from "./estilos";
 
 // Vitrine da sacola no estilo do carrossel de produtos da home (lululemon-referencia.md §3.7): trilho
@@ -36,7 +36,7 @@ export function CarrosselSacola({ id, titulo, produtos }: { id: string; titulo: 
                 </h3>
                 <p className={css({ flexShrink: "0", fontSize: { base: "xs", desktop: "sm" }, lineHeight: "texto", color: "escuro" })}>
                   <span className={css({ color: "textoSuave" })}>a partir de </span>
-                  {formatarPreco(produto.preco)}
+                  {precoOuConsulta(produto.preco)}
                 </p>
               </div>
             </article>

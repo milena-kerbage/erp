@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { ArrowLeft, ArrowRight, Pause, Play } from "@/loja/componentes/icones";
 import { botaoSecundario } from "@/loja/componentes/inicio/estilos";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import type { FotoGaleria } from "./dados";
 import { FotoSlide } from "./FotoSlide";
 import { revelarAoRolar } from "./movimento";
@@ -82,7 +82,7 @@ export function Looks({ looks, href }: { looks: Look[]; href: string }) {
                   {peca.nome}
                 </Link>
               </p>
-              <p className={precoPeca}>{formatarPreco(peca.preco)}</p>
+              <p className={precoPeca}>{precoOuConsulta(peca.preco)}</p>
             </li>
           ))}
         </ul>

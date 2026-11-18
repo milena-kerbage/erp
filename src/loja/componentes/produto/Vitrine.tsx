@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { css, cx } from "styled-system/css";
 import type { Foto } from "@/loja/lib/catalogo/fotos";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import { BotaoFavoritar } from "./BotaoFavoritar";
 import { FotoProduto } from "./FotoProduto";
 
@@ -23,7 +23,7 @@ export function CardProduto({ produto }: { produto: CartaoProduto }) {
         <BotaoFavoritar slug={produto.slug} nome={produto.nome} variante="card" />
       </div>
       <div className={css({ px: "1", pt: "3", pb: "4" })}>
-        <p className={css({ fontSize: "sm", fontWeight: "bold", color: "escuro" })}>{formatarPreco(produto.preco)}</p>
+        <p className={css({ fontSize: "sm", fontWeight: "bold", color: "escuro" })}>{precoOuConsulta(produto.preco)}</p>
         <p className={nomeCard}>{produto.nome}</p>
         <p className={css({ mt: "1", fontSize: "sm", color: "textoSuave" })}>{produto.marca}</p>
       </div>

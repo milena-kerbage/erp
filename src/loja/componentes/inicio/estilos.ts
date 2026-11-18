@@ -77,27 +77,25 @@ const baseBotao = {
   _focusVisible: { outline: "none", boxShadow: "anelFoco" },
 } as const;
 
-// Primário: fundo escuro, nas seções claras.
-export const botaoPrimario = css({ ...baseBotao, bg: "escuro", color: "fundo", _hover: { bg: "marcaContraste" } });
+// Primário: verde da marca com letra branca, nas seções claras.
+export const botaoPrimario = css({ ...baseBotao, bg: "marca", color: "sobreDestaque", _hover: { bg: "marcaContraste" } });
 
-// Terciário: claro e com desfoque, sobre foto ou vídeo.
+// Terciário: sobre foto ou vídeo, também no verde da marca com letra branca.
 export const botaoTerciario = css({
   ...baseBotao,
-  bg: "fundoSutil",
-  color: "escuro",
-  backdropFilter: "auto",
-  backdropBlur: "botao",
-  _hover: { bg: "superficieSuave" },
+  bg: "marca",
+  color: "sobreDestaque",
+  _hover: { bg: "marcaContraste" },
 });
 
 // Secundário: contorno de 1 px.
 export const botaoSecundario = css({
   ...baseBotao,
   bg: "transparent",
-  color: "escuro",
+  color: "marca",
   borderWidth: "1px",
-  borderColor: "escuro",
-  _hover: { bg: "escuro", color: "fundo" },
+  borderColor: "marca",
+  _hover: { bg: "marca", color: "sobreDestaque" },
 });
 
 // Link de texto dos cards de destaque: 14/500, sublinhado de 1 px a 4 px do texto; no hover o

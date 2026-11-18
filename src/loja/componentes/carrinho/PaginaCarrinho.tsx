@@ -22,7 +22,7 @@ import {
   prazoDeProducao,
   textoPrazo,
 } from "@/loja/lib/carrinho/totais";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import { CarrosselSacola } from "./CarrosselSacola";
 import { DicaInfo } from "./DicaInfo";
 import { Dialogo } from "./Dialogo";
@@ -583,7 +583,7 @@ function ItensSalvos({
               </Link>
               <p className={css({ mt: "1", mb: "4", fontSize: "sm", color: "escuro" })}>
                 <span className={css({ fontSize: "xs", color: "textoSuave" })}>a partir de </span>
-                {formatarPreco(produto.preco)}
+                {precoOuConsulta(produto.preco)}
               </p>
               <button type="button" onClick={() => aoMover(produto)} className={cx(botaoContorno, largo, css({ mt: "auto", px: "3" }))}>
                 Mover para a sacola

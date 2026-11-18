@@ -26,8 +26,8 @@ export const receitaBotao = defineRecipe({
     variante: {
       // CTA de compra: sálvia da marca.
       primario: { bg: "marca", color: "sobreDestaque", _hover: { bg: "marcaContraste" } },
-      escuro: { bg: "escuro", color: "fundo", _hover: { bg: "texto" } },
-      contorno: { bg: "transparent", color: "escuro", borderColor: "escuro", _hover: { bg: "escuro", color: "fundo" } },
+      escuro: { bg: "marca", color: "sobreDestaque", _hover: { bg: "marcaContraste" } },
+      contorno: { bg: "transparent", color: "marca", borderColor: "marca", _hover: { bg: "marca", color: "sobreDestaque" } },
       secundario: { bg: "superficie", color: "texto", borderColor: "borda", _hover: { bg: "superficieSuave" } },
       fantasma: { bg: "transparent", color: "texto", _hover: { bg: "superficieSuave" } },
     },

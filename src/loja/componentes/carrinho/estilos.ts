@@ -30,7 +30,7 @@ const baseBotao = {
   "& svg": { flexShrink: "0" },
 } as const;
 
-export const botaoEscuro = css({ ...baseBotao, bg: "escuro", color: "fundo", _hover: { bg: "texto" } });
+export const botaoEscuro = css({ ...baseBotao, bg: "marca", color: "sobreDestaque", _hover: { bg: "marcaContraste" } });
 export const botaoClaro = css({ ...baseBotao, bg: "superficieSuave", color: "escuro", _hover: { bg: "placeholder" } });
 export const botaoContorno = css({
   ...baseBotao,

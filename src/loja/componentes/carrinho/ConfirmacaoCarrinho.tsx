@@ -9,7 +9,7 @@ import { WhatsappLogo } from "@/loja/componentes/icones";
 import { produtoDoProjeto, produtoDoQuartinho } from "@/loja/lib/carrinho/linhas";
 import { centavos, DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
 import type { Foto } from "@/loja/lib/catalogo/fotos";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import { Dialogo } from "./Dialogo";
 import { type ItemCarrinho, tipoDe, useItensCarrinho, useQuantidadeNoCarrinho } from "./estado";
 import { botaoClaro, botaoEscuro } from "./estilos";
@@ -123,7 +123,7 @@ export function ConfirmacaoCarrinho({
             {item.preco && (
               <p className={css({ color: "escuro" })}>
                 <span className={css({ fontSize: "xs", color: "textoSuave" })}>a partir de </span>
-                {formatarPreco(item.preco)}
+                {precoOuConsulta(item.preco)}
               </p>
             )}
             <p>
@@ -146,7 +146,7 @@ export function ConfirmacaoCarrinho({
                       <span className={css({ srOnly: true })}>{sugestao.nome}, </span>
                       {(sugestao.preco ?? dados?.precos[sugestao.slug]) && (
                         <span className={css({ display: "block", mt: "1", fontSize: "xs", color: "textoSuave" })}>
-                          a partir de {formatarPreco(sugestao.preco ?? dados?.precos[sugestao.slug] ?? "0")}
+                          a partir de {precoOuConsulta(sugestao.preco ?? dados?.precos[sugestao.slug] ?? "0")}
                         </span>
                       )}
                     </Link>

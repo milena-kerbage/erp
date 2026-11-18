@@ -59,10 +59,9 @@ test('menu conserva a foto escolhida no ERP e completa as outras com as capas at
   menu[0].painel.cards[0].src='/campanha-da-equipe.webp';
   const pronto=menuComFotos(menu,c);
   assert.equal(pronto[0].painel.cards[0].src,'/campanha-da-equipe.webp');
-  assert(pronto.find(i=>i.id==='para-quem').painel.cards.every(card=>card.src));
-  const maternidade=pronto.find(i=>i.id==='maternidade').painel.cards;
-  assert.equal(maternidade[0].href,'/kit-berco/kits');
-  assert(maternidade.every(c=>c.src));
+  const berco=pronto.find(i=>i.id==='kit-berco').painel.cards;
+  assert.deepEqual(berco.map(c=>c.href).slice(0,2),['/kit-berco/kits/menina','/kit-berco/kits/menino']); // sem resultado, a curadoria troca o destino
+  assert(berco.slice(1,2).every(c=>c.src));
   assert.equal(menu[0].painel.cards.length,4); // não modifica o cadastro original
 });
 

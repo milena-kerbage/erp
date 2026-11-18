@@ -16,7 +16,7 @@ import {
   sugerirTermos,
   type TermoIndice,
 } from "@/loja/lib/catalogo/sugestoes";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import { termosDaCuradoria } from "./curadoria";
 
 // Índice das sugestões da busca, montado no servidor a partir do catálogo (uma vez por processo) e
@@ -113,7 +113,7 @@ export async function sugerir(q: string): Promise<RespostaSugestoes> {
       nome: produto.nome,
       base,
       variacao,
-      preco: formatarPreco(produto.preco),
+      preco: precoOuConsulta(produto.preco),
       foto: foto?.src ? { src: foto.src, alt: foto.alt } : undefined,
       tom: foto?.tom ?? "linho",
     };

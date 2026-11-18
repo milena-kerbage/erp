@@ -5,13 +5,13 @@ import { createContext, type ReactNode, type RefObject, useContext, useEffect, u
 import { css, cx } from "styled-system/css";
 import { ConfirmacaoCarrinho, type Sugestao } from "@/loja/componentes/carrinho/ConfirmacaoCarrinho";
 import { adicionarAoCarrinho } from "@/loja/componentes/carrinho/estado";
-import { CaretDown, CaretRight, Info } from "@/loja/componentes/icones";
+import { CaretDown, CaretRight, Info, Needle } from "@/loja/componentes/icones";
 import type { Opcao } from "@/loja/lib/catalogo/exemplos";
 import type { Foto } from "@/loja/lib/catalogo/fotos";
 import { slugificar } from "@/loja/lib/catalogo/listagem";
 import { EMPRESA } from "@/loja/lib/empresa";
 import { DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta, semPreco } from "@/loja/lib/formatacao/moeda";
 import { BotaoFavoritar } from "./BotaoFavoritar";
 import { classeDaCor } from "./cores";
 import type { CorProduto } from "./dados";
@@ -138,6 +138,14 @@ export function CompraProvider({ dados, sugestoes, children }: { dados: DadosCom
 // o valor do Pix nunca é calculado na tela, só o percentual.
 const ROTULO_PIX = `${DESCONTO_PIX_PERCENTUAL}% OFF no Pix`;
 
+// Preço mostrado na página: o "a partir de" mais o acréscimo da opção escolhida (ex.: 400 fios egípcios),
+// o mesmo que a sacola soma em resolverItem. Sem escolha, fica o "a partir de".
+function precoComEscolha(dados: { preco: string; variacao?: { opcoes: Array<{ rotulo: string; acrescimoCentavos?: number }> } }, escolha: string | undefined | null): string {
+  const acrescimo = dados.variacao?.opcoes.find((opcao) => opcao.rotulo === escolha)?.acrescimoCentavos ?? 0;
+  if (!acrescimo) return dados.preco;
+  return ((Math.round(Number(dados.preco) * 100) + acrescimo) / 100).toFixed(2);
+}
+
 const linkWhatsapp = (texto: string) => `https://wa.me/${EMPRESA.whatsapp.numero}?text=${encodeURIComponent(texto)}`;
 
 // Painel de compra (lululemon-pdp.md §1.3 e §6): blocos com 32 de espaço (24 no celular), na ordem
@@ -154,6 +162,7 @@ export function PainelCompra() {
   const parteEscolhida = escolha ? partesDaOpcao(escolha) : undefined;
   const sufixoTamanho = parteEscolhida ? `?tamanho=${slugificar(parteEscolhida.curto)}` : "";
   const prazo = dados.prontaEntrega ? "Pronta entrega" : "Sob encomenda: 15 a 25 dias úteis";
+  const precoAtual = precoComEscolha(dados, escolha);
 
   return (
     <div id="painel-compra" className={secoes}>
@@ -185,8 +194,8 @@ export function PainelCompra() {
           <BotaoFavoritar slug={dados.slug} nome={dados.nome} variante="linha" />
         </div>
         <p className={preco}>
-          {formatarPreco(dados.preco)}
-          <span className={seloPix}>{ROTULO_PIX}</span>
+          {precoOuConsulta(precoAtual)}
+          {!semPreco(precoAtual) && <span className={seloPix}>{ROTULO_PIX}</span>}
         </p>
       </div>
 
@@ -274,7 +283,9 @@ export function PainelCompra() {
                 ? `${parteEscolhida.curto}: ${parteEscolhida.detalhe}.`
                 : opcoes.some((opcao) => !opcao.disponivel)
                   ? `Opções riscadas estão esgotadas no momento.`
-                  : "Escolha o tamanho para ver as medidas."}
+                  : /tamanho/i.test(dados.variacao?.titulo ?? "")
+                    ? "Escolha o tamanho para ver as medidas."
+                    : "O preço acompanha a opção escolhida."}
             </p>
           </div>
         </fieldset>
@@ -318,13 +329,17 @@ export function PainelCompra() {
       <div>
         <button ref={botaoPrincipal} type="button" onClick={comprar} className={cx(botaoCompra, css({ w: "full" }))}>
           <span className={rotuloBotao}>Adicionar no meu enxoval</span>
-          <span className={precoBotao}>{formatarPreco(dados.preco)}</span>
+          <span className={precoBotao}>{precoOuConsulta(precoAtual)}</span>
         </button>
         <p className={parcelamento}>
           <Info size={16} aria-hidden className={css({ flexShrink: "0" })} />
           <span>
-            {dados.parcelas > 1 && `ou em até ${dados.parcelas}x · `}
-            {ROTULO_PIX}
+            {semPreco(precoAtual)
+              ? "Valor combinado com o ateliê pelo WhatsApp"
+              : <>
+                  {dados.parcelas > 1 && `ou em até ${dados.parcelas}x · `}
+                  {ROTULO_PIX}
+                </>}
           </span>
         </p>
         <a
@@ -337,6 +352,10 @@ export function PainelCompra() {
           <CaretRight size={12} aria-hidden />
           <span className={css({ srOnly: true })}> (abre em nova aba)</span>
         </a>
+        <p className={notaPersonalizacao}>
+          <Needle size={16} aria-hidden className={css({ flexShrink: "0", color: "marca" })} />
+          <span>Qualquer item pode ser personalizado ou modificado: cores, tecido, bordado e medidas, combinados com o ateliê.</span>
+        </p>
       </div>
 
       <hr className={divisoria} />
@@ -368,7 +387,7 @@ export function PainelCompra() {
 // botão principal sai da tela por cima e some perto do rodapé (opacidade e visibilidade, 250 ms).
 // Enquanto aparece, a barra flutuante do site sai de cena (data-compra-fixa).
 export function PilulaCompra() {
-  const { botaoPrincipal, comprar, dados } = useCompra();
+  const { botaoPrincipal, comprar, dados, escolha } = useCompra();
   const [visivel, setVisivel] = useState(false);
 
   useEffect(() => {
@@ -401,7 +420,7 @@ export function PilulaCompra() {
     <div data-visivel={visivel || undefined} data-compra-fixa={visivel || undefined} className={trilhoPilula}>
       <button type="button" onClick={comprar} className={cx(botaoCompra, pilulaBotao)}>
         <span className={rotuloBotao}>Adicionar no meu enxoval</span>
-        <span className={precoBotao}>{formatarPreco(dados.preco)}</span>
+        <span className={precoBotao}>{precoOuConsulta(precoComEscolha(dados, escolha))}</span>
       </button>
     </div>
   );
@@ -611,8 +630,8 @@ const botaoCompra = css({
   px: "5",
   py: "3",
   borderRadius: "pilula",
-  bg: "escuro",
-  color: "fundo",
+  bg: "marca",
+  color: "sobreDestaque",
   fontSize: "sm",
   fontWeight: "medium",
   lineHeight: "[1.2]",
@@ -631,6 +650,20 @@ const precoBotao = css({ flexShrink: "0", whiteSpace: "nowrap" });
 
 // Pílula fixa: mín. 280, 24 entre o texto e o preço e nunca mais larga que a tela (12 de cada lado).
 const pilulaBotao = css({ minW: "pilulaCompra", maxW: "[calc(100vw - 24px)]", gap: "6" });
+
+const notaPersonalizacao = css({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "2",
+  mt: "4",
+  px: "3",
+  py: "2.5",
+  borderRadius: "md",
+  bg: "marcaSuave",
+  fontSize: "sm",
+  lineHeight: "texto",
+  color: "texto",
+});
 
 const parcelamento = css({ display: "flex", alignItems: "center", gap: "2", mt: "3", fontSize: "xs", lineHeight: "texto", color: "textoSuave" });
 

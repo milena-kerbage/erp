@@ -164,15 +164,17 @@ export function destaquesDe(produto: Pick<Produto, "ficha" | "personalizacao" | 
         }
       : {
           chave: "bordado",
-          titulo: "Feito à mão",
-          texto: "Peça feita à mão no ateliê: as medidas podem variar até 2 cm e o tom do tecido muda levemente conforme o lote.",
+          titulo: "Do seu jeito",
+          texto: "Qualquer peça pode ser personalizada ou modificada: cores, tecido, bordado e medidas são combinados com o ateliê pelo WhatsApp.",
           tom: "salviaClara",
           icone: "agulha",
         },
     {
       chave: "entrega",
       titulo: disponibilidade,
-      texto: [prazo, entrega].filter(Boolean).join(". ") + ".",
+      texto: prazo || entrega
+        ? [prazo, entrega].filter(Boolean).join(". ") + "."
+        : "Feito para você: 15 a 25 dias úteis de produção, com entrega para todo o Brasil ou retirada no ateliê.",
       tom: "areia",
       icone: "caminhao",
     },

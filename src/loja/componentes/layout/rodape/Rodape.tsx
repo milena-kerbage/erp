@@ -129,7 +129,7 @@ export async function Rodape() {
         <div className={base}>
           <div className={informativos}>
             <span className={selo}>{DESCONTO_PIX_PERCENTUAL}% OFF no Pix</span>
-            <span className={textoBase}>Feito à mão em {EMPRESA.cidade}/{EMPRESA.uf} · Entrega para todo o Brasil</span>
+            <span className={textoBase}>Ateliê em {EMPRESA.cidade}/{EMPRESA.uf} · Entrega para todo o Brasil</span>
             <span className={textoBase}>
               {EMPRESA.razaoSocial} · CNPJ {EMPRESA.cnpj}
             </span>

@@ -120,7 +120,7 @@ export default async function PaginaProduto({ params }: PageProps<"/loja/produto
         </div>
         <FaleComAtelie nome={produto.nome} />
         <HeroLinha linha={linhaDe(produto)} />
-        <Destaques frase="Feito à mão no ateliê, peça por peça." destaques={destaquesDe(produto)} fotos={fotos} />
+        <Destaques frase="Do seu jeito: qualquer peça pode ser personalizada ou modificada." destaques={destaquesDe(produto)} fotos={fotos} />
         <Looks looks={looks} href={produto.trilha[0]?.href ?? "/"} />
         <Avaliacoes produto={{ slug: produto.slug, nome: produto.nome }} inicial={avaliacoes} />
         <VoceTambem produtos={semelhantes} />

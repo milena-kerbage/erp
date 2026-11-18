@@ -1,7 +1,8 @@
 import { css, cx } from "styled-system/css";
 import { CardPropagandaCasa, type PropagandaCasa, propagandasDeCasas } from "@/loja/componentes/casas/PropagandaCasa";
 import { coresDe, dividirNome, fotosDoProduto } from "@/loja/componentes/produto/dados";
-import { type Produto, SOB_ENCOMENDA } from "@/loja/lib/catalogo/exemplos";
+import { tecidoDoCard } from "@/loja/componentes/produto/SeloTecido";
+import type { Produto } from "@/loja/lib/catalogo/exemplos";
 import type { BlocoEditorial as Bloco } from "@/loja/lib/catalogo/edicoes";
 import { intercalarBlocos, intercalarPropagandas, type LadoBloco } from "@/loja/lib/catalogo/listagem";
 import { ESTILOS, type Propaganda } from "@/loja/lib/catalogo/propagandas";
@@ -84,7 +85,7 @@ function dadosDoCard(produto: Produto): DadosCard {
     nomeVariacao: variacao,
     preco: produto.preco,
     selo: produto.selo,
-    feitoAMao: produto.atributos.entrega?.includes(SOB_ENCOMENDA) ?? false,
+    tecido: tecidoDoCard(produto),
     cores: coresDe(produto),
     fotos: fotosDoProduto(produto).slice(0, 4),
   };

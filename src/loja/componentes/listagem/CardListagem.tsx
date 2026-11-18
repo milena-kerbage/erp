@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { css, cx } from "styled-system/css";
 import { ArrowLeft, ArrowRight } from "@/loja/componentes/icones";
-import { SeloFeitoAMao, temSeloFeitoAMao } from "@/loja/componentes/produto/SeloFeitoAMao";
+import { SeloTecido } from "@/loja/componentes/produto/SeloTecido";
 import { BotaoFavoritar } from "@/loja/componentes/produto/BotaoFavoritar";
 import { classeDaCor } from "@/loja/componentes/produto/cores";
 import type { CorProduto, FotoGaleria, VarianteCor } from "@/loja/componentes/produto/dados";
 import { FotoSlide } from "@/loja/componentes/produto/FotoSlide";
 import { DESCONTO_PIX_PERCENTUAL } from "@/loja/lib/carrinho/totais";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta, semPreco } from "@/loja/lib/formatacao/moeda";
 
 export type DadosCard = {
   slug: string;
@@ -19,7 +19,7 @@ export type DadosCard = {
   nomeVariacao?: string;
   preco: string;
   selo?: string;
-  feitoAMao?: boolean; // peça sob encomenda: selo discreto "Feito à mão" no alto da foto
+  tecido?: string; // "Percal 230 fios" / "400 fios egípcios": selo discreto no alto da foto
   cores: CorProduto[];
   fotos: FotoGaleria[];
 };
@@ -75,7 +75,7 @@ export function CardListagem({ dados }: { dados: DadosCard }) {
           ))}
         </div>
         {atual.selo && <span className={selo}>{atual.selo}</span>}
-        {temSeloFeitoAMao(dados.feitoAMao, atual.selo) && <SeloFeitoAMao />}
+        {dados.tecido && <SeloTecido tecido={dados.tecido} />}
         {total > 1 && (
           <>
             {/* biome-ignore lint/a11y/useSemanticElements: grupo de dois botões em linha */}
@@ -140,9 +140,9 @@ export function CardListagem({ dados }: { dados: DadosCard }) {
             {corEscolhida}
           </span>
           <span className={css({ display: { md: "none" }, color: "texto" })}>{rotuloCores}</span>
-          <span className={css({ color: "escuro", whiteSpace: "nowrap" })}>{formatarPreco(atual.preco)}</span>
+          <span className={css({ color: "escuro", whiteSpace: "nowrap" })}>{precoOuConsulta(atual.preco)}</span>
         </div>
-        <p className={pix}>{ROTULO_PIX}</p>
+        {!semPreco(atual.preco) && <p className={pix}>{ROTULO_PIX}</p>}
       </div>
     </article>
   );

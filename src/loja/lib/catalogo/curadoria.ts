@@ -8,7 +8,7 @@ import { filtrosDaQuery } from "./urlsListagem";
 import { interpretarUrlListagem } from "@/loja/lib/seo/urls";
 import { REGRAS_SEO } from "@/loja/lib/seo/config";
 import { dividirNome } from "@/loja/componentes/produto/dados";
-import { formatarPreco } from "@/loja/lib/formatacao/moeda";
+import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import type { ProdutoSugerido } from "./sugestoes";
 
 // Referências editoriais, nunca URLs de fotos: o cadastro ativo continua sendo a fonte de imagem,
@@ -82,7 +82,7 @@ export function termosDaCuradoria(catalogo: Pick<CatalogoLoja, "produtos">): str
 export function sugestaoDoProduto(produto: Produto): ProdutoSugerido {
   const { base, variacao } = dividirNome(produto.nome);
   return { slug: produto.slug, href: `/produto/${produto.slug}`, nome: produto.nome, base, variacao,
-    preco: formatarPreco(produto.preco), foto: escolherFoto([produto]), tom: "linho" };
+    preco: precoOuConsulta(produto.preco), foto: escolherFoto([produto]), tom: "linho" };
 }
 
 export function menuComFotos(menu: ItemMenu[], catalogo: CatalogoLoja): ItemMenu[] {

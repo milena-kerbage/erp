@@ -9,6 +9,13 @@ export function formatarPreco(valor: string): string {
   return BRL.format(Number(valor)); // seguro: 2 casas decimais cabem exatas para exibição
 }
 
+/** Produto sem preço cadastrado (R$ 0,00): a loja mostra "Sob consulta" e o valor é combinado pelo WhatsApp. */
+export const SOB_CONSULTA = "Sob consulta";
+export const semPreco = (valor: string): boolean => DECIMAL.test(valor) && Number(valor) === 0;
+export function precoOuConsulta(valor: string): string {
+  return semPreco(valor) ? SOB_CONSULTA : formatarPreco(valor);
+}
+
 export function formatarParcelamento(parcelas: number, valorParcela: string): string {
   if (!Number.isInteger(parcelas) || parcelas < 2) throw new Error("parcelamento precisa de 2 ou mais parcelas");
   return `ou ${parcelas}x de ${formatarPreco(valorParcela)}`;
