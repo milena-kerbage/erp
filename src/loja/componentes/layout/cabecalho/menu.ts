@@ -85,42 +85,22 @@ const SECUNDARIOS: LinkMenu[] = [
 const MIDIA_CATEGORIA: Record<string, { cards: CardMenu[]; promo?: PromoMenu }> = {
   "kit-berco": {
     cards: [
-      card("Kits completos", "/kit-berco/kits", "rose", "berco", "kit-berco/kits-completos"),
-      card("Protetores de berço", "/kit-berco/protetores", "azul", "nuvem", "kit-berco/protetores"),
-      card("Lençóis e fronhas", "/kit-berco/lencois", "cru", "lua", "kit-berco/lencois"),
-      card("Edredons e colchas", "/kit-berco/edredons", "linho", "pena", "kit-berco/edredons"),
+      card("Para menina", "/kit-berco/kits/menina", "rose", "flor", "kit-berco/menina"),
+      card("Para menino", "/kit-berco/kits/menino", "azul", "nuvem", "kit-berco/menino"),
+      card("Unissex", "/kit-berco/kits/unissex", "linho", "bebe", "kit-berco/unissex"),
+      card("Complementares", "/itens-complementares", "salviaClara", "coracao", "kit-berco/complementares"),
     ],
   },
-  enxoval: {
+  "kit-cama-kids": {
     cards: [
-      card("Fraldas de boca", "/enxoval/paninhos/fraldas-de-boca", "salviaClara", "bebe", "enxoval/fraldas-de-boca"),
-      card("Mantas e cobertores", "/enxoval/mantas", "areia", "nuvem", "enxoval/mantas"),
-      card("Toalhas com capuz", "/enxoval/toalhas", "branco", "estrela", "enxoval/toalhas"),
-      card("Kits de enxoval", "/enxoval/kits", "cru", "presente", "enxoval/kits"),
+      card("Kit cama kids", "/kit-cama-kids", "rose", "nuvem", "kit-cama/kids"),
+      card("Kit cama adulto", "/kit-cama-adulto", "linho", "lua", "kit-cama/adulto"),
     ],
   },
-  quarto: {
+  "kit-maternidade": {
     cards: [
-      card("Cortinas", "/quarto/cortinas", "linho", "lua", "quarto/cortinas"),
-      card("Tapetes", "/quarto/tapetes", "areia", "novelo", "quarto/tapetes"),
-      card("Almofadas e nichos", "/quarto/almofadas", "salviaClara", "coracao", "quarto/almofadas"),
-      card("Kit mini cama", "/quarto/mini-cama", "verde", "berco", "quarto/mini-cama"),
-    ],
-    promo: {
-      titulo: "O quarto inteiro no mesmo tema",
-      descricao: "Cortinas, tapete, almofadas e nichos combinando com o kit berço.",
-      href: "/quarto",
-      tom: "verde",
-      icone: "lua",
-      src: foto("quarto/editorial"),
-    },
-  },
-  maternidade: {
-    cards: [
-      card("Bolsas de maternidade", "/maternidade/bolsas", "rose", "bolsa", "maternidade/bolsas"),
-      card("Saídas de maternidade", "/maternidade/saidas", "branco", "pena", "maternidade/saidas"),
-      card("Enfeites de porta", "/maternidade/enfeites-de-porta", "salviaClara", "tulipa", "maternidade/enfeites-de-porta"),
-      card("Kits maternidade", "/maternidade/kits", "areia", "presente", "maternidade/kits"),
+      card("Kits maternidade", "/kit-maternidade", "areia", "presente", "kit-maternidade/kits"),
+      card("Kit paninhos", "/kit-paninhos", "salviaClara", "bebe", "kit-maternidade/paninhos"),
     ],
   },
 };
@@ -149,29 +129,16 @@ function colunas(indice: number): ItemMenu {
 }
 
 export function montarMenu(): ItemMenu[] {
-  const projetos = itemDaNavegacao(4);
+  // NAVEGACAO: 0 Kit berço, 1 Kit cama kids, 2 Kit maternidade, 3 Kit paninhos, 4 Para presentear,
+  // 5 Complementares, 6 Personalizado.
+  const projetos = itemDaNavegacao(6);
   return [
-    colunas(0), // Kit berço
-    colunas(1), // Enxoval
-    colunas(2), // Quarto de bebê
-    colunas(3), // Maternidade
-    {
-      // Variante C (cards 5:6), como "Activity" na referência: um botão sem página própria.
-      id: "para-quem",
-      rotulo: "Para quem",
-      href: "/kit-berco/kits",
-      soBotao: true,
-      painel: {
-        tipo: "cards",
-        cards: [
-          card("Menina", "/kit-berco/kits/menina", "rose", "flor", "para-quem/menina"),
-          card("Menino", "/kit-berco/kits/menino", "azul", "nuvem", "para-quem/menino"),
-          card("Neutro", "/kit-berco/kits/neutro", "linho", "bebe", "para-quem/neutro"),
-          card("Primeiros dias", "/enxoval/kits", "salviaClara", "coracao", "para-quem/primeiros-dias"),
-          card("Para a mamãe", "/maternidade", "areia", "bolsa", "para-quem/mamae"),
-        ],
-      },
-    },
+    colunas(0),
+    colunas(1),
+    colunas(2),
+    colunas(3),
+    colunas(4),
+    colunas(5),
     {
       // Variante B (editorial com mídia 16:9), como "New & Featured".
       id: "projetos",
@@ -196,7 +163,7 @@ export function montarMenu(): ItemMenu[] {
         ],
         promo: {
           titulo: "O quartinho inteiro, planejado pelo ateliê",
-          descricao: "Kit berço, cortinas, tapete e enfeites no mesmo tema, com bordado do nome.",
+          descricao: "Kit berço e peças complementares no mesmo tema, com bordado do nome. Qualquer item pode ser personalizado.",
           href: "/personalizado",
           tom: "salvia",
           icone: "berco",
@@ -215,9 +182,9 @@ export function montarMenu(): ItemMenu[] {
         destaques: [
           { rotulo: "Tudo a pronta entrega", href: LINKS_UTILITARIOS.loja.href },
           { rotulo: "Kit berço", href: categoria("kit-berco", { entrega: [PRONTA] }) },
-          { rotulo: "Enxoval", href: categoria("enxoval", { entrega: [PRONTA] }) },
-          { rotulo: "Quarto de bebê", href: categoria("quarto", { entrega: [PRONTA] }) },
-          { rotulo: "Maternidade", href: categoria("maternidade", { entrega: [PRONTA] }) },
+          { rotulo: "Kit maternidade", href: categoria("kit-maternidade", { entrega: [PRONTA] }) },
+          { rotulo: "Kit paninhos", href: categoria("kit-paninhos", { entrega: [PRONTA] }) },
+          { rotulo: "Complementares", href: categoria("itens-complementares", { entrega: [PRONTA] }) },
           EDICAO,
         ],
         secundarios: [LINKS_UTILITARIOS.pedido],
@@ -237,18 +204,16 @@ export function montarMenu(): ItemMenu[] {
             titulo: "Para presentear",
             href: LINKS_UTILITARIOS.loja.href,
             links: [
-              { rotulo: "Fraldas de boca", href: categoria("enxoval/paninhos/fraldas-de-boca", { entrega: [PRONTA] }) },
-              { rotulo: "Mantas", href: categoria("enxoval/mantas", { entrega: [PRONTA] }) },
-              { rotulo: "Saídas de maternidade", href: categoria("maternidade/saidas", { entrega: [PRONTA] }) },
-              { rotulo: "Almofadas", href: categoria("quarto/almofadas", { entrega: [PRONTA] }) },
+              { rotulo: "Itens para presentear", href: categoria("para-presentear", { entrega: [PRONTA] }) },
+              { rotulo: "Kit paninhos", href: categoria("kit-paninhos", { entrega: [PRONTA] }) },
             ],
           },
         ],
         cards: [
           card("Kit berço", categoria("kit-berco", { entrega: [PRONTA] }), "rose", "berco", "pronta-entrega/kit-berco"),
-          card("Enxoval", categoria("enxoval", { entrega: [PRONTA] }), "salviaClara", "bebe", "pronta-entrega/enxoval"),
-          card("Quarto de bebê", categoria("quarto", { entrega: [PRONTA] }), "areia", "lua", "pronta-entrega/quarto"),
-          card("Maternidade", categoria("maternidade", { entrega: [PRONTA] }), "linho", "bolsa", "pronta-entrega/maternidade"),
+          card("Kit maternidade", categoria("kit-maternidade", { entrega: [PRONTA] }), "areia", "presente", "pronta-entrega/kit-maternidade"),
+          card("Kit paninhos", categoria("kit-paninhos", { entrega: [PRONTA] }), "salviaClara", "bebe", "pronta-entrega/kit-paninhos"),
+          card("Para presentear", categoria("para-presentear", { entrega: [PRONTA] }), "linho", "presente", "pronta-entrega/presentes"),
         ],
         promo: {
           titulo: "Sai do ateliê em até 2 dias úteis",

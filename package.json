@@ -51,7 +51,9 @@
     "test:crm:postgres": "CRM_TEST_POSTGRES=1 node --experimental-strip-types --test tests/crm-pagination.test.mjs",
     "test:storage": "node --experimental-strip-types --test tests/storage.test.mjs",
     "test:images": "node --experimental-strip-types --test tests/image-compression.test.mjs",
-    "test:performance:http": "node --experimental-strip-types tests/performance-http.mjs"
+    "test:performance:http": "node --experimental-strip-types tests/performance-http.mjs",
+    "loja:segmentacoes": "node --env-file-if-exists=.env.local --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --no-warnings scripts/loja-segmentacoes.mjs",
+    "loja:albuns": "node --env-file-if-exists=.env.local --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --no-warnings scripts/loja-albuns.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1164.0",

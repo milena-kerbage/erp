@@ -59,7 +59,7 @@ A estrutura, a grade, os breakpoints e as interações seguem o mesmo esqueleto 
 | **Pílula do cabeçalho** sálvia-linho translúcida (`vidroCabecalho` = sage 100 a 82%) | Desktop | Cor própria em vez do vidro cinza neutro; texto escuro com contraste > 9:1 mesmo sobre o hero |
 | **Rubrica** acima dos títulos de seção ("Feito à mão", "Paleta do ateliê", "Mais vendidos", "Pronta entrega", "Para o quartinho", "Primeiros dias", "No Instagram"): caixa alta, entreletra 0,14em, sálvia, com um pespontinho de 24 px antes | Home (`rubrica` em `inicio/estilos.ts`; texto em `conteudo.ts`) | Etiqueta de costura; organiza a página sem mudar a grade |
 | **Nomes próprios** das seções: "Recém-saídas da costura" (era "Novidades do ateliê"), "Escolha pela cor" (era "Compre por cor"), "As mais pedidas no ateliê", "Sai do ateliê em até 2 dias úteis" | Home | Tira a tradução literal dos títulos da referência |
-| **Selo "Feito à mão"** (agulha + texto, pílula clara) | Canto superior esquerdo da foto dos cards de peças **sob encomenda** (listagem e carrosséis); some quando a cor escolhida é de pronta entrega | Valoriza o feito sob encomenda com discrição |
+| **Selo do tecido** ("Percal 230 fios" / "400 fios egípcios", pílula clara) | Canto superior esquerdo da foto dos cards (listagem e carrosséis), tirado do atributo `tecido` (1º valor com "fios"). Substituiu o antigo "Feito à mão", que o ateliê não usa | É a primeira dúvida da cliente |
 | **Cantos de 12 px** nas fotos | Cards dos carrosséis (home e "Você também pode gostar") e posts do Instagram | Mais suave, sem mudar proporção nem grade |
 | **Bloco em linho** (`linho` = `#F3EFE6`) | Seção do Instagram, a última antes do rodapé | Fundo alternado quente; `marca` tem 4,8:1 e o texto 12:1 sobre ele |
 | **Scarlett** em frase curta sem acento ("Cada detalhe, bem cuidado") | Assinatura da seção do Instagram | A fonte da marca aparece onde faz sentido, sem acento |
@@ -137,6 +137,16 @@ As contas de cliente são **separadas das contas da equipe** do ERP: tabelas pr�
 **Produção:** a migração `009_loja_clientes.sql` precisa ser aplicada no Supabase (`npm run db:migrate -- --confirm=APLICAR-MIGRACOES --allow-existing` e `npm run db:check`, com autorização do responsável). Antes disso, `/api/conta/eu` responde 503 e a tela de pedido cai no envio direto pelo WhatsApp (sem conta nem cupom).
 
 Testes: `npm run test:contas` (SQLite) e `npm run test:contas:postgres` (PGlite com as migrações 001, 006, 009 e 010).
+
+## Segmentações e relevância (nov/2026)
+
+- **Menu e categorias:** Kit berço (menina, menino, unissex), Kit cama kids, Kit maternidade, Kit paninhos, Para presentear, Itens complementares, Personalizado e Pronta entrega (`navegacao.ts` e `menu.ts`). As árvores antigas (enxoval, quarto, maternidade) saíram do menu, mas seguem em `CATEGORIAS_LEGADAS` para o catálogo de exemplo; no banco ficam desligadas. O ateliê não vende mala maternidade nem enfeite.
+- **Produtos das planilhas de orçamento** (`src/lib/loja/gestao/segmentacoes.ts`): preço "a partir de" em percal 230 fios e o 400 fios egípcios como acréscimo da opção "Tecido" (kit paninhos R$ 337 / R$ 398, kit maternidade R$ 1.534 / R$ 1.782, ninho, trocador, embalagem, cama kids solteiro/casal e as peças avulsas dos jogos coordenados). A página de produto mostra o preço já com o acréscimo da opção escolhida. Aplicar: `npm run loja:segmentacoes -- --fotos=<pasta>` (idempotente; no banco remoto exige `--confirm=APLICAR-SEGMENTACOES` e salva o menu anterior em `.data/`).
+- **Produtos dos álbuns do Google Fotos** (`src/lib/loja/gestao/albuns.ts`, `npm run loja:albuns -- --lista=<produtos.json> --fotos=<pasta>`): os kits fotografados (berço, cama kids, cama adulto, moisés, paninhos, almofadas de amamentação, ninhos, trocadores e jogos de lençol), catalogados foto a foto, com até 4 fotos cada. Entram ativos e **sem preço**: R$ 0,00 aparece na loja como "Sob consulta" (sem o selo do Pix e com "valor combinado com o ateliê pelo WhatsApp"). A relevância inicial vem da qualidade das fotos.
+- **Kit cama:** o item do menu "Kit cama" reúne Kit cama kids (`/kit-cama-kids`) e Kit cama adulto (`/kit-cama-adulto`).
+- **Relevância** (migração `016_loja_relevancia.sql`): nota de 1 a 5 por produto (padrão 3), editável no editor e direto na lista de produtos do ERP. A ordem "Relevância" das listagens, da home e da busca é relevância (maior primeiro) e, no empate, a ordem manual.
+- **Personalização:** a página de produto sempre avisa que qualquer item pode ser personalizado ou modificado.
+- **Vídeos:** `public/vitrine/videos/` (720 px, sem áudio, ~3 MB no total, capa `.webp` ao lado; créditos em `CREDITOS.md`). Ficam no deploy, fora do banco e do storage. `Midia` e as propagandas da listagem (`imagem.video`) tocam em loop, mudos.
 
 ## Gestão do e-commerce no ERP
 

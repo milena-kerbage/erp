@@ -31,7 +31,7 @@ import { escolherCupom } from '../src/loja/lib/contas/regras.ts';
 
 const postgres = process.env.LOJA_GESTAO_TEST_POSTGRES === '1';
 const gestora = { id: 'admin-1', name: 'Gestora', email: 'gestora@example.test', permission: 'admin' };
-const MIGRACOES = ['001_auth.sql', '006_erp.sql', '009_loja_clientes.sql', '010_loja_gestao.sql', '012_storage.sql', '014_image_compression.sql'];
+const MIGRACOES = ['001_auth.sql', '006_erp.sql', '009_loja_clientes.sql', '010_loja_gestao.sql', '012_storage.sql', '014_image_compression.sql', '016_loja_relevancia.sql'];
 let directory, engine, socket, sequencia = 0;
 
 before(async () => {
@@ -369,14 +369,14 @@ test('coleções e menu: hierarquia validada, tom/ícone da lista, ordem e a loj
   await rejeita(criarColecao({ slug: 'pronta-entrega', nome: 'Outra' }, gestora), 'DUPLICATE_SLUG', 409);
 
   const { menu } = await obterMenu();
-  assert.equal(menu.length, 7);
-  const kitBerco = menu[0], paraQuem = menu.find((item) => item.id === 'para-quem');
+  assert.equal(menu.length, 8);
+  const kitBerco = menu[0];
   await rejeita(criarItemMenu({ secao: 'link', paiId: kitBerco.id, rotulo: 'Solto', href: '/x' }, gestora), 'INVALID_PARENT', 400);
-  await rejeita(criarItemMenu({ secao: 'coluna', paiId: paraQuem.id, rotulo: 'Coluna', href: '/x' }, gestora), 'INVALID_PARENT', 400);
   await rejeita(criarItemMenu({ secao: 'card', paiId: kitBerco.id, rotulo: 'Card', href: '/x', tom: 'roxo' }, gestora), 'INVALID_INPUT', 400);
   await rejeita(criarItemMenu({ secao: 'item', rotulo: 'Fora', href: 'javascript:alert(1)' }, gestora), 'INVALID_URL', 400);
   const novo = (await criarItemMenu({ secao: 'item', rotulo: 'Presentes', href: '/presentes', painel: 'cards', destaque: true }, gestora)).item;
   await criarItemMenu({ secao: 'card', paiId: novo.id, rotulo: 'Caixas', href: '/presentes', tom: 'rose', icone: 'presente' }, gestora);
+  await rejeita(criarItemMenu({ secao: 'coluna', paiId: novo.id, rotulo: 'Coluna', href: '/x' }, gestora), 'INVALID_PARENT', 400);
   await ordenarMenu({ paiId: null, ids: [novo.id] }, gestora);
   const lido = (await lerCatalogoDoBanco()).menu;
   assert.equal(lido[0].rotulo, 'Presentes');
@@ -384,7 +384,7 @@ test('coleções e menu: hierarquia validada, tom/ícone da lista, ordem e a loj
   await atualizarItemMenu(novo.id, { revisao: 2, ativo: false }, gestora);
   assert.equal((await lerCatalogoDoBanco()).menu.some((item) => item.rotulo === 'Presentes'), false, 'inativo some da loja');
   await removerItemMenu(novo.id, 3, gestora);
-  assert.equal((await obterMenu()).menu.length, 7);
+  assert.equal((await obterMenu()).menu.length, 8);
 });
 
 test('permissões e gravação: escrita só admin/gestão, dados de clientes fora do perfil membro, sem gravar no banco remoto em desenvolvimento', async () => {

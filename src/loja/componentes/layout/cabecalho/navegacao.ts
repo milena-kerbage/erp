@@ -21,82 +21,74 @@ export const NAVEGACAO: ItemNavegacao[] = [
         links: [
           { rotulo: "Para menina", href: "/kit-berco/kits/menina" },
           { rotulo: "Para menino", href: "/kit-berco/kits/menino" },
-          { rotulo: "Neutros", href: "/kit-berco/kits/neutro" },
-        ],
-      },
-      {
-        titulo: "Peças avulsas",
-        href: "/kit-berco",
-        links: [
-          { rotulo: "Protetores de berço", href: "/kit-berco/protetores" },
-          { rotulo: "Lençóis e fronhas", href: "/kit-berco/lencois" },
-          { rotulo: "Edredons e colchas", href: "/kit-berco/edredons" },
-          { rotulo: "Saias de berço", href: "/kit-berco/saias" },
-          { rotulo: "Travesseiros e rolinhos", href: "/kit-berco/travesseiros" },
+          { rotulo: "Unissex", href: "/kit-berco/kits/unissex" },
         ],
       },
     ],
   },
   {
-    rotulo: "Enxoval",
-    href: "/enxoval",
+    rotulo: "Kit cama",
+    href: "/kit-cama-kids",
+    colunas: [
+      {
+        titulo: "Kit cama",
+        href: "/kit-cama-kids",
+        links: [
+          { rotulo: "Kit cama kids", href: "/kit-cama-kids" },
+          { rotulo: "Kit cama adulto", href: "/kit-cama-adulto" },
+        ],
+      },
+    ],
+  },
+  {
+    rotulo: "Kit maternidade",
+    href: "/kit-maternidade",
+    colunas: [
+      {
+        titulo: "Para a maternidade",
+        href: "/kit-maternidade",
+        links: [
+          { rotulo: "Kits maternidade", href: "/kit-maternidade" },
+          { rotulo: "Kit paninhos", href: "/kit-paninhos" },
+        ],
+      },
+    ],
+  },
+  {
+    rotulo: "Kit paninhos",
+    href: "/kit-paninhos",
     colunas: [
       {
         titulo: "Paninhos",
-        href: "/enxoval/paninhos",
-        links: [
-          { rotulo: "Fraldas de boca", href: "/enxoval/paninhos/fraldas-de-boca" },
-          { rotulo: "Cueiros", href: "/enxoval/paninhos/cueiros" },
-          { rotulo: "Babadores", href: "/enxoval/paninhos/babadores" },
-        ],
-      },
-      {
-        titulo: "Banho e soninho",
-        href: "/enxoval",
-        links: [
-          { rotulo: "Toalhas com capuz", href: "/enxoval/toalhas" },
-          { rotulo: "Mantas e cobertores", href: "/enxoval/mantas" },
-          { rotulo: "Kits de enxoval", href: "/enxoval/kits" },
-        ],
+        href: "/kit-paninhos",
+        links: [{ rotulo: "Todos os kits paninhos", href: "/kit-paninhos" }],
       },
     ],
   },
   {
-    rotulo: "Quarto de bebê",
-    href: "/quarto",
+    rotulo: "Para presentear",
+    href: "/para-presentear",
     colunas: [
       {
-        titulo: "Decoração",
-        href: "/quarto",
-        links: [
-          { rotulo: "Cortinas", href: "/quarto/cortinas" },
-          { rotulo: "Tapetes", href: "/quarto/tapetes" },
-          { rotulo: "Almofadas e nichos", href: "/quarto/almofadas" },
-          { rotulo: "Mosquiteiros", href: "/quarto/mosquiteiros" },
-        ],
-      },
-      {
-        titulo: "Cama e trocador",
-        href: "/quarto",
-        links: [
-          { rotulo: "Kit mini cama", href: "/quarto/mini-cama" },
-          { rotulo: "Capas de trocador", href: "/quarto/trocador" },
-        ],
+        titulo: "Presentes",
+        href: "/para-presentear",
+        links: [{ rotulo: "Itens para presentear", href: "/para-presentear" }],
       },
     ],
   },
   {
-    rotulo: "Maternidade",
-    href: "/maternidade",
+    rotulo: "Complementares",
+    href: "/itens-complementares",
     colunas: [
       {
-        titulo: "Para a chegada",
-        href: "/maternidade",
+        titulo: "Itens complementares",
+        href: "/itens-complementares",
         links: [
-          { rotulo: "Bolsas de maternidade", href: "/maternidade/bolsas" },
-          { rotulo: "Saídas de maternidade", href: "/maternidade/saidas" },
-          { rotulo: "Enfeites de porta", href: "/maternidade/enfeites-de-porta" },
-          { rotulo: "Kits maternidade", href: "/maternidade/kits" },
+          { rotulo: "Todos os complementares", href: "/itens-complementares" },
+          { rotulo: "Ninhos", href: "/busca?q=ninho" },
+          { rotulo: "Trocadores", href: "/busca?q=trocador" },
+          { rotulo: "Almofadas de amamentação", href: "/busca?q=amamenta%C3%A7%C3%A3o" },
+          { rotulo: "Embalagem maternidade", href: "/busca?q=embalagem" },
         ],
       },
     ],
@@ -138,6 +130,37 @@ export const NAVEGACAO: ItemNavegacao[] = [
   },
 ];
 
+// Categorias antigas que saíram do menu (nov/2026), mas seguem na árvore estática: o catálogo de exemplo
+// (fallback e testes) ainda usa esses caminhos. No banco elas ficam desligadas (loja:segmentacoes).
+export const CATEGORIAS_LEGADAS: LinkNavegacao[] = [
+  { rotulo: "Kit berço · Peças avulsas", href: "/kit-berco" },
+  { rotulo: "Protetores de berço", href: "/kit-berco/protetores" },
+  { rotulo: "Lençóis e fronhas", href: "/kit-berco/lencois" },
+  { rotulo: "Edredons e colchas", href: "/kit-berco/edredons" },
+  { rotulo: "Saias de berço", href: "/kit-berco/saias" },
+  { rotulo: "Travesseiros e rolinhos", href: "/kit-berco/travesseiros" },
+  { rotulo: "Enxoval", href: "/enxoval" },
+  { rotulo: "Paninhos", href: "/enxoval/paninhos" },
+  { rotulo: "Fraldas de boca", href: "/enxoval/paninhos/fraldas-de-boca" },
+  { rotulo: "Cueiros", href: "/enxoval/paninhos/cueiros" },
+  { rotulo: "Babadores", href: "/enxoval/paninhos/babadores" },
+  { rotulo: "Toalhas com capuz", href: "/enxoval/toalhas" },
+  { rotulo: "Mantas e cobertores", href: "/enxoval/mantas" },
+  { rotulo: "Kits de enxoval", href: "/enxoval/kits" },
+  { rotulo: "Quarto de bebê", href: "/quarto" },
+  { rotulo: "Cortinas", href: "/quarto/cortinas" },
+  { rotulo: "Tapetes", href: "/quarto/tapetes" },
+  { rotulo: "Almofadas e nichos", href: "/quarto/almofadas" },
+  { rotulo: "Mosquiteiros", href: "/quarto/mosquiteiros" },
+  { rotulo: "Kit mini cama", href: "/quarto/mini-cama" },
+  { rotulo: "Capas de trocador", href: "/quarto/trocador" },
+  { rotulo: "Maternidade", href: "/maternidade" },
+  { rotulo: "Bolsas de maternidade", href: "/maternidade/bolsas" },
+  { rotulo: "Saídas de maternidade", href: "/maternidade/saidas" },
+  { rotulo: "Enfeites de porta", href: "/maternidade/enfeites-de-porta" },
+  { rotulo: "Kits maternidade", href: "/maternidade/kits" },
+];
+
 // Links utilitários: rodapé do menu do celular, linha de serviço do mega menu, ícone de conta e rodapé.
 export const LINKS_UTILITARIOS = {
   loja: { rotulo: "Pronta entrega", href: "/pronta-entrega" },
@@ -154,11 +177,11 @@ export const LINKS_UTILITARIOS = {
 // Painel de busca vazio. Trocar pelos termos reais do relatório de busca interna (GA4) assim que houver dados.
 export const TERMOS_MAIS_BUSCADOS = [
   "kit berço",
-  "protetor de berço",
-  "saída de maternidade",
-  "bolsa maternidade",
-  "fralda de boca",
-  "manta",
   "kit berço menina",
+  "kit berço menino",
+  "kit paninhos",
+  "kit maternidade",
+  "kit cama kids",
+  "ninho",
   "pronta entrega",
 ];

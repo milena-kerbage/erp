@@ -9,7 +9,7 @@ export const ORIGEM = ORIGEM_LOJA;
 export const REGRAS_SEO: Regras = {
   categorias: {
     "kit-berco/kits": {
-      facetasIndexaveis: [{ chave: "para", valores: ["menina", "menino", "neutro"] }],
+      facetasIndexaveis: [{ chave: "para", valores: ["menina", "menino", "unissex"] }],
     },
   },
   // "entrega": "pronta-entrega" (sai em até 2 dias úteis) ou "sob-encomenda" (feito no ateliê).

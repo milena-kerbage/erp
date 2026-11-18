@@ -134,12 +134,29 @@ export async function importarCatalogoDeExemplo(ator = 'importacao', agora = Dat
 
     // Menu do cabeçalho: só com a tabela vazia (o menu é um todo; editar item a item é no ERP).
     if (Number((await database.prepare('SELECT COUNT(*) AS total FROM loja_menu_itens').get())?.total ?? 0) > 0) contar('menu', false);
-    else {
+    else resumo.menu.criados += await inserirMenuPadrao(agora);
+
+    // Cupons de campanha do código (o BEMVINDO5 continua especial: é o de primeira compra de cada conta).
+    for (const cupom of CUPONS.filter((item) => item.codigo !== CUPOM_GENERICO_PRIMEIRA)) {
+      if (await database.prepare('SELECT id FROM loja_cupons_campanha WHERE codigo = ?').get(cupom.codigo)) { contar('cupons', false); continue; }
+      await database.prepare("INSERT INTO loja_cupons_campanha (id, codigo, descricao, tipo, valor, minimo_centavos, exibir, ativo, revisao, criado, atualizado) VALUES (?, ?, ?, 'percentual', ?, ?, ?, 1, 1, ?, ?)")
+        .run(novoId(), cupom.codigo, cupom.descricao, cupom.percentual, cupom.minimoCentavos, cupom.exibir ? 1 : 0, agora, agora);
+      contar('cupons', true);
+    }
+    await auditarGestao(ator, 'imported', 'loja_produtos', 'catalogo-de-exemplo');
+  });
+  return resumo;
+}
+
+/** Grava o menu do cabeçalho de `montarMenu()` (a tabela precisa estar vazia). Devolve quantos itens entraram. */
+export async function inserirMenuPadrao(agora = Date.now()): Promise<number> {
+  const database = gestaoDb();
+  let criados = 0;
       const inserir = async (campos: { id?: string; paiId: string | null; secao: string; rotulo: string; href: string; ordem: number; descricao?: string; imagem?: string; tom?: string; icone?: string; painel?: string; externo?: boolean; destaque?: boolean; soBotao?: boolean }) => {
         const id = campos.id ?? novoId();
         await database.prepare('INSERT INTO loja_menu_itens (id, pai_id, secao, rotulo, href, descricao, imagem, tom, icone, painel, externo, destaque, so_botao, ordem, ativo, revisao, criado, atualizado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)')
           .run(id, campos.paiId, campos.secao, campos.rotulo, campos.href, campos.descricao ?? '', campos.imagem ?? '', campos.tom ?? '', campos.icone ?? '', campos.painel ?? '', campos.externo ? 1 : 0, campos.destaque ? 1 : 0, campos.soBotao ? 1 : 0, campos.ordem, agora, agora);
-        resumo.menu.criados++;
+        criados++;
         return id;
       };
       for (const [ordemItem, item] of montarMenu().entries()) {
@@ -156,16 +173,5 @@ export async function importarCatalogoDeExemplo(ator = 'importacao', agora = Dat
         }
         for (const [ordem, card] of painel.cards.entries()) await inserir({ paiId: itemId, secao: 'card', rotulo: card.rotulo, href: card.href, tom: card.tom, icone: card.icone, imagem: card.src ?? '', ordem });
       }
-    }
-
-    // Cupons de campanha do código (o BEMVINDO5 continua especial: é o de primeira compra de cada conta).
-    for (const cupom of CUPONS.filter((item) => item.codigo !== CUPOM_GENERICO_PRIMEIRA)) {
-      if (await database.prepare('SELECT id FROM loja_cupons_campanha WHERE codigo = ?').get(cupom.codigo)) { contar('cupons', false); continue; }
-      await database.prepare("INSERT INTO loja_cupons_campanha (id, codigo, descricao, tipo, valor, minimo_centavos, exibir, ativo, revisao, criado, atualizado) VALUES (?, ?, ?, 'percentual', ?, ?, ?, 1, 1, ?, ?)")
-        .run(novoId(), cupom.codigo, cupom.descricao, cupom.percentual, cupom.minimoCentavos, cupom.exibir ? 1 : 0, agora, agora);
-      contar('cupons', true);
-    }
-    await auditarGestao(ator, 'imported', 'loja_produtos', 'catalogo-de-exemplo');
-  });
-  return resumo;
+  return criados;
 }

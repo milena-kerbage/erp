@@ -5,7 +5,7 @@
 //   as facetas tiradas dos links do menu.
 // Chaves sem barra inicial, no formato do motor de URLs ("kit-berco/kits").
 
-import { NAVEGACAO } from "@/loja/componentes/layout/cabecalho/navegacao";
+import { CATEGORIAS_LEGADAS, NAVEGACAO } from "@/loja/componentes/layout/cabecalho/navegacao";
 import { REGRAS_SEO } from "@/loja/lib/seo/config";
 
 export type Elo = { rotulo: string; href: string };
@@ -39,10 +39,12 @@ function ehFaceta(chave: string): { mae: string } | null {
 // Afinidade entre linhas (quem compra uma costuma levar a outra): base das sugestões de
 // "Continue explorando" no fim da listagem. PROVISÓRIO até haver dados de compra conjunta.
 const AFINS: Record<string, string[]> = {
-  "kit-berco": ["enxoval/mantas", "quarto/cortinas", "quarto/tapetes", "kit-berco/lencois", "enxoval/paninhos", "quarto/mosquiteiros"],
-  enxoval: ["maternidade/saidas", "maternidade/bolsas", "kit-berco/kits", "enxoval/kits", "quarto/trocador"],
-  quarto: ["kit-berco/kits", "quarto/almofadas", "enxoval/mantas", "kit-berco/protetores", "maternidade/enfeites-de-porta"],
-  maternidade: ["enxoval/paninhos", "enxoval/mantas", "maternidade/kits", "enxoval/kits", "kit-berco/kits"],
+  "kit-berco": ["itens-complementares", "kit-paninhos", "kit-maternidade", "para-presentear"],
+  "kit-cama-kids": ["kit-berco/kits", "itens-complementares", "para-presentear"],
+  "kit-maternidade": ["kit-paninhos", "itens-complementares", "para-presentear", "kit-berco/kits"],
+  "kit-paninhos": ["kit-maternidade", "para-presentear", "itens-complementares"],
+  "para-presentear": ["kit-paninhos", "kit-maternidade", "itens-complementares"],
+  "itens-complementares": ["kit-berco/kits", "kit-maternidade", "kit-paninhos"],
 };
 
 /**
@@ -136,6 +138,18 @@ for (const item of NAVEGACAO) {
     registrar(coluna.href, coluna.titulo);
     for (const link of coluna.links) registrar(link.href, link.rotulo);
   }
+}
+// Legadas por último (fora do menu): mantêm os caminhos do catálogo de exemplo. "/kit-berco" já veio do menu.
+for (const link of CATEGORIAS_LEGADAS) {
+  const chave = chaveDe(link.href);
+  if (chave && !CATEGORIAS_NAVEGACAO.some((categoria) => categoria.chave === chave)) CATEGORIAS_NAVEGACAO.push({ chave, rotulo: link.rotulo });
+}
+// Em pré-ordem (cada raiz com as suas filhas logo depois), como o banco lista a árvore.
+{
+  const raizes = [...new Set(CATEGORIAS_NAVEGACAO.map((categoria) => categoria.chave.split("/")[0]))];
+  const indice = new Map<string, number>();
+  for (const [posicao, categoria] of CATEGORIAS_NAVEGACAO.entries()) if (!indice.has(categoria.chave)) indice.set(categoria.chave, posicao);
+  CATEGORIAS_NAVEGACAO.sort((a, b) => raizes.indexOf(a.chave.split("/")[0]) - raizes.indexOf(b.chave.split("/")[0]) || (indice.get(a.chave) ?? 0) - (indice.get(b.chave) ?? 0));
 }
 const PRINCIPAIS_NAVEGACAO = NAVEGACAO.map((item) => chaveDe(item.href)).filter((chave): chave is string => Boolean(chave));
 
