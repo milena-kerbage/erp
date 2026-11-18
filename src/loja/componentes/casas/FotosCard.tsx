@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ImagemNativa as Image } from "@/loja/componentes/produto/ImagemNativa";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { css } from "styled-system/css";

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { css, cx } from "styled-system/css";
 import { botao } from "styled-system/recipes";
-import { Baby } from "@/loja/componentes/icones";
+import { ImagemNativa as Image } from "@/loja/componentes/produto/ImagemNativa";
 import { RESPIRO_LATERAL } from "@/loja/componentes/layout/cabecalho/estilos";
 import { listarProjetos, projetosEmDestaque } from "@/loja/lib/casas/catalogo";
+import { fotoAtelie } from "@/loja/lib/fotosAtelie";
 import { VitrineProjetos } from "./secoes";
 
 // Bloco "Projetos" da home: faixa de abertura em sálvia clara com a chamada e as ações e, logo
@@ -24,8 +25,8 @@ export function CasasNaHome() {
             O quartinho inteiro, planejado pelo ateliê.
           </h2>
           <p className={css({ mt: "4", maxW: "[40ch]", fontSize: { base: "md", lg: "lg" }, lineHeight: "relaxed", color: "texto" })}>
-            Kit berço, cortina, tapete, almofadas e enfeite de porta no mesmo tema, feitos à mão em Fortaleza e entregues em todo o
-            Brasil.
+            Kit berço, almofadas, ninho e complementares no mesmo tema, feitos no ateliê em Fortaleza e entregues em todo o
+            Brasil. Qualquer item pode ser personalizado.
           </p>
           <div className={css({ display: "flex", flexWrap: "wrap", gap: "3", mt: "7" })}>
             <Link href="/personalizado" className={botao({ variante: "escuro", tamanho: "m" })}>
@@ -36,8 +37,8 @@ export function CasasNaHome() {
             </Link>
           </div>
         </div>
-        <div aria-hidden className={ilustracao}>
-          <Baby weight="thin" className={cx(css({ w: "full", h: "full", color: "marca" }))} />
+        <div className={ilustracao}>
+          <Image src={fotoAtelie("quarto-floral").src} alt={fotoAtelie("quarto-floral").alt} fill sizes="320px" className={css({ objectFit: "cover" })} />
         </div>
       </section>
       <VitrineProjetos
@@ -79,7 +80,8 @@ const ilustracao = css({
   justifySelf: "center",
   w: "[min(100%, 320px)]",
   aspectRatio: "square",
-  p: "10",
+  position: "relative",
+  overflow: "hidden",
   borderRadius: "full",
   bg: "fundoProduto",
 });

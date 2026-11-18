@@ -24,10 +24,11 @@ import {
 } from "@/loja/componentes/icones";
 import { brilhoAoCarregar } from "@/loja/componentes/produto/esqueleto";
 import { ImagemSuave } from "@/loja/componentes/produto/ImagemSuave";
+import { fotoDeEspera } from "@/loja/lib/fotosAtelie";
 
-// Mídia dos módulos da home e do mega menu: foto ou vídeo quando houver (`src`, em
-// public/vitrine/home/...) e, enquanto não há foto, uma composição nos tons da marca: degradê suave
-// (sálvia, linho e neutros), trama de tecido em CSS e um ícone de traço fino com um anel em volta.
+// Mídia dos módulos da home e do mega menu: foto ou vídeo quando houver (`src`) e, sem foto própria,
+// uma foto do ateliê no mesmo assunto do ícone (fotosAtelie.ts). A composição de cor (degradê, trama
+// e ícone) só aparece com `apenasCor`, sem o ícone.
 // Sem tamanho próprio: ocupa o contêiner (quem usa define a proporção: 100vh, 1:1, 5:6, 16:9).
 // Pode ser usada em Server e Client Components (sem estado).
 
@@ -133,15 +134,17 @@ export function Midia({
   className?: string;
 }) {
   const Icone = ICONES[icone];
+  // Sem foto própria: uma foto do ateliê no mesmo assunto (nunca só o ícone). Só `apenasCor` fica na cor.
+  const fonte = src ?? (apenasCor ? undefined : fotoDeEspera(icone, `${tom}|${alt}`).src);
   return (
-    <div className={cx(moldura, src && brilhoAoCarregar, parallax && linhaDoTempo, className)}>
+    <div className={cx(moldura, fonte && brilhoAoCarregar, parallax && linhaDoTempo, className)}>
       <div data-parallax={parallax || undefined} className={cx(camada, zoom && comZoom, parallax && comParallax)}>
-        {src && VIDEO.test(src) ? (
-          <video src={src} poster={capaDoVideo(src)} autoPlay muted loop playsInline preload="metadata" aria-label={alt || undefined} className={cobrir} />
-        ) : src ? (
-          <ImagemSuave src={src} alt={alt} fill sizes={sizes} preload={preload} className={cobrir} />
+        {fonte && VIDEO.test(fonte) ? (
+          <video src={fonte} poster={capaDoVideo(fonte)} autoPlay muted loop playsInline preload="metadata" aria-label={alt || undefined} className={cobrir} />
+        ) : fonte ? (
+          <ImagemSuave src={fonte} alt={alt} fill sizes={sizes} preload={preload} className={cobrir} />
         ) : (
-          <div aria-hidden className={cx(espera, TONS[tom], tomEscuro(tom) ? sobreEscuro : sobreClaro, iconeNoAlto ? noAlto : noCentro)}>
+          <div aria-hidden data-sem-foto={icone} className={cx(espera, TONS[tom], tomEscuro(tom) ? sobreEscuro : sobreClaro, iconeNoAlto ? noAlto : noCentro)}>
             {!apenasCor && <span className={trama} />}
             {!apenasCor && (
               <span className={selo}>

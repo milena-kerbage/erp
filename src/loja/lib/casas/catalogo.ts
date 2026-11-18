@@ -3,8 +3,9 @@
 // enfeite de porta e, conforme o projeto, kit mini cama e enxoval de paninhos.
 // PROVISÓRIO: nomes, textos e preços são de demonstração (preços FICTÍCIOS, ver AVISO_PRECOS).
 // Quando houver API de catálogo, este arquivo passa a ser montado por ela.
-// Fotos: ainda não há. A estrutura espera public/vitrine/projetos/<slug>/foto-1.webp, foto-2.webp…
-// (campo "fotos" = quantas existem); com 0, as telas mostram o placeholder com o ícone de bebê.
+// Fotos: public/vitrine/projetos/<slug>/foto-1.webp, foto-2.webp… (campo "fotos" = quantas existem),
+// tiradas dos álbuns do ateliê (kits reais no mesmo tema, ilustrativas do projeto); com 0, as telas
+// usam uma foto do ateliê (fotosAtelie.ts).
 // Sem imports locais de valor: roda no `node --test` (o import abaixo é só de tipo).
 
 import type { ProjetoFiltravel } from "./filtragem";
@@ -91,7 +92,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com guirlanda de camomila",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "nuvem-salvia",
@@ -119,7 +120,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com nuvem e nome em feltro",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "safari-areia",
@@ -147,7 +148,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com cabeça de leãozinho",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "bosque-de-lavanda",
@@ -174,7 +175,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com buquê de lavanda",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "ceu-de-algodao",
@@ -201,7 +202,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com lua e estrelas",
     ],
     opcionais: [PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "leaozinho-terracota",
@@ -228,7 +229,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com leãozinho de juba franjada",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "heranca-azul",
@@ -256,7 +257,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com coroa e laço",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "rosa-antigo",
@@ -283,7 +284,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com guirlanda de rosas",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "primavera-delicada",
@@ -310,7 +311,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com nome em feltro",
     ],
     opcionais: [PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "lua-de-linho",
@@ -337,7 +338,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com lua crescente",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "savana-oliva",
@@ -364,7 +365,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com elefantinho",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "provence-off-white",
@@ -392,7 +393,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com guirlanda e laço",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
   {
     slug: "ramo-de-oliveira",
@@ -419,7 +420,7 @@ const PROJETOS: Projeto[] = [
       "Enfeite de porta com guirlanda de oliveira",
     ],
     opcionais: [KIT_MINI_CAMA, PANINHOS],
-    fotos: 0,
+    fotos: 3,
   },
 ];
 

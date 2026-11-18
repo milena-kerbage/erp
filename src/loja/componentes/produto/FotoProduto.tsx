@@ -1,25 +1,25 @@
 import {ImagemNativa as Image} from "./ImagemNativa";
 import { css, cx } from "styled-system/css";
-import { Baby } from "@/loja/componentes/icones";
 import type { TomMidia } from "@/loja/componentes/inicio/Midia";
 import { ehFotoDoCatalogo, type Foto } from "@/loja/lib/catalogo/fotos";
+import { fotoDeEspera } from "@/loja/lib/fotosAtelie";
 import { brilhoAoCarregar } from "./esqueleto";
 import { ImagemSuave } from "./ImagemSuave";
 
-// Foto do produto (fundo de estúdio, 1:1) ou, enquanto a peça não tem foto, o bloco de espera:
-// fundo de estúdio com o ícone de bebê em sálvia suave, no centro.
+// Foto do produto (fundo de estúdio, 1:1) ou, enquanto a peça não tem foto, uma foto do ateliê
+// (fotosAtelie.ts, decorativa): nunca o bloco só com ícone.
 // Quem usa define o formato pela className (aspectRatio ou w/h) e diz em `sizes` a largura real
 // que a foto ocupa, para o next/image não baixar a versão de 1600 px numa miniatura.
 // A foto preenche toda a moldura com recorte centralizado, inclusive quando as proporções diferem,
 // sem deixar faixas do fundo nas laterais ou no topo.
 // `segunda`: a 2ª foto, que entra por cima no hover do card (classe "group"), só onde há mouse.
-// `cor`: tom do tecido no bloco de espera (cards): cada cor da peça tem o seu, então trocar a cor no
-// card troca a "foto" mesmo antes das fotos reais. A foto real entra com fade quando carrega.
+// `cor` e `rotulo` variam a foto do ateliê usada na falta da foto da peça. A foto entra com fade.
 export function FotoProduto({
   foto,
   segunda,
   sizes,
   className,
+  rotulo,
   tom = "claro",
   cor,
   preload = false,
@@ -28,18 +28,12 @@ export function FotoProduto({
   segunda?: Foto;
   sizes: string;
   className?: string;
-  rotulo?: string; // legado do wireframe: o bloco de espera não mostra mais rótulo
+  rotulo?: string; // varia a foto do ateliê quando a peça ainda não tem foto
   tom?: "claro" | "forte";
   cor?: TomMidia;
   preload?: boolean; // primeira foto da página de produto (LCP)
 }) {
-  if (!foto) {
-    return (
-      <div aria-hidden data-tinta={cor && TINTAS[cor] ? "" : undefined} className={cx(moldura, espera, tom === "forte" && esperaForte, cor && TINTAS[cor], className)}>
-        <Baby weight="thin" className={icone} />
-      </div>
-    );
-  }
+  if (!foto) foto = { ...fotoDeEspera("bebe", `${rotulo ?? ""}|${cor ?? ""}|${tom}`), alt: "" };
   return (
     <div className={cx(moldura, brilhoAoCarregar, className)}>
       <ImagemSuave src={foto.src} alt={foto.alt} fill sizes={sizes} preload={preload} className={css({ objectFit: "cover", objectPosition: "center" })} />
@@ -58,22 +52,3 @@ const fotoHover = css({
 });
 
 const moldura = css({ position: "relative", flexShrink: "0", overflow: "hidden", bg: "fundoProduto" });
-
-const espera = css({ display: "flex", alignItems: "center", justifyContent: "center" });
-
-// Tom "forte": a miniatura selecionada (cor atual) e as linhas do resumo do checkout.
-const esperaForte = css({ bg: "marcaSuave" });
-
-// O ícone acompanha o tamanho da moldura: 36% do lado, do card grande à miniatura de 44 px.
-const icone = css({ w: "[36%]", h: "[36%]", maxW: "[160px]", maxH: "[160px]", color: "logo", opacity: "[0.45]" });
-
-// Tom do tecido no bloco de espera, misturado ao fundo de estúdio (sem perder o ícone). Os tons que
-// não são de tecido ficam no fundo de estúdio.
-const TINTAS: Partial<Record<TomMidia, string>> = {
-  rose: css({ "&[data-tinta]": { bg: "[color-mix(in srgb, token(colors.tecido.rose) 55%, token(colors.fundoProduto))]" } }),
-  azul: css({ "&[data-tinta]": { bg: "[color-mix(in srgb, token(colors.tecido.azulBebe) 55%, token(colors.fundoProduto))]" } }),
-  verde: css({ "&[data-tinta]": { bg: "[color-mix(in srgb, token(colors.tecido.salvia) 55%, token(colors.fundoProduto))]" } }),
-  cru: css({ "&[data-tinta]": { bg: "[color-mix(in srgb, token(colors.tecido.cru) 70%, token(colors.fundoProduto))]" } }),
-  cinza: css({ "&[data-tinta]": { bg: "[color-mix(in srgb, token(colors.tecido.cinza) 55%, token(colors.fundoProduto))]" } }),
-  branco: css({ "&[data-tinta]": { bg: "superficie" } }),
-};

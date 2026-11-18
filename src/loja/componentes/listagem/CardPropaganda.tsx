@@ -1,21 +1,22 @@
-import Image from "next/image";
+import { ImagemNativa as Image } from "@/loja/componentes/produto/ImagemNativa";
 import Link from "next/link";
 import { css, cx } from "styled-system/css";
-import { Needle } from "@/loja/componentes/icones";
 import type { EstiloPropaganda, Propaganda } from "@/loja/lib/catalogo/propagandas";
+import { fotoDeEspera } from "@/loja/lib/fotosAtelie";
 
 // Card de campanha no meio da grade (Lululemon): foto inteira e o card todo clicável. A foto é
 // decorativa (alt vazio): título, texto e CTA já dizem para onde o link leva.
 // 3 estilos sorteados: escuro (degradê e texto branco embaixo), claro (bloco branco embaixo) e
-// topo (degradê e texto branco em cima). Sem foto (ainda não há fotos das campanhas): bloco sálvia
-// com uma agulha de bordado decorativa ao fundo; o estilo "claro" vira sálvia suave com texto escuro.
+// topo (degradê e texto branco em cima). Campanha sem foto própria usa uma foto do ateliê
+// (fotosAtelie.ts): nunca o bloco só com ícone.
 export function CardPropaganda({ propaganda, estilo }: { propaganda: Propaganda; estilo: EstiloPropaganda }) {
-  const { titulo, texto, acao, href, imagem } = propaganda;
+  const { titulo, texto, acao, href } = propaganda;
+  const imagem = propaganda.imagem ?? { src: fotoDeEspera("bebe", titulo).src };
   const externo = href.startsWith("http");
   return (
     <Link
       href={href}
-      className={cx("group", card, imagem ? VARIANTES[estilo] : SEM_FOTO[estilo])}
+      className={cx("group", card, VARIANTES[estilo])}
       {...(externo ? { target: "_blank", rel: "noopener" } : {})}
     >
       {imagem?.video ? (
@@ -31,7 +32,7 @@ export function CardPropaganda({ propaganda, estilo }: { propaganda: Propaganda;
           className={cx(foto, css({ position: "absolute", inset: "0", w: "full", h: "full" }))}
           style={imagem.posicao ? { objectPosition: imagem.posicao } : undefined}
         />
-      ) : imagem ? (
+      ) : (
         <Image
           src={imagem.src}
           alt=""
@@ -40,10 +41,8 @@ export function CardPropaganda({ propaganda, estilo }: { propaganda: Propaganda;
           className={foto}
           style={imagem.posicao ? { objectPosition: imagem.posicao } : undefined}
         />
-      ) : (
-        <Needle aria-hidden weight="thin" className={enfeite} />
       )}
-      <span className={cx(conteudo, imagem && estilo === "claro" && blocoClaro, !imagem && css({ textShadow: "none" }))}>
+      <span className={cx(conteudo, estilo === "claro" && blocoClaro)}>
         <span className={css({ display: "block", fontSize: { base: "3xl", xl: "4xl" }, lineHeight: "[1.2]", letterSpacing: "[-0.02em]" })}>
           {titulo}
         </span>
@@ -95,24 +94,6 @@ const VARIANTES: Record<EstiloPropaganda, string> = {
     _before: { backgroundImage: "[linear-gradient(to bottom, rgba(5, 5, 5, 0.85) 0%, rgba(5, 5, 5, 0.55) 40%, rgba(5, 5, 5, 0) 75%)]" },
   }),
 };
-
-// Sem foto: fundo sálvia (escuro e topo) ou sálvia suave (claro), sem degradê.
-const SEM_FOTO: Record<EstiloPropaganda, string> = {
-  escuro: css({ alignItems: "flex-end", bg: "fundoBanner", color: "fundo" }),
-  claro: css({ alignItems: "flex-end", bg: "marcaSuave", color: "escuro" }),
-  topo: css({ alignItems: "flex-start", bg: "fundoBannerEscuro", color: "fundo" }),
-};
-
-const enfeite = css({
-  position: "absolute",
-  top: "[12%]",
-  right: "[-8%]",
-  w: "[70%]",
-  h: "[70%]",
-  opacity: "[0.14]",
-  transform: "rotate(-20deg)",
-  pointerEvents: "none",
-});
 
 const conteudo = css({
   position: "relative",

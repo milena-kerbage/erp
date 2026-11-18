@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ImagemNativa as Image } from "@/loja/componentes/produto/ImagemNativa";
 import Link from "next/link";
 import { css, cx } from "styled-system/css";
 import { CATEGORIAS_PROPAGANDAS_PROJETOS, PROPAGANDAS_PROJETOS, type PropagandaCasa } from "@/loja/lib/casas/propagandas";
