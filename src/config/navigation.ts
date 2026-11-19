@@ -48,6 +48,11 @@ export type NavModule = {
  * Fonte única do menu: a sidebar lista os módulos e o header mostra as
  * seções (`tabs`) do módulo atual.
  *
+ * Liberados (2026-11-19, a pedido): Painel, Leads (funil), Conversas, Clientes e E-commerce, além das Configurações
+ * (sem elas não há como conectar o WhatsApp, editar funis nem cuidar da equipe). Os demais módulos estão com `soon`:
+ * aparecem com o selo "Produção" e a tela deles fica bloqueada (AppShell + LockedModule), mesmo já tendo página
+ * pronta. Para liberar um módulo, basta tirar o `soon` dele.
+ *
  * Ícones vêm de `@phosphor-icons/react/ssr` para que este arquivo possa ser
  * importado tanto em Server quanto em Client Components.
  */
@@ -69,16 +74,28 @@ export const navigation = {
       label: "Agenda",
       href: "/agenda",
       icon: CalendarBlankIcon,
+      soon: {
+        description: "Entregas, retiradas e compromissos do ateliê num calendário só, com lembretes para a equipe.",
+        features: ["Calendário por pessoa da equipe", "Lembretes de prazos e entregas", "Compromissos ligados à oportunidade"],
+      },
     },
     {
       label: "Orçamentos",
       href: "/orcamentos",
       icon: CalculatorIcon,
+      soon: {
+        description: "Monte orçamentos com produtos, personalização e prazos, e envie para aprovação.",
+        features: ["Modelos de orçamento por tipo de produto", "Envio pelo WhatsApp", "Aprovação que já vira pedido"],
+      },
     },
     {
       label: "Pedidos",
       href: "/pedidos",
       icon: ClipboardTextIcon,
+      soon: {
+        description: "Cada pedido do sinal à entrega, com pagamentos e prazos no mesmo lugar.",
+        features: ["Linha do tempo de cada pedido", "Controle de sinal e parcelas", "Alertas de prazo de entrega"],
+      },
       tabs: [
         { label: "Em andamento", href: "/pedidos/em-andamento" },
         { label: "Finalizados", href: "/pedidos/finalizados" },
@@ -88,6 +105,10 @@ export const navigation = {
       label: "Catálogo",
       href: "/catalogo",
       icon: BookOpenTextIcon,
+      soon: {
+        description: "Produtos, tecidos e acabamentos com fotos e preços, para orçar mais rápido.",
+        features: ["Ficha e fotos de cada produto", "Tabela de preços por tecido", "Coleções para compartilhar"],
+      },
     },
     {
       label: "E-commerce",
@@ -111,11 +132,19 @@ export const navigation = {
       label: "Produção",
       href: "/producao",
       icon: KanbanIcon,
+      soon: {
+        description: "O ateliê por dentro: cada peça na etapa certa, do corte à finalização.",
+        features: ["Quadro de produção por peça", "Responsável e prazo por etapa", "Ordem de serviço para a costura"],
+      },
     },
     {
       label: "Estoque",
       href: "/estoque",
       icon: PackageIcon,
+      soon: {
+        description: "Tecidos e aviamentos com quantidade, fornecedor e aviso de reposição.",
+        features: ["Entradas e saídas por pedido", "Aviso de estoque baixo", "Cadastro de fornecedores"],
+      },
       tabs: [
         { label: "Materiais", href: "/estoque/materiais" },
         { label: "Movimentações", href: "/estoque/movimentacoes" },
@@ -125,6 +154,10 @@ export const navigation = {
       label: "Financeiro",
       href: "/financeiro",
       icon: WalletIcon,
+      soon: {
+        description: "Contas a receber e a pagar, fluxo de caixa e o resultado de cada pedido.",
+        features: ["Recebimentos por pedido e parcela", "Contas a pagar com vencimento", "Fluxo de caixa do mês"],
+      },
       tabs: [
         { label: "Contas a receber", href: "/financeiro/receber" },
         { label: "Contas a pagar", href: "/financeiro/pagar" },
@@ -135,6 +168,10 @@ export const navigation = {
       label: "Relatórios",
       href: "/relatorios",
       icon: ChartLineUpIcon,
+      soon: {
+        description: "Vendas, conversão por origem, tempo de produção e desempenho da equipe.",
+        features: ["Conversão por funil e origem", "Faturamento por período", "Desempenho de cada pessoa da equipe"],
+      },
     },
   ],
   secondary: [
@@ -163,6 +200,10 @@ export const navigation = {
       label: "Novidades",
       href: "/conta/novidades",
       icon: SparkleIcon,
+      soon: {
+        description: "Tudo o que entra de novo no sistema, mês a mês, com vídeos curtos de como usar.",
+        features: ["Lançamentos de cada mês", "Vídeos rápidos das novidades", "Aviso quando um módulo é liberado"],
+      },
     },
     { label: "Preferências", href: "/configuracoes/preferencias", icon: ToggleLeftIcon },
   ],
@@ -171,6 +212,10 @@ export const navigation = {
       label: "Central de ajuda",
       href: "/ajuda",
       icon: InfoIcon,
+      soon: {
+        description: "Guias passo a passo, respostas rápidas e contato direto com o suporte.",
+        features: ["Guias de cada tela", "Perguntas frequentes", "Chat com o suporte"],
+      },
     },
   ],
 } as const satisfies Record<string, readonly NavModule[]>;

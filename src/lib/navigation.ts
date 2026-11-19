@@ -52,7 +52,8 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
   const current = findModule(pathname);
 
   if (current && current !== home) {
-    const sections = current.tabs && [
+    // Módulo bloqueado não oferece as seções: todas levariam à mesma tela de bloqueio.
+    const sections = current.tabs && !current.soon ? [
       ...(current.overview === false
         ? []
         : [{ label: "Visão geral", href: current.href, active: pathname === current.href }]),
@@ -61,11 +62,11 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
         href: item.href,
         active: isPathActive(pathname, item.href),
       })),
-    ];
+    ] : undefined;
 
     trail.push({ label: current.label, href: current.href, sections });
 
-    const tab = current.tabs?.find((item) => isPathActive(pathname, item.href));
+    const tab = current.soon ? undefined : current.tabs?.find((item) => isPathActive(pathname, item.href));
     if (tab) trail.push({ label: tab.label, href: tab.href });
   }
 
