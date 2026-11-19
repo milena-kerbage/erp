@@ -23,6 +23,17 @@ Fluxo trazido do ERP da Le Ange (`src/lib/whatsapp/conexao.ts`, tela `ConexaoWha
 
 **Erro antigo "Segredo fora do formato ou tamanho permitido":** o navegador preenchia a senha salva no campo do token (campo `password`). Os campos de segredo agora são texto mascarado sem preenchimento automático, os valores colados são limpos (`Bearer`, espaços) e a mensagem diz o campo e o tamanho.
 
+## 0.1 Tela de Conversas (padrão do ERP da Le Ange, nov/2026)
+
+`/conversas` → `src/features/whatsapp/conversas/` (lista | conversa | ficha). Servidor em `core.ts` e `midia.ts`; migração `017_whatsapp_conversas.sql`.
+
+- **Lista:** abas Todas / Não lidas (com contagem) / Favoritas + "Mais" (Fixadas, Arquivadas, etiquetas). Fixadas no topo; favorito é por pessoa (`stars`); arquivar (mensagem nova desarquiva); marcar como não lida; etiquetas por conversa. Botão direito (ou toque longo) abre o menu. Busca no servidor em todo o histórico, sem acento, com o trecho destacado. Rolagem infinita (60 por página). Prévia com ticks, ícone do tipo, "Você:" e rascunho.
+- **Conversa:** separador de dia fixo por dia, blocos com rabinho, enviadas à direita; resposta citada (clicar leva à original), reações (contato e equipe, pela Cloud API), copiar, baixar; foto em tela cheia; áudio com onda e velocidade (um por vez); vídeo; documento. Abre no fim, carrega as anteriores ao rolar sem pular, botão "ir para o fim" com contador. Leitura marcada ao abrir (só com a aba visível). Ficha lateral com etiquetas, fotos/vídeos, documentos e exclusão.
+- **Compositor:** Enter envia, Shift+Enter quebra linha, rascunho por conversa, emoji, anexos (clique, arrastar, colar; até 10; legenda na 1ª mídia), respostas rápidas com "/" (`quick_replies`, `{nome}` = primeiro nome), nota de voz (até 2 min, pausar). Janela de 24 h fechada: aviso + "Enviar modelo". Envio otimista; recusa da Meta mostra o motivo em português e "Tentar de novo"/"Descartar" (a mesma chave é reaproveitada só quando a recusa é definitiva).
+- **Mídia:** o navegador comprime foto (JPEG 1600 px, até 5 MB) e vídeo (MP4 H.264/AAC, até 1280 px, ~14 MB, via `mediabunny`), e transforma a nota de voz do Chrome (WebM/Opus) em OGG/Opus só trocando o container. O arquivo sobe direto para o R2 (link pré-assinado) e o servidor envia à Meta (`/{phone}/media`) e manda a mensagem com o id (`voice: true` para nota de voz). Recebida: baixada da Meta uma vez, guardada no R2 e servida por link assinado (com Range). Sem R2 (dev): envio direto até 4 MB. Retenção e exclusão apagam também os arquivos do R2.
+- **Velocidade:** lista e conversa em cache no IndexedDB (abrem na hora); `/api/whatsapp/revisao` a cada 3 s com a aba visível e lista/conversa só quando muda; pré-carga ao passar o mouse; som de mensagem nova (liga/desliga).
+- **Testes:** `npm run test:conversas` (SQLite) e `npm run test:conversas:postgres` (PGlite com as migrações reais).
+
 ## 1. Uso previsto e fronteiras do produto
 
 ### 1.1 Por que conectar o WhatsApp

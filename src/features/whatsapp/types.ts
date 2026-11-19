@@ -14,7 +14,19 @@ export type WhatsAppConversation = {
   serviceWindowExpiresAt: string | null;
   consent: WhatsAppConsent;
   optedOut: boolean;
+  lastType?: string;
+  lastDirection?: "" | "inbound" | "outbound";
+  lastStatus?: string;
+  markedUnread?: boolean;
+  pinned?: boolean;
+  archived?: boolean;
+  starred?: boolean;
+  labels?: string[];
+  /** Trecho da mensagem encontrada pela busca no histórico. */
+  match?: string;
 };
+
+export type WhatsAppReaction = { emoji: string; from: "contact" | "me"; at: number };
 
 export type WhatsAppMessage = {
   id: string;
@@ -29,6 +41,15 @@ export type WhatsAppMessage = {
   mediaId?: string;
   mimeType?: string;
   filename?: string;
+  hasMedia?: boolean;
+  size?: number;
+  duration?: number;
+  voice?: boolean;
+  author?: string;
+  reactions?: WhatsAppReaction[];
+  replyTo?: { id: string; text: string; type: string; direction: "inbound" | "outbound" };
+  /** Só no navegador: envio otimista ainda sem confirmação do servidor. */
+  local?: { previewUrl?: string; progress?: string; retry?: () => void };
 };
 
 export type WhatsAppTemplateComponent = {
@@ -74,6 +95,6 @@ export type WhatsAppSendPayload = {
   phone: string;
   clientRequestId: string;
 } & (
-  | { type: "text"; text: string }
+  | { type: "text"; text: string; replyTo?: string }
   | { type: "template"; template: { name: string; language: string; components?: { type: "body"; parameters: { type: "text"; text: string }[] }[] } }
 );

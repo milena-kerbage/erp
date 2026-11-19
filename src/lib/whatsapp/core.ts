@@ -13,12 +13,14 @@ export class WhatsAppError extends Error {
 }
 export type JsonObject = Record<string, unknown>;
 export type ConsentStatus = 'unknown' | 'granted' | 'revoked';
-export type Message = { id: string; phone: string; direction: 'inbound' | 'outbound'; type: string; text: string; status: string; createdAt: string; isRead: boolean; error?: string; mediaId?: string; mimeType?: string; filename?: string };
-type ContactRow = { phone: string; name: string; consent_status: ConsentStatus; consent_source: string; consent_updated: number | null; opted_out: number; last_inbound: number | null; updated: number };
-type MessageRow = { id: string; phone: string; direction: 'inbound' | 'outbound'; type: string; text: string; status: string; created: number; status_rank: number; error: string | null; media_id: string | null; mime_type: string | null; filename: string | null; is_read: number };
+export type Reaction = { emoji: string; from: 'contact' | 'me'; at: number };
+export type Message = { id: string; phone: string; direction: 'inbound' | 'outbound'; type: string; text: string; status: string; createdAt: string; isRead: boolean; error?: string; mediaId?: string; mimeType?: string; filename?: string; hasMedia?: boolean; size?: number; duration?: number; voice?: boolean; author?: string; reactions?: Reaction[]; replyTo?: { id: string; text: string; type: string; direction: 'inbound' | 'outbound' } };
+type ContactRow = { phone: string; name: string; consent_status: ConsentStatus; consent_source: string; consent_updated: number | null; opted_out: number; last_inbound: number | null; updated: number; pinned_at?: number | null; archived?: number; marked_unread?: number; labels?: string };
+type MessageRow = { id: string; phone: string; direction: 'inbound' | 'outbound'; type: string; text: string; status: string; created: number; status_rank: number; error: string | null; media_id: string | null; mime_type: string | null; filename: string | null; is_read: number; reply_to?: string | null; reactions?: string | null; media_key?: string | null; media_size?: number | null; duration?: number | null; voice?: number | null; author?: string | null; reply_text?: string | null; reply_type?: string | null; reply_direction?: 'inbound' | 'outbound' | null };
 type SendRow = { request_key: string; payload_hash: string; message_id: string; state: string; created: number };
 export type Template = { id?: string; name: string; language: string; status: string; category: string; parameter_format?: string; components: JsonObject[] };
 export const DAY = 24 * 60 * 60 * 1000;
+export const MEDIA_TYPES = ['image', 'video', 'audio', 'document'] as const;
 export const mediaMaximumBytes = () => (process.env.VERCEL === '1' ? 3 : 16) * 1024 * 1024;
 const iso = (value: number | null) => value === null ? null : new Date(value).toISOString();
 const object = (value: unknown): JsonObject => value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {};
@@ -38,8 +40,10 @@ export function configuration() { return environmentConfiguration(); }
 async function configured() { const config = await effectiveConfiguration(); if (!config.configured) throw new WhatsAppError(503, 'Complete a configuração da integração no servidor.', 'NOT_CONFIGURED'); return config; }
 
 const sqliteSchema = `PRAGMA journal_mode = DELETE; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON;
-    CREATE TABLE IF NOT EXISTS contacts (phone TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', consent_status TEXT NOT NULL DEFAULT 'unknown', consent_source TEXT NOT NULL DEFAULT '', consent_updated INTEGER, opted_out INTEGER NOT NULL DEFAULT 0, last_inbound INTEGER, updated INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, phone TEXT NOT NULL REFERENCES contacts(phone) ON DELETE CASCADE, direction TEXT NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, status TEXT NOT NULL, status_rank INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, error TEXT, media_id TEXT, mime_type TEXT, filename TEXT, is_read INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS contacts (phone TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', consent_status TEXT NOT NULL DEFAULT 'unknown', consent_source TEXT NOT NULL DEFAULT '', consent_updated INTEGER, opted_out INTEGER NOT NULL DEFAULT 0, last_inbound INTEGER, updated INTEGER NOT NULL, pinned_at INTEGER, archived INTEGER NOT NULL DEFAULT 0, marked_unread INTEGER NOT NULL DEFAULT 0, labels TEXT NOT NULL DEFAULT '[]');
+    CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, phone TEXT NOT NULL REFERENCES contacts(phone) ON DELETE CASCADE, direction TEXT NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, status TEXT NOT NULL, status_rank INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, error TEXT, media_id TEXT, mime_type TEXT, filename TEXT, is_read INTEGER NOT NULL DEFAULT 0, reply_to TEXT, reactions TEXT NOT NULL DEFAULT '[]', media_key TEXT, media_size INTEGER, duration INTEGER, voice INTEGER NOT NULL DEFAULT 0, author TEXT);
+    CREATE TABLE IF NOT EXISTS stars (phone TEXT NOT NULL REFERENCES contacts(phone) ON DELETE CASCADE, user_id TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (phone, user_id));
+    CREATE TABLE IF NOT EXISTS quick_replies (id TEXT PRIMARY KEY, shortcut TEXT NOT NULL UNIQUE, body TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL);
     CREATE INDEX IF NOT EXISTS messages_phone_created ON messages(phone, created);
     CREATE TABLE IF NOT EXISTS consent_audit (id TEXT PRIMARY KEY, phone TEXT NOT NULL REFERENCES contacts(phone) ON DELETE CASCADE, status TEXT NOT NULL, source TEXT NOT NULL, actor TEXT NOT NULL, created INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS webhook_events (event_key TEXT PRIMARY KEY, created INTEGER NOT NULL);
@@ -85,7 +89,8 @@ export async function setConsent(input: JsonObject, actor: string) {
 }
 export async function deleteContact(phoneInput: unknown, evidence?: {actor: string; verification: string}) {
   const phone = phoneNumber(phoneInput), database = db(), hash = await suppressionHash(phone);
-  return database.transaction(async () => {
+  const midias = await database.prepare('SELECT media_key FROM messages WHERE phone = ? AND media_key IS NOT NULL').all(phone) as Array<{media_key: string | null}>;
+  const resultado = await database.transaction(async () => {
     await lockContact(phone);
     await database.prepare('DELETE FROM pending_statuses WHERE message_id IN (SELECT id FROM messages WHERE phone = ?)').run(phone);
     const deleted = (await database.prepare('DELETE FROM contacts WHERE phone = ?').run(phone)).changes;
@@ -93,10 +98,20 @@ export async function deleteContact(phoneInput: unknown, evidence?: {actor: stri
     if (evidence) await database.prepare('INSERT INTO deletion_audit VALUES (?, ?, ?, ?)').run(randomUUID(), evidence.actor, digest(evidence.verification), Date.now());
     return { deleted: Number(deleted), suppressed: true };
   });
+  await descartarMidias(midias);
+  await bumpRevision();
+  return resultado;
+}
+// Arquivos de mídia guardados no R2 saem junto com as mensagens (retenção e exclusão do contato).
+async function descartarMidias(keys: Array<{media_key: string | null}>) {
+  const lista = keys.map(item => item.media_key).filter((key): key is string => Boolean(key));
+  if (!lista.length) return;
+  try { const { discardBinaries } = await import('../storage/r2.ts'); await discardBinaries(lista); } catch { /* a limpeza do storage tenta de novo na próxima retenção */ }
 }
 export async function pruneRetention(now = Date.now()) {
   const days = (await effectiveConfiguration()).retentionDays, cutoff = now - days * DAY, database = db();
-  return database.transaction(async () => {
+  const midias = await database.prepare('SELECT media_key FROM messages WHERE created < ? AND media_key IS NOT NULL').all(cutoff) as Array<{media_key: string | null}>;
+  const resultado = await database.transaction(async () => {
     const messages = (await database.prepare('DELETE FROM messages WHERE created < ?').run(cutoff)).changes;
     await database.prepare('DELETE FROM send_requests WHERE created < ?').run(cutoff);
     await database.prepare('DELETE FROM webhook_events WHERE created < ?').run(cutoff);
@@ -108,6 +123,8 @@ export async function pruneRetention(now = Date.now()) {
     await database.prepare('INSERT INTO metadata VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('lastRetentionAt', new Date(now).toISOString());
     return { messages: Number(messages), retentionDays: days };
   });
+  await descartarMidias(midias);
+  return resultado;
 }
 const maintenanceChecks = new WeakMap<Database, {until: number; task: Promise<void>}>();
 async function maintenance() {
@@ -120,28 +137,79 @@ async function maintenance() {
   maintenanceChecks.set(database, {until: now + 60_000, task});
   return task;
 }
-function messageFromRow(row: MessageRow): Message { return { id: row.id, phone: row.phone, direction: row.direction, type: row.type, text: row.text, status: row.status, createdAt: iso(row.created)!, isRead: Boolean(row.is_read), ...(row.error ? { error: row.error } : {}), ...(row.media_id ? {mediaId: row.media_id} : {}), ...(row.mime_type ? {mimeType: row.mime_type} : {}), ...(row.filename ? {filename: row.filename} : {}) }; }
-type ConversationRow = ContactRow & {last_text: string | null; last_created: number | null; unread_count: number};
-const summarySql = `SELECT contacts.*, (SELECT text FROM messages WHERE messages.phone = contacts.phone ORDER BY created DESC, id DESC LIMIT 1) AS last_text, (SELECT created FROM messages WHERE messages.phone = contacts.phone ORDER BY created DESC, id DESC LIMIT 1) AS last_created, (SELECT COUNT(*) FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0) AS unread_count FROM contacts`;
-function conversationFromRow(row: ConversationRow) {
-  return {phone: row.phone, name: row.name || row.phone, lastMessage: row.last_text || '', lastMessageAt: iso(row.last_created ?? row.updated), unreadCount: row.unread_count, serviceWindowExpiresAt: iso(row.last_inbound === null ? null : row.last_inbound + DAY), consent: {status: row.consent_status, source: row.consent_source, updatedAt: iso(row.consent_updated)}, optedOut: Boolean(row.opted_out)};
+function reactionsOf(value: string | null | undefined): Reaction[] {
+  try { return array(JSON.parse(value || '[]')).map(object).filter(item => typeof item.emoji === 'string' && (item.from === 'contact' || item.from === 'me')).map(item => ({emoji: String(item.emoji).slice(0, 16), from: item.from as Reaction['from'], at: Number(item.at) || 0})); } catch { return []; }
 }
-export async function conversation(phone: string) {
-  const row = await db().prepare(`${summarySql} WHERE phone = ?`).get(phone) as ConversationRow | undefined;
+function messageFromRow(row: MessageRow): Message {
+  const reactions = reactionsOf(row.reactions);
+  return { id: row.id, phone: row.phone, direction: row.direction, type: row.type, text: row.text, status: row.status, createdAt: iso(row.created)!, isRead: Boolean(row.is_read),
+    ...(row.error ? { error: row.error } : {}), ...(row.media_id ? {mediaId: row.media_id} : {}), ...(row.mime_type ? {mimeType: row.mime_type} : {}), ...(row.filename ? {filename: row.filename} : {}),
+    ...(row.media_id || row.media_key ? {hasMedia: true} : {}), ...(row.media_size ? {size: Number(row.media_size)} : {}), ...(row.duration ? {duration: Number(row.duration)} : {}), ...(row.voice ? {voice: true} : {}),
+    ...(row.author ? {author: row.author} : {}), ...(reactions.length ? {reactions} : {}),
+    ...(row.reply_to ? {replyTo: {id: row.reply_to, text: row.reply_text ?? '', type: row.reply_type ?? 'unknown', direction: row.reply_direction ?? 'inbound'}} : {}) };
+}
+// Mensagem com a citada ao lado (resposta), numa só leitura.
+// Campos de mídia de um item do webhook (imagem, vídeo, áudio, documento, figurinha).
+function mediaFields(media: JsonObject) {
+  const id = string(media.id, 40);
+  return {mediaId: /^[0-9]{5,40}$/.test(id) ? id : null, mime: string(media.mime_type, 100) || null, filename: string(media.filename, 200) || null, voice: media.voice === true ? 1 : 0};
+}
+const messageSelect = `SELECT m.*, r.text AS reply_text, r.type AS reply_type, r.direction AS reply_direction FROM messages m LEFT JOIN messages r ON r.id = m.reply_to`;
+type ConversationRow = ContactRow & {last_text: string | null; last_created: number | null; last_type: string | null; last_direction: string | null; last_status: string | null; unread_count: number; starred: number};
+// Resumo da lista: última mensagem (texto, tipo, sentido e status para os ticks), não lidas e favorito de quem consulta.
+// Cada subconsulta usa o índice (phone, created DESC, id DESC).
+const lastOf = (column: string) => `(SELECT ${column} FROM messages WHERE messages.phone = contacts.phone ORDER BY created DESC, id DESC LIMIT 1)`;
+const summarySql = `SELECT contacts.*, ${lastOf('text')} AS last_text, ${lastOf('created')} AS last_created, ${lastOf('type')} AS last_type, ${lastOf('direction')} AS last_direction, ${lastOf('status')} AS last_status, (SELECT COUNT(*) FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0) AS unread_count, (SELECT COUNT(*) FROM stars WHERE stars.phone = contacts.phone AND stars.user_id = ?) AS starred FROM contacts`;
+function labelsOf(value: string | null | undefined) { try { return array(JSON.parse(value || '[]')).filter((item): item is string => typeof item === 'string').slice(0, 20); } catch { return []; } }
+function conversationFromRow(row: ConversationRow) {
+  const unread = Number(row.unread_count) || 0;
+  return {phone: row.phone, name: row.name || row.phone, lastMessage: row.last_text || '', lastMessageAt: iso(row.last_created ?? row.updated), lastType: row.last_type || '', lastDirection: (row.last_direction || '') as '' | 'inbound' | 'outbound', lastStatus: row.last_status || '',
+    unreadCount: unread || (row.marked_unread ? 1 : 0), markedUnread: Boolean(row.marked_unread), pinned: Boolean(row.pinned_at), archived: Boolean(row.archived), starred: Number(row.starred) > 0, labels: labelsOf(row.labels),
+    serviceWindowExpiresAt: iso(row.last_inbound === null ? null : row.last_inbound + DAY), consent: {status: row.consent_status, source: row.consent_source, updatedAt: iso(row.consent_updated)}, optedOut: Boolean(row.opted_out)};
+}
+export async function conversation(phone: string, userId = '') {
+  const row = await db().prepare(`${summarySql} WHERE phone = ?`).get(userId, phone) as ConversationRow | undefined;
   return row ? conversationFromRow(row) : null;
 }
-export async function conversations(limit = 100, offset = 0) {
+export type FiltroConversas = { userId?: string; aba?: string; busca?: string; etiqueta?: string; limit?: number; offset?: number };
+const semAcento = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+/** Lista no padrão da Le Ange: fixadas no topo, depois pela última mensagem; abas, etiqueta e busca no histórico. */
+export async function conversations(limitOrFilter: number | FiltroConversas = 100, offsetArg = 0) {
   await maintenance();
-  // Só quem tem mensagem, da mais recente para a mais antiga. Contatos da agenda do celular sem conversa ficam fora da lista.
-  const rows = await db().prepare(`SELECT * FROM (${summarySql} WHERE opted_out = 0 AND EXISTS (SELECT 1 FROM messages WHERE messages.phone = contacts.phone)) AS conversas ORDER BY last_created DESC, phone DESC LIMIT ? OFFSET ?`).all(limit, offset) as ConversationRow[];
-  return rows.map(conversationFromRow);
+  const filtro: FiltroConversas = typeof limitOrFilter === 'number' ? {limit: limitOrFilter, offset: offsetArg} : limitOrFilter;
+  const limit = Math.min(Math.max(filtro.limit ?? 100, 1), 200), offset = Math.max(filtro.offset ?? 0, 0), userId = filtro.userId ?? '', aba = filtro.aba ?? 'todas';
+  // Parâmetros na ordem em que aparecem na consulta: trecho da busca (SELECT), favorito do usuário (resumo), filtros, página.
+  const condicoes = ['opted_out = 0', 'last_created IS NOT NULL'], filtros: Array<string | number> = [];
+  if (aba === 'arquivadas') condicoes.push('archived = 1'); else condicoes.push('archived = 0');
+  if (aba === 'nao_lidas') condicoes.push('(unread_count > 0 OR marked_unread = 1)');
+  if (aba === 'favoritas') condicoes.push('starred > 0');
+  if (aba === 'fixadas') condicoes.push('pinned_at IS NOT NULL');
+  if (filtro.etiqueta) { condicoes.push('labels LIKE ?'); filtros.push(`%${JSON.stringify(filtro.etiqueta.slice(0, 40))}%`); }
+  const busca = semAcento((filtro.busca ?? '').trim()).slice(0, 80);
+  let trecho = '';
+  const inicio: Array<string | number> = [];
+  if (busca.length >= 2) {
+    const digitos = busca.replace(/\D/g, ''), termo = `%${busca.replace(/[%_\\]/g, '')}%`;
+    // Nome, telefone ou qualquer mensagem do histórico (sem acento no Postgres; no SQLite, minúsculas).
+    const normalizar = (coluna: string) => db().backend === 'postgres' ? `translate(lower(${coluna}), 'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc')` : `sem_acento(${coluna})`;
+    condicoes.push(`(${normalizar('name')} LIKE ?${digitos.length >= 3 ? ' OR phone LIKE ?' : ''} OR EXISTS (SELECT 1 FROM messages b WHERE b.phone = conversas.phone AND ${normalizar('b.text')} LIKE ?))`);
+    filtros.push(termo, ...(digitos.length >= 3 ? [`%${digitos}%`] : []), termo);
+    trecho = `, (SELECT text FROM messages b WHERE b.phone = conversas.phone AND ${normalizar('b.text')} LIKE ? ORDER BY created DESC LIMIT 1) AS match_text`;
+    inicio.push(termo);
+  }
+  const ordem = aba === 'todas' ? 'CASE WHEN pinned_at IS NULL THEN 0 ELSE 1 END DESC, pinned_at DESC, ' : '';
+  const sql = `SELECT *${trecho} FROM (${summarySql}) AS conversas WHERE ${condicoes.join(' AND ')} ORDER BY ${ordem}last_created DESC, phone DESC LIMIT ? OFFSET ?`;
+  const rows = await db().prepare(sql).all(...inicio, userId, ...filtros, limit + 1, offset) as Array<ConversationRow & {match_text?: string | null}>;
+  const mais = rows.length > limit; rows.length = Math.min(rows.length, limit);
+  const lista = rows.map(row => ({...conversationFromRow(row), ...(row.match_text ? {match: row.match_text.slice(0, 300)} : {})}));
+  return typeof limitOrFilter === 'number' ? lista : {conversations: lista, nextOffset: mais ? offset + limit : null};
 }
 export async function unreadConversationCount() {
   await maintenance();
-  const row = await db().prepare(`SELECT COUNT(*) AS count FROM contacts WHERE opted_out = 0 AND EXISTS (SELECT 1 FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0)`).get() as {count: number};
+  const row = await db().prepare(`SELECT COUNT(*) AS count FROM contacts WHERE opted_out = 0 AND archived = 0 AND (marked_unread = 1 OR EXISTS (SELECT 1 FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0))`).get() as {count: number};
   return row.count;
 }
-export async function messagesFor(phoneInput: unknown, before?: string, limit = 100) {
+export async function messagesFor(phoneInput: unknown, before?: string, limit = 100, userId = '') {
   await maintenance(); const phone = phoneNumber(phoneInput);
   let cutoff = Date.now() + 1, beforeId = '';
   if (before) {
@@ -152,10 +220,76 @@ export async function messagesFor(phoneInput: unknown, before?: string, limit = 
     } catch { throw new WhatsAppError(400, 'Cursor inválido.', 'INVALID_CURSOR'); }
   }
   if (!Number.isFinite(cutoff)) throw new WhatsAppError(400, 'Cursor inválido.', 'INVALID_CURSOR');
-  const rows = await db().prepare('SELECT * FROM messages WHERE phone = ? AND (created < ? OR (created = ? AND id < ?)) ORDER BY created DESC, id DESC LIMIT ?').all(phone, cutoff, cutoff, beforeId, limit + 1) as MessageRow[];
+  const rows = await db().prepare(`${messageSelect} WHERE m.phone = ? AND (m.created < ? OR (m.created = ? AND m.id < ?)) ORDER BY m.created DESC, m.id DESC LIMIT ?`).all(phone, cutoff, cutoff, beforeId, limit + 1) as MessageRow[];
   const more = rows.length > limit; rows.length = Math.min(rows.length, limit);
   rows.reverse();
-  return { messages: rows.map(messageFromRow), conversation: await conversation(phone), nextBefore: more ? Buffer.from(JSON.stringify({created: rows[0].created, id: rows[0].id})).toString('base64url') : null };
+  return { messages: rows.map(messageFromRow), conversation: await conversation(phone, userId), nextBefore: more ? Buffer.from(JSON.stringify({created: rows[0].created, id: rows[0].id})).toString('base64url') : null };
+}
+
+/* -------------------------------------------------------------- revisão (atualização leve das telas) */
+// Toda escrita que muda a lista ou uma conversa avança a revisão; as telas consultam só esse número (barato) e buscam
+// a lista e a conversa aberta apenas quando ele muda.
+export async function bumpRevision() {
+  await db().prepare('INSERT INTO metadata VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('revision', `${Date.now()}.${Math.random().toString(36).slice(2, 8)}`);
+}
+export async function currentRevision() {
+  return (await db().prepare("SELECT value FROM metadata WHERE key = 'revision'").get() as {value: string} | undefined)?.value || '0';
+}
+
+/* -------------------------------------------------------------- organização da conversa */
+export type AcaoConversa = { fixar?: boolean; arquivar?: boolean; naoLida?: boolean; favoritar?: boolean; etiquetas?: unknown };
+export async function updateConversation(phoneInput: unknown, acao: AcaoConversa, userId: string) {
+  const phone = phoneNumber(phoneInput), database = db(), now = Date.now();
+  if (!(await database.prepare('SELECT 1 FROM contacts WHERE phone = ?').get(phone))) throw new WhatsAppError(404, 'Conversa não encontrada.', 'NOT_FOUND');
+  await database.transaction(async () => {
+    if (acao.fixar !== undefined) await database.prepare('UPDATE contacts SET pinned_at = ? WHERE phone = ?').run(acao.fixar ? now : null, phone);
+    if (acao.arquivar !== undefined) await database.prepare('UPDATE contacts SET archived = ?, pinned_at = CASE WHEN ? = 1 THEN NULL ELSE pinned_at END WHERE phone = ?').run(acao.arquivar ? 1 : 0, acao.arquivar ? 1 : 0, phone);
+    if (acao.naoLida !== undefined) await database.prepare('UPDATE contacts SET marked_unread = ? WHERE phone = ?').run(acao.naoLida ? 1 : 0, phone);
+    if (acao.favoritar !== undefined) {
+      if (acao.favoritar) await database.prepare('INSERT INTO stars VALUES (?, ?, ?) ON CONFLICT(phone, user_id) DO NOTHING').run(phone, userId, now);
+      else await database.prepare('DELETE FROM stars WHERE phone = ? AND user_id = ?').run(phone, userId);
+    }
+    if (acao.etiquetas !== undefined) {
+      const etiquetas = [...new Set(array(acao.etiquetas).filter((item): item is string => typeof item === 'string').map(item => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
+      await database.prepare('UPDATE contacts SET labels = ? WHERE phone = ?').run(JSON.stringify(etiquetas), phone);
+    }
+  });
+  await bumpRevision();
+  return conversation(phone, userId);
+}
+/** Etiquetas já usadas (para sugerir e filtrar). */
+export async function allLabels() {
+  const rows = await db().prepare("SELECT labels FROM contacts WHERE labels <> '[]'").all() as Array<{labels: string}>;
+  return [...new Set(rows.flatMap(row => labelsOf(row.labels)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+/** Abrir a conversa marca tudo como lido (e tira o "não lida" manual); o recibo azul vai para a última recebida. */
+export async function markConversationRead(phoneInput: unknown, fetcher: typeof fetch = fetch) {
+  const phone = phoneNumber(phoneInput), database = db();
+  const last = await database.prepare("SELECT id, is_read FROM messages WHERE phone = ? AND direction = 'inbound' ORDER BY created DESC, id DESC LIMIT 1").get(phone) as {id: string; is_read: number} | undefined;
+  const pendentes = (await database.prepare("SELECT COUNT(*) AS n FROM messages WHERE phone = ? AND direction = 'inbound' AND is_read = 0").get(phone) as {n: number}).n;
+  if (last && !last.is_read) { try { await graph(`${(await configured()).phoneNumberId}/messages`, {method: 'POST', body: JSON.stringify({messaging_product: 'whatsapp', status: 'read', message_id: last.id})}, fetcher); } catch { /* recibo é cortesia: a leitura local vale mesmo assim */ } }
+  await database.prepare("UPDATE messages SET is_read = 1 WHERE phone = ? AND direction = 'inbound' AND is_read = 0").run(phone);
+  const desmarcou = (await database.prepare('UPDATE contacts SET marked_unread = 0 WHERE phone = ? AND marked_unread = 1').run(phone)).changes;
+  if (pendentes || desmarcou) await bumpRevision();
+  return {success: true, read: Number(pendentes)};
+}
+
+/* -------------------------------------------------------------- respostas rápidas */
+export async function quickReplies() {
+  return (await db().prepare('SELECT id, shortcut, body FROM quick_replies ORDER BY shortcut').all() as Array<{id: string; shortcut: string; body: string}>);
+}
+export async function saveQuickReply(input: JsonObject) {
+  const shortcut = string(input.shortcut, 40).trim().replace(/^\//, '').toLowerCase().replace(/\s+/g, '-'), body = string(input.body, 4096).trim();
+  if (!/^[a-z0-9à-ú_-]{1,40}$/i.test(shortcut)) throw new WhatsAppError(400, 'Use um atalho curto, sem espaços (ex.: preco).', 'INVALID_SHORTCUT', 'shortcut');
+  if (!body) throw new WhatsAppError(400, 'Escreva o texto da resposta.', 'INVALID_BODY', 'body');
+  const id = typeof input.id === 'string' && input.id ? string(input.id, 60) : randomUUID(), now = Date.now();
+  try { await db().prepare('INSERT INTO quick_replies VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET shortcut = excluded.shortcut, body = excluded.body, updated = excluded.updated').run(id, shortcut, body, now, now); }
+  catch { throw new WhatsAppError(409, 'Já existe uma resposta com esse atalho.', 'DUPLICATE_SHORTCUT', 'shortcut'); }
+  return quickReplies();
+}
+export async function deleteQuickReply(id: unknown) {
+  await db().prepare('DELETE FROM quick_replies WHERE id = ?').run(string(id, 60));
+  return quickReplies();
 }
 export async function historySyncProgress() { const row = await db().prepare("SELECT value FROM metadata WHERE key = 'historySync'").get() as {value: string} | undefined; try { const value = object(JSON.parse(row?.value || '{}')); return {progress: Number(value.progress) || 0, refused: Boolean(value.refused), lastAt: string(value.lastAt, 40) || null}; } catch { return {progress: 0, refused: false, lastAt: null}; } }
 export async function lastWebhookAt() { return (await db().prepare("SELECT value FROM metadata WHERE key = 'lastWebhookAt'").get() as {value: string} | undefined)?.value || null; }
@@ -233,7 +367,8 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
                 const text = type === 'text' ? string(object(message.text).body, 4096) : string(media.caption, 4096) || `[${type}]`;
                 const created = Math.min(timestamp, now);
                 await ensureContact(phone, undefined, created);
-                await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1) ON CONFLICT(id) DO NOTHING`).run(id, phone, inbound ? 'inbound' : 'outbound', type, text, inbound ? 'received' : 'sent', inbound ? 0 : 3, created);
+                const midia = mediaFields(media);
+                await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read, media_id, mime_type, filename, voice, reply_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, inbound ? 'inbound' : 'outbound', type, text, inbound ? 'received' : 'sent', inbound ? 0 : 3, created, midia.mediaId, midia.mime, midia.filename, midia.voice, string(object(message.context).id, 300) || null);
                 processed++;
               }
             }
@@ -254,7 +389,8 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
             const text = type === 'text' ? string(object(echo.text).body, 4096) : string(media.caption, 4096) || `[${type}]`;
             const created = Math.min(timestamp, now);
             await ensureContact(phone, undefined, created);
-            await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read) VALUES (?, ?, 'outbound', ?, ?, 'sent', 3, ?, 1) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, text, created);
+            const midia = mediaFields(media);
+            await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read, media_id, mime_type, filename, voice, reply_to) VALUES (?, ?, 'outbound', ?, ?, 'sent', 3, ?, 1, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, text, created, midia.mediaId, midia.mime, midia.filename, midia.voice, string(object(echo.context).id, 300) || null);
             processed++;
           }
           continue;
@@ -270,12 +406,26 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
           if (await suppressed(phone, config.suppressionSecret)) { ignored++; continue; }
           const eventKey = digest(`message:${id}`);
           if (!(await database.prepare('INSERT INTO webhook_events VALUES (?, ?) ON CONFLICT(event_key) DO NOTHING').run(eventKey, now)).changes) { ignored++; continue; }
+          if (type === 'reaction') {
+            // Reação do contato numa mensagem: atualiza a mensagem (emoji vazio = removeu); não vira mensagem nova.
+            const reacao = object(incoming.reaction), alvo = string(reacao.message_id, 300), emoji = string(reacao.emoji, 16);
+            const linha = await database.prepare('SELECT reactions FROM messages WHERE id = ? AND phone = ?').get(alvo, phone) as {reactions: string | null} | undefined;
+            if (linha) {
+              const outras = reactionsOf(linha.reactions).filter(item => item.from !== 'contact');
+              await database.prepare('UPDATE messages SET reactions = ? WHERE id = ?').run(JSON.stringify(emoji ? [...outras, {emoji, from: 'contact', at: timestamp}] : outras), alvo);
+              processed++;
+            } else ignored++;
+            continue;
+          }
           const media = object(incoming[type]);
           const interactive = object(incoming.interactive);
           const text = type === 'text' ? string(object(incoming.text).body, 4096) : type === 'button' ? string(object(incoming.button).text, 4096) : type === 'interactive' ? string(object(interactive.button_reply).title || object(interactive.list_reply).title, 4096) : string(media.caption, 4096) || `[${type}]`;
           const created = Math.min(timestamp, now);
           await ensureContact(phone, names.get(phone), created);
-          await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, created, media_id, mime_type, filename) VALUES (?, ?, 'inbound', ?, ?, 'received', ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, text, created, /^[0-9]{5,40}$/.test(string(media.id, 40)) ? String(media.id) : null, string(media.mime_type, 100) || null, string(media.filename, 200) || null);
+          const midia = mediaFields(media);
+          await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, created, media_id, mime_type, filename, voice, reply_to) VALUES (?, ?, 'inbound', ?, ?, 'received', ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, text, created, midia.mediaId, midia.mime, midia.filename, midia.voice, string(object(incoming.context).id, 300) || null);
+          // Mensagem nova desarquiva a conversa (como no WhatsApp).
+          await database.prepare('UPDATE contacts SET archived = 0 WHERE phone = ? AND archived = 1').run(phone);
           await database.prepare('UPDATE contacts SET last_inbound = greatest(COALESCE(last_inbound, 0), ?), updated = greatest(updated, ?) WHERE phone = ?').run(created, created, phone);
           const optout = text.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
           if (['STOP', 'PARAR', 'SAIR', 'CANCELAR', 'DESCADASTRAR', 'PARE', 'NAO QUERO RECEBER MENSAGENS'].includes(optout)) {
@@ -298,15 +448,42 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
             await database.prepare("UPDATE send_requests SET message_id = ?, state = 'accepted' WHERE request_key = ?").run(id, requestKey);
           }
           const errorCode = Number(object(array(status.errors)[0]).code);
-          await applyStatus(id, state, now, Number.isFinite(errorCode) ? `Meta: ${errorCode}` : null); processed++;
+          await applyStatus(id, state, now, Number.isFinite(errorCode) ? metaErrorMessage(errorCode) : null); processed++;
         }
       }
     }
     await database.prepare('INSERT INTO metadata VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('lastWebhookAt', new Date(now).toISOString());
+    if (processed) await bumpRevision();
     return {processed, ignored};
   });
 }
 
+/** Erros mais comuns da Cloud API em linguagem de atendimento (o código fica entre parênteses para o suporte). */
+export function metaErrorMessage(code: number) {
+  const mensagens: Record<number, string> = {
+    190: 'O acesso do WhatsApp à Meta expirou ou foi revogado. Reconecte em Configurações > WhatsApp.',
+    10: 'O aplicativo perdeu a permissão nesta conta do WhatsApp. Reconecte em Configurações > WhatsApp.',
+    200: 'O aplicativo perdeu a permissão nesta conta do WhatsApp. Reconecte em Configurações > WhatsApp.',
+    131026: 'Este número não tem WhatsApp ou não pode receber mensagens.',
+    131047: 'Passaram 24 horas desde a última mensagem da pessoa: envie um modelo aprovado.',
+    131051: 'O WhatsApp não aceita este tipo de mensagem.',
+    131052: 'A Meta não conseguiu baixar a mídia. Envie de novo.',
+    131053: 'A Meta recusou o arquivo (formato ou tamanho). Envie em JPG, MP4, OGG ou PDF.',
+    131056: 'Muitas mensagens para esta pessoa em pouco tempo. Aguarde um pouco e tente de novo.',
+    130429: 'Limite de envios da conta atingido no momento. Tente de novo em alguns minutos.',
+    131048: 'A Meta limitou os envios por qualidade da conta. Confira o WhatsApp Manager.',
+    131031: 'A conta do WhatsApp Business está bloqueada pela Meta. Confira o WhatsApp Manager.',
+    131000: 'A Meta teve uma falha ao enviar. Tente de novo.',
+    132000: 'O número de variáveis não confere com o modelo aprovado.',
+    132001: 'Este modelo não existe ou não está aprovado neste idioma.',
+    132005: 'O texto do modelo ficou longo demais com as variáveis.',
+    132015: 'O modelo está pausado pela Meta por baixa qualidade.',
+    133010: 'O número ainda não está registrado na Cloud API. Reconecte em Configurações > WhatsApp.',
+    100: 'A Meta recusou um dado da mensagem. Confira o conteúdo e tente de novo.',
+  };
+  if (Number.isFinite(code) && mensagens[code]) return `${mensagens[code]} (código ${code})`;
+  return Number.isFinite(code) ? `A Meta recusou a operação (código ${code}). Confira permissões, conta e configuração no painel da Meta.` : 'A Meta recusou a operação. Confira a configuração no painel da Meta.';
+}
 export async function graph(path: string, options: RequestInit = {}, fetcher: typeof fetch = fetch): Promise<JsonObject> {
   const config = await configured();
   if (!/^\/?[0-9]{5,40}(?:\/[a-z_]+)?(?:\?[^#]*)?$/.test(path)) throw new WhatsAppError(500, 'Recurso Graph inválido.', 'INVALID_GRAPH_PATH');
@@ -318,7 +495,7 @@ export async function graph(path: string, options: RequestInit = {}, fetcher: ty
   try { const raw = await readBytes(response, 2 * 1024 * 1024); body = object(JSON.parse(raw.toString('utf8'))); } catch { throw new WhatsAppError(502, 'Resposta inválida da Meta.', 'META_INVALID_RESPONSE'); }
   if (!response.ok || body.error) {
     const code = Number(object(body.error).code);
-    throw new WhatsAppError(response.status === 429 ? 429 : 502, Number.isFinite(code) ? `A Meta recusou a operação (código ${code}). Confira permissões, conta e configuração no painel da Meta.` : 'A Meta recusou a operação. Confira a configuração no painel da Meta.', 'META_REJECTED');
+    throw new WhatsAppError(response.status === 429 ? 429 : 502, metaErrorMessage(code), 'META_REJECTED');
   }
   return body;
 }
@@ -348,16 +525,26 @@ async function permissionToSend(phone: string, type: string) {
   if (await suppressed(phone) || row?.opted_out) throw new WhatsAppError(409, 'Contato retirado da lista de comunicações. Obtenha uma nova autorização comprovada antes de contatar.', 'OPTED_OUT');
   // Como no ERP da Le Ange: só pedido de parada bloqueia. Texto livre vale na janela de 24 h aberta pela pessoa; fora dela,
   // modelo aprovado pela Meta. A autorização registrada continua disponível como evidência, mas não trava a resposta.
-  if (type === 'text' && (!row?.last_inbound || Date.now() >= row.last_inbound + DAY)) throw new WhatsAppError(409, 'A janela de atendimento de 24 horas está fechada. Use um template aprovado.', 'WINDOW_CLOSED');
+  if (type !== 'template' && (!row?.last_inbound || Date.now() >= row.last_inbound + DAY)) throw new WhatsAppError(409, 'A janela de atendimento de 24 horas está fechada. Use um template aprovado.', 'WINDOW_CLOSED');
 }
 export async function sendMessage(input: JsonObject, fetcher: typeof fetch = fetch) {
   const config = await configured(), phone = phoneNumber(input.phone), type = input.type;
   const requestKey = typeof input.clientRequestId === 'string' ? input.clientRequestId : '';
   if (!/^[a-zA-Z0-9_-]{8,100}$/.test(requestKey)) throw new WhatsAppError(400, 'Informe uma chave única clientRequestId com 8 a 100 caracteres.', 'INVALID_REQUEST_ID');
-  if (type !== 'text' && type !== 'template') throw new WhatsAppError(400, 'Envie texto ou template aprovado.', 'INVALID_MESSAGE_TYPE');
+  if (typeof type !== 'string' || !['text', 'template', ...MEDIA_TYPES].includes(type)) throw new WhatsAppError(400, 'Envie texto, mídia ou template aprovado.', 'INVALID_MESSAGE_TYPE');
   const payload: JsonObject = { messaging_product: 'whatsapp', recipient_type: 'individual', to: phone, type, biz_opaque_callback_data: requestKey };
+  const replyTo = typeof input.replyTo === 'string' && /^[A-Za-z0-9._=:+/-]{8,300}$/.test(input.replyTo) && !input.replyTo.startsWith('local.') ? input.replyTo : null;
+  if (replyTo) payload.context = {message_id: replyTo};
+  const media = object(input.media);
   let display = '';
-  if (type === 'text') {
+  if ((MEDIA_TYPES as readonly string[]).includes(type)) {
+    // Mídia já enviada à Meta (midia.ts): aqui só a mensagem que a usa.
+    const assetId = string(media.id, 40), caption = string(input.caption, 1025).trim();
+    if (!/^[0-9]{5,40}$/.test(assetId)) throw new WhatsAppError(400, 'Mídia inválida.', 'INVALID_MEDIA');
+    if (caption.length > 1024) throw new WhatsAppError(400, 'A legenda deve ter até 1024 caracteres.', 'INVALID_CAPTION');
+    payload[type] = {id: assetId, ...(caption && type !== 'audio' ? {caption} : {}), ...(type === 'document' ? {filename: string(media.filename, 200) || 'arquivo'} : {}), ...(type === 'audio' && media.voice === true ? {voice: true} : {})};
+    display = caption || ({image: '[image]', video: '[video]', audio: '[audio]', document: string(media.filename, 200) || '[document]'} as Record<string, string>)[type];
+  } else if (type === 'text') {
     if (typeof input.text !== 'string' || !input.text.trim() || input.text.length > 4096) throw new WhatsAppError(400, 'O texto deve ter de 1 a 4096 caracteres.', 'INVALID_TEXT');
     display = input.text.trim(); payload.text = {body: display, preview_url: false};
   } else {
@@ -376,7 +563,13 @@ export async function sendMessage(input: JsonObject, fetcher: typeof fetch = fet
     if (existing.payload_hash !== hash) throw new WhatsAppError(409, 'Esta chave já foi usada com outro conteúdo.', 'REQUEST_ID_CONFLICT');
     const row = await database.prepare('SELECT * FROM messages WHERE id = ?').get(existing.message_id) as MessageRow | undefined;
     if (row && existing.state === 'accepted') return {message: messageFromRow(row), duplicate: true};
-    throw new WhatsAppError(409, 'Este envio já foi iniciado. Verifique o histórico e aguarde a confirmação antes de criar outro envio.', 'SEND_ALREADY_STARTED');
+    // Recusa definitiva da Meta: "Tentar de novo" reaproveita a chave (o registro que falhou dá lugar à nova tentativa).
+    // Resultado incerto (unknown/sending) continua bloqueado para nunca mandar duas vezes.
+    if (existing.state !== 'failed') throw new WhatsAppError(409, 'Este envio já foi iniciado. Verifique o histórico e aguarde a confirmação antes de criar outro envio.', 'SEND_ALREADY_STARTED');
+    await database.transaction(async () => {
+      await database.prepare("DELETE FROM messages WHERE id = ? AND status = 'failed'").run(existing.message_id);
+      await database.prepare("DELETE FROM send_requests WHERE request_key = ? AND state = 'failed'").run(requestKey);
+    });
   }
   await permissionToSend(phone, type);
   if (type === 'template') {
@@ -399,7 +592,8 @@ export async function sendMessage(input: JsonObject, fetcher: typeof fetch = fet
     await ensureContact(phone, undefined, now); // modelo para número que ainda não escreveu: cria o contato antes do envio
     const reserved = await database.prepare('INSERT INTO send_requests VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(request_key) DO NOTHING').run(requestKey, hash, localId, phone, 'sending', now);
     if (!reserved.changes) throw new WhatsAppError(409, 'Este envio já foi iniciado.', 'SEND_ALREADY_STARTED');
-    await database.prepare("INSERT INTO messages (id, phone, direction, type, text, status, created) VALUES (?, ?, 'outbound', ?, ?, 'sending', ?)").run(localId, phone, type, display, now);
+    await database.prepare("INSERT INTO messages (id, phone, direction, type, text, status, created, media_id, mime_type, filename, media_key, media_size, duration, voice, reply_to, author) VALUES (?, ?, 'outbound', ?, ?, 'sending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(localId, phone, type, display, now,
+      string(media.id, 40) || null, string(media.mime, 100) || null, string(media.filename, 200) || null, string(media.key, 400) || null, Number(media.size) || null, Number(media.duration) ? Math.round(Number(media.duration)) : null, media.voice === true ? 1 : 0, replyTo, string(input.author, 120) || null);
     await database.prepare('UPDATE contacts SET updated = ? WHERE phone = ?').run(now, phone);
   });
   try {
@@ -413,16 +607,51 @@ export async function sendMessage(input: JsonObject, fetcher: typeof fetch = fet
       await database.prepare("UPDATE send_requests SET message_id = ?, state = 'accepted' WHERE request_key = ?").run(id, requestKey);
       await reconcileStatus(id);
     });
-    const row = await database.prepare('SELECT * FROM messages WHERE id = ?').get(id) as MessageRow | undefined;
+    const row = await database.prepare(`${messageSelect} WHERE m.id = ?`).get(id) as MessageRow | undefined;
     if (!row) throw new WhatsAppError(409, 'O contato foi excluído durante o envio. Confirme o estado na Meta.', 'CONTACT_DELETED');
+    await bumpRevision();
     return {message: messageFromRow(row), duplicate: false};
   } catch (error) {
     const knownFailure = error instanceof WhatsAppError && error.code === 'META_REJECTED';
-    await database.prepare('UPDATE messages SET status = ?, error = ? WHERE id = ? AND status_rank = 0').run(knownFailure ? 'failed' : 'unknown', knownFailure ? 'Envio recusado pela Meta.' : 'Confirmação pendente; não reenviar automaticamente.', localId);
+    await database.prepare('UPDATE messages SET status = ?, error = ? WHERE id = ? AND status_rank = 0').run(knownFailure ? 'failed' : 'unknown', knownFailure ? (error as WhatsAppError).message.slice(0, 300) : 'Sem confirmação da Meta: confira no celular antes de reenviar.', localId);
     await database.prepare("UPDATE send_requests SET state = ? WHERE request_key = ? AND state = 'sending'").run(knownFailure ? 'failed' : 'unknown', requestKey);
+    await bumpRevision();
     throw error;
   }
 }
+/** Reação da equipe numa mensagem (emoji vazio remove), enviada pela Cloud API. */
+export async function sendReaction(phoneInput: unknown, messageId: unknown, emojiInput: unknown, fetcher: typeof fetch = fetch) {
+  const config = await configured(), phone = phoneNumber(phoneInput), emoji = string(emojiInput, 16);
+  if (typeof messageId !== 'string' || messageId.startsWith('local.') || messageId.length > 300) throw new WhatsAppError(400, 'Mensagem inválida.', 'INVALID_MESSAGE_ID');
+  const row = await db().prepare('SELECT reactions FROM messages WHERE id = ? AND phone = ?').get(messageId, phone) as {reactions: string | null} | undefined;
+  if (!row) throw new WhatsAppError(404, 'Mensagem não encontrada.', 'MESSAGE_NOT_FOUND');
+  await permissionToSend(phone, 'reaction');
+  await graph(`${config.phoneNumberId}/messages`, {method: 'POST', body: JSON.stringify({messaging_product: 'whatsapp', recipient_type: 'individual', to: phone, type: 'reaction', reaction: {message_id: messageId, emoji}})}, fetcher);
+  const outras = reactionsOf(row.reactions).filter(item => item.from !== 'me');
+  const reactions = emoji ? [...outras, {emoji, from: 'me' as const, at: Date.now()}] : outras;
+  await db().prepare('UPDATE messages SET reactions = ? WHERE id = ?').run(JSON.stringify(reactions), messageId);
+  await bumpRevision();
+  return {reactions};
+}
+/** Descarta uma mensagem que a Meta recusou (só enviada e com falha): some da conversa e libera "tentar de novo". */
+export async function discardFailedMessage(phoneInput: unknown, id: unknown) {
+  const phone = phoneNumber(phoneInput);
+  if (typeof id !== 'string' || id.length > 300) throw new WhatsAppError(400, 'Mensagem inválida.', 'INVALID_MESSAGE_ID');
+  const database = db();
+  const removidas = await database.transaction(async () => {
+    const apagadas = (await database.prepare("DELETE FROM messages WHERE id = ? AND phone = ? AND direction = 'outbound' AND status = 'failed'").run(id, phone)).changes;
+    if (apagadas) await database.prepare('DELETE FROM send_requests WHERE message_id = ?').run(id);
+    return Number(apagadas);
+  });
+  if (!removidas) throw new WhatsAppError(409, 'Só dá para descartar mensagem que não foi enviada.', 'NOT_FAILED');
+  await bumpRevision();
+  return {discarded: true};
+}
+export async function messageById(id: string) {
+  const row = await db().prepare(`${messageSelect} WHERE m.id = ?`).get(id) as MessageRow | undefined;
+  return row ? {row, message: messageFromRow(row)} : null;
+}
+export async function setMessageMediaKey(id: string, key: string) { await db().prepare('UPDATE messages SET media_key = ? WHERE id = ?').run(key, id); }
 export async function markRead(messageId: unknown, fetcher: typeof fetch = fetch) {
   if (typeof messageId !== 'string' || messageId.length > 300) throw new WhatsAppError(400, 'Mensagem inválida.', 'INVALID_MESSAGE_ID');
   const message = await db().prepare("SELECT * FROM messages WHERE id = ? AND direction = 'inbound'").get(messageId) as MessageRow | undefined;
@@ -442,16 +671,18 @@ export async function readBytes(source: Request | Response, maximum: number) {
   } finally { reader.releaseLock(); }
   return Buffer.concat(chunks);
 }
-export async function downloadMedia(messageId: string, fetcher: typeof fetch = fetch) {
+export const MIME_PERMITIDOS = /^(image\/(jpeg|png|webp|gif)|audio\/(aac|mp4|mpeg|ogg|amr|opus|wav|webm)|video\/(mp4|3gpp|quicktime|webm)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.[a-z.]+|vnd\.ms-excel|vnd\.ms-powerpoint|zip|vnd\.oasis\.opendocument\.[a-z]+)|text\/(plain|csv))$/;
+export async function downloadMedia(messageId: string, fetcher: typeof fetch = fetch, maximumBytes = mediaMaximumBytes()) {
   const message = await db().prepare('SELECT * FROM messages WHERE id = ?').get(messageId) as MessageRow | undefined;
   if (!message?.media_id) throw new WhatsAppError(404, 'Mídia não encontrada.', 'MEDIA_NOT_FOUND');
   const metadata = await graph(`${message.media_id}?phone_number_id=${(await configured()).phoneNumberId}`, {}, fetcher);
   let url: URL; try { url = new URL(String(metadata.url)); } catch { throw new WhatsAppError(502, 'URL de mídia inválida.', 'INVALID_MEDIA_URL'); }
   if (url.protocol !== 'https:' || url.hostname !== 'lookaside.fbsbx.com' || url.port || url.username || url.password) throw new WhatsAppError(502, 'Origem de mídia não permitida.', 'INVALID_MEDIA_URL');
-  const maximum = mediaMaximumBytes();
+  const maximum = maximumBytes;
   if (Number(metadata.file_size) > maximum) throw new WhatsAppError(413, `Mídia excede ${maximum / 1024 / 1024} MiB, limite deste ambiente.`, 'MEDIA_TOO_LARGE');
-  const mime = string(metadata.mime_type, 100);
-  if (!/^(image\/(jpeg|png|webp)|audio\/(aac|mp4|mpeg|ogg|amr)|video\/mp4|application\/pdf|text\/plain)$/.test(mime)) throw new WhatsAppError(415, 'Tipo de arquivo não suportado para download.', 'UNSUPPORTED_MEDIA');
+  // "audio/ogg; codecs=opus" → "audio/ogg": a lista confere só o tipo.
+  const mime = string(metadata.mime_type, 100).split(';')[0].trim().toLowerCase();
+  if (!MIME_PERMITIDOS.test(mime)) throw new WhatsAppError(415, 'Tipo de arquivo não suportado para download.', 'UNSUPPORTED_MEDIA');
   let response: Response;
   try { response = await fetcher(url.toString(), {headers: {Authorization: `Bearer ${(await configured()).accessToken}`}, signal: AbortSignal.timeout(15_000), cache: 'no-store', redirect: 'error'}); } catch { throw new WhatsAppError(502, 'Não foi possível baixar a mídia na Meta.', 'MEDIA_UNAVAILABLE'); }
   if (!response.ok) throw new WhatsAppError(502, 'A mídia não está mais disponível na Meta.', 'MEDIA_UNAVAILABLE');

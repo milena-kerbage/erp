@@ -114,6 +114,8 @@ export class Database {
       mkdirSync(dirname(file), {recursive: true, mode: 0o700});
       this.sqlite = new DatabaseSync(file); chmodSync(file, 0o600);
       this.sqlite.function('greatest', {varargs: true}, (...values) => Math.max(...values.map(value => Number(value))));
+      // Busca sem acento (o Postgres usa translate/lower): mesma regra no SQLite local e nos testes.
+      this.sqlite.function('sem_acento', {deterministic: true}, (value) => typeof value === 'string' ? value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : value);
     }
     for (const schema of this.sqliteSchemas) if (!this.initializedSchemas.has(schema)) { this.sqlite.exec(schema); this.initializedSchemas.add(schema); }
     return this.sqlite;

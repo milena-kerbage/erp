@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { WhatsAppInbox } from "@/features/whatsapp/components/WhatsAppInbox";
+import { Conversas } from "@/features/whatsapp/conversas/Conversas";
 import { normalizeWhatsAppPhone } from "@/features/whatsapp/client";
 
 export const metadata: Metadata = {
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 export default async function ConversationsPage({ searchParams }: PageProps<"/conversas">) {
   const { phone } = await searchParams;
   const selectedPhone = typeof phone === "string" ? normalizeWhatsAppPhone(phone) : null;
-  return <WhatsAppInbox selectedPhone={selectedPhone ?? undefined} invalidPhone={typeof phone === "string" && !selectedPhone} />;
+  return <Conversas telefoneInicial={selectedPhone ?? undefined} telefoneInvalido={typeof phone === "string" && !selectedPhone} />;
 }
