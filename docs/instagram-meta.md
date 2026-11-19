@@ -19,6 +19,16 @@ Usando a origem pública já indicada pelo projeto (`https://app.ateliemilenaker
 
 A tela `/configuracoes/instagram` calcula as URLs a partir de `INSTAGRAM_PUBLIC_BASE_URL`, `PUBLIC_BASE_URL` ou `AUTH_ORIGIN`, nessa ordem. Só usar o host do ERP: o host `www.` reescreve rotas para a loja. A origem deve ser HTTPS, sem caminho, busca ou credenciais. HTTP em loopback só é aceito fora de produção para testes.
 
+## Conectar pela tela (nov/2026)
+
+Em **Configurações > Instagram** o gestor faz tudo sem mexer na hospedagem (mesmo desenho da conexão do WhatsApp):
+
+1. **App do Instagram (uma vez):** App ID e App Secret do Instagram (Instagram > Configuração da API com login do Instagram > Configurações do login da empresa) e, se o app não for o mesmo do WhatsApp, o App Secret do app (Configurações do app > Básico) para validar a assinatura dos webhooks. Marcar "Mensagens do Direct" e "Comentários" pede essas permissões no login. Tudo fica cifrado na tabela `integration_settings` (chaves `instagram.*`, `src/lib/instagram/ajustes.ts`), sem migração nova; o salvo na tela prevalece sobre as variáveis `INSTAGRAM_*`. Versão padrão da Graph: `v26.0`.
+2. **Conectar Instagram** com o perfil @milenakerbageatelie e, de volta, **Habilitar notificações**.
+3. A tabela "O que fica cadastrado no app da Meta" mostra as oito linhas com botão de copiar, inclusive o token de verificação (botão "Mostrar token").
+
+**O token de verificação do webhook não muda:** o de `INSTAGRAM_VERIFY_TOKEN` (já cadastrado na Meta) sempre prevalece; um novo só é gerado e salvo se não houver nenhum. Assinatura dos webhooks: segredo próprio salvo > `INSTAGRAM_WEBHOOK_APP_SECRET` > App Secret do WhatsApp (mesmo app da Meta).
+
 ## Configurar
 
 1. Aplicar `supabase/migrations/015_instagram.sql` no banco da instalação depois das migrações anteriores. É aditiva, cria tabelas privadas em `erp_meta` e habilita RLS. O script geral `npm run db:migrate -- --confirm=APLICAR-MIGRACOES --allow-existing` reaplica todas as migrações idempotentes; conferir o destino antes. Nenhuma migração remota é aplicada pela implementação local.

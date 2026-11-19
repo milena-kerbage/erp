@@ -2,6 +2,7 @@ import { readBytes } from '../whatsapp/core.ts';
 import { InstagramError, instagramConfig, instagramUrls, requireOAuthConfig } from './config.ts';
 import { seal } from './crypto.ts';
 import { connectionToken, currentConnection, instagramDb, saveConnection } from './store.ts';
+import { carregarAjustesInstagram } from './ajustes.ts';
 
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): ObjectValue => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : {};
@@ -37,6 +38,7 @@ export function authorizationUrl(state: string) {
   return url.toString();
 }
 export async function exchangeCode(code: string, fetcher: typeof fetch = fetch, authorizedAt = Date.now()) {
+  await carregarAjustesInstagram();
   const config = requireOAuthConfig();
   if (!code || code.length > 4096 || /\s/.test(code)) throw new InstagramError(400, 'Código de autorização inválido.');
   const form = new FormData();
@@ -64,7 +66,7 @@ export function subscribedFields(scopes: string[]) {
   ];
 }
 export async function subscribeAccount(fetcher: typeof fetch = fetch) {
-  const config = requireOAuthConfig(), c = await currentConnection();
+  const c = await currentConnection(), config = requireOAuthConfig();
   if (!c) throw new InstagramError(409, 'Conecte o Instagram primeiro.', 'NOT_CONNECTED');
   const fields = subscribedFields(JSON.parse(c.scopes_json));
   if (!fields.length) throw new InstagramError(409, 'Autorize mensagens ou comentários para habilitar notificações.', 'PERMISSION_REQUIRED');
@@ -77,6 +79,7 @@ export async function subscribeAccount(fetcher: typeof fetch = fetch) {
   return { subscribed: true, fields };
 }
 export async function refreshToken(fetcher: typeof fetch = fetch, now = Date.now()) {
+  await carregarAjustesInstagram();
   const c = await currentConnection();
   if (!c) throw new InstagramError(409, 'Conecte o Instagram primeiro.', 'NOT_CONNECTED');
   if (now - c.refreshed_at < 86400_000) throw new InstagramError(409, 'Aguarde 24 horas após a emissão ou renovação do token.', 'TOKEN_TOO_RECENT');

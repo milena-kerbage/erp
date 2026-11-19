@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { databaseFor } from '../database.ts';
 import { InstagramError, instagramConfig, instagramOrigin, retentionDays } from './config.ts';
 import { digest, seal, unseal, subjectHash } from './crypto.ts';
+import { carregarAjustesInstagram } from './ajustes.ts';
 
 const schema = `PRAGMA secure_delete = ON;
 CREATE TABLE IF NOT EXISTS instagram_connections (
@@ -37,6 +38,7 @@ export function instagramTransaction<T>(operation: () => Promise<T>) {
 }
 export type Connection = { subject_hash: string; account_hash: string; app_id: string; account_id: string; username: string; token_cipher: string; scopes_json: string; expires_at: number; refreshed_at: number; connected_at: number; fields_json: string };
 export async function currentConnection() {
+  await carregarAjustesInstagram();
   return await instagramDb().prepare('SELECT * FROM instagram_connections WHERE app_id = ?').get(instagramConfig().appId) as Connection | undefined;
 }
 export async function createState(userId: string, session: string, now = Date.now()) {

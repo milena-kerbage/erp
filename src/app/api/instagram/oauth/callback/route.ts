@@ -5,10 +5,12 @@ import { exchangeCode } from '@/lib/instagram/api';
 import { instagramOrigin } from '@/lib/instagram/config';
 import { consumeState } from '@/lib/instagram/store';
 import { instagramError, instagramHeaders, invalidateInstagramFeed } from '@/lib/instagram/server';
+import { carregarAjustesInstagram } from '@/lib/instagram/ajustes';
 export const runtime = 'nodejs';
 export async function GET(request: Request) {
   let outcome = 'failed';
   let origin: string;
+  await carregarAjustesInstagram();
   try { origin = instagramOrigin(); } catch (error) { return instagramError(error); }
   try {
     const user = await requireManager(request), session = (await cookies()).get(COOKIE_NAME)?.value;

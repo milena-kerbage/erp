@@ -8,18 +8,27 @@ export class InstagramError extends Error {
   }
 }
 
+/** Versão da Graph API do Instagram quando a instalação não define outra. */
+export const VERSAO_INSTAGRAM_PADRAO = 'v26.0';
+// Ajustes cadastrados pelo gestor na tela (cifrados no banco; src/lib/instagram/ajustes.ts). Prevalecem sobre o ambiente.
+type AjustesSalvos = { appId?: string; appSecret?: string; webhookSecret?: string; version?: string; scopes?: string; metaAppSecret?: string; verifyToken?: string };
+let salvos: AjustesSalvos = {};
+export function definirAjustesSalvos(valores: AjustesSalvos) { salvos = valores; }
+
 export const PERMISSIONS = ['instagram_business_basic', 'instagram_business_manage_messages', 'instagram_business_manage_comments', 'instagram_business_content_publish'] as const;
 export function instagramConfig() {
-  const scopes = (process.env.INSTAGRAM_SCOPES || 'instagram_business_basic').split(',').map(v => v.trim()).filter(Boolean);
+  const scopes = (salvos.scopes || process.env.INSTAGRAM_SCOPES || 'instagram_business_basic').split(',').map(v => v.trim()).filter(Boolean);
   if (!scopes.includes('instagram_business_basic') || scopes.some(v => !PERMISSIONS.includes(v as typeof PERMISSIONS[number]))) {
     throw new InstagramError(503, 'Configure INSTAGRAM_SCOPES com permissões atuais do Instagram.', 'INVALID_SCOPES');
   }
   return {
-    appId: process.env.INSTAGRAM_APP_ID?.trim() || '',
-    appSecret: process.env.INSTAGRAM_APP_SECRET?.trim() || '',
-    webhookSecret: process.env.INSTAGRAM_WEBHOOK_APP_SECRET?.trim() || '',
-    verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN?.trim() || '',
-    version: process.env.INSTAGRAM_GRAPH_VERSION?.trim() || '',
+    appId: salvos.appId || process.env.INSTAGRAM_APP_ID?.trim() || '',
+    appSecret: salvos.appSecret || process.env.INSTAGRAM_APP_SECRET?.trim() || '',
+    // Assinatura dos webhooks: App Secret do app da Meta (Configurações do app > Básico). Sem um próprio, usa o do WhatsApp (mesmo app).
+    webhookSecret: salvos.webhookSecret || process.env.INSTAGRAM_WEBHOOK_APP_SECRET?.trim() || salvos.metaAppSecret || '',
+    // O do ambiente (já cadastrado na Meta) nunca é trocado; o salvo só existe quando o ambiente não tem.
+    verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN?.trim() || salvos.verifyToken || '',
+    version: salvos.version || process.env.INSTAGRAM_GRAPH_VERSION?.trim() || VERSAO_INSTAGRAM_PADRAO,
     expectedUsername: (process.env.INSTAGRAM_EXPECTED_USERNAME || 'milenakerbageatelie').replace(/^@/, '').toLowerCase(),
     scopes: [...new Set(scopes)],
   };
@@ -40,7 +49,7 @@ export function instagramUrls() {
 export function requireOAuthConfig() {
   const config = instagramConfig();
   if (!/^\d{5,32}$/.test(config.appId) || config.appSecret.length < 16 || !/^v\d{2,3}\.0$/.test(config.version)) {
-    throw new InstagramError(503, 'Configure INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET e INSTAGRAM_GRAPH_VERSION no servidor.', 'OAUTH_NOT_CONFIGURED');
+    throw new InstagramError(503, 'Cadastre o App ID e o App Secret do Instagram em Configurações > Instagram.', 'OAUTH_NOT_CONFIGURED');
   }
   instagramOrigin();
   return config;

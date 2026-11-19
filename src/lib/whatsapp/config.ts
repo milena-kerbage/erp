@@ -32,13 +32,13 @@ function encryptionKey() {
   return key;
 }
 export function encryptionReady() { try { encryptionKey(); return true; } catch { return false; } }
-function encrypt(key: SecretKey, value: string) {
+function encrypt(key: string, value: string) {
   const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv);
   cipher.setAAD(Buffer.from(`erp-whatsapp-integration:${key}:v1`));
   const bytes = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
   return JSON.stringify({v: 1, iv: iv.toString('base64'), tag: cipher.getAuthTag().toString('base64'), data: bytes.toString('base64')});
 }
-function decrypt(key: SecretKey, envelope: string) {
+function decrypt(key: string, envelope: string) {
   const secret = encryptionKey();
   try {
     const parsed = JSON.parse(envelope);
@@ -156,4 +156,27 @@ export async function generateSecret(kind: unknown, actor: string) {
   const secret = randomBytes(32).toString('hex');
   await saveSettings({secrets: {[kind]: secret}}, actor);
   return {kind, secret, stored: true};
+}
+
+// Ajustes de outras integrações (ex.: "instagram.appId") na mesma tabela cifrada, sem migração nova. As linhas com outro
+// prefixo são ignoradas por effectiveSettings; segredos usam o mesmo AES-256-GCM com o nome da chave no contexto.
+const CHAVE_LIVRE = /^[a-z]+\.[A-Za-z]{2,40}$/;
+export async function lerAjustesLivres(prefixo: string): Promise<Record<string, string>> {
+  const linhas = await settingsDb().prepare('SELECT key, value, encrypted FROM integration_settings WHERE key LIKE ?').all(`${prefixo}%`) as SettingRow[];
+  const resultado: Record<string, string> = {};
+  for (const linha of linhas) {
+    if (!CHAVE_LIVRE.test(linha.key)) continue;
+    resultado[linha.key] = linha.encrypted === 1 ? decrypt(linha.key, linha.value) : String(JSON.parse(linha.value));
+  }
+  return resultado;
+}
+export async function gravarAjustesLivres(valores: Record<string, { valor: string; secreto: boolean }>, ator: string) {
+  const entradas = Object.entries(valores);
+  if (entradas.some(([chave]) => !CHAVE_LIVRE.test(chave))) throw new IntegrationConfigurationError(400, 'Ajuste de integração inválido.', 'INVALID_CONFIG_FIELD');
+  if (!entradas.length) return;
+  const database = settingsDb();
+  await database.transaction(async () => {
+    for (const [chave, { valor, secreto }] of entradas) await database.prepare('INSERT INTO integration_settings (key, value, encrypted, updated, actor) VALUES (?, ?, ?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, encrypted = excluded.encrypted, updated = excluded.updated, actor = excluded.actor').run(chave, secreto ? encrypt(chave, valor) : JSON.stringify(valor), secreto ? 1 : 0, Date.now(), ator);
+    await database.prepare('INSERT INTO integration_audit VALUES (?, ?, ?, ?, ?)').run(randomUUID(), 'configuration_updated', JSON.stringify(entradas.map(([chave]) => chave)), ator, Date.now());
+  });
 }

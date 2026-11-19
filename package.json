@@ -34,7 +34,7 @@
     "instagram:renovar-token": "node --env-file-if-exists=.env.local scripts/instagram-renovar-token.mjs",
     "instagram:preparar": "node --env-file-if-exists=.env.local scripts/instagram-preparar.mjs",
     "instagram:manutencao": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/instagram-manutencao.mjs",
-    "test:instagram": "node --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --test tests/instagram.test.mjs",
+    "test:instagram": "node --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --test tests/instagram.test.mjs tests/instagram-ajustes.test.mjs",
     "test:instagram:http": "node --experimental-strip-types tests/instagram-http.mjs",
     "test:instagram:postgres": "node --experimental-strip-types tests/instagram-postgres.mjs",
     "test:loja": "node --experimental-strip-types --test 'tests/loja/**/*.test.mjs'",

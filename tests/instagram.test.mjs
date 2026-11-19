@@ -56,6 +56,9 @@ test('URL oficial exige versão/configuração e usa os scopes atuais com state'
   assert.match(url.searchParams.get('scope'), /instagram_business_basic/);
   const version = process.env.INSTAGRAM_GRAPH_VERSION;
   process.env.INSTAGRAM_GRAPH_VERSION = '';
+  assert.doesNotThrow(() => api.authorizationUrl('a'.repeat(64)), 'sem versão no ambiente, usa a padrão');
+  assert.equal(config.instagramConfig().version, config.VERSAO_INSTAGRAM_PADRAO);
+  process.env.INSTAGRAM_GRAPH_VERSION = 'v27';
   assert.throws(() => api.authorizationUrl('a'.repeat(64)), { code: 'OAUTH_NOT_CONFIGURED' });
   process.env.INSTAGRAM_GRAPH_VERSION = version;
 });
