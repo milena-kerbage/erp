@@ -67,7 +67,7 @@
     "@emotion/styled": "^11.14.1",
     "@phosphor-icons/react": "^2.1.10",
     "mediabunny": "1.65.2",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "nodemailer": "^10.2.1",
     "pg": "^8.23.1",
     "react": "19.2.8",
