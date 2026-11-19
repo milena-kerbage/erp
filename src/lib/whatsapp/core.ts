@@ -156,6 +156,7 @@ export async function messagesFor(phoneInput: unknown, before?: string, limit = 
   rows.reverse();
   return { messages: rows.map(messageFromRow), conversation: await conversation(phone), nextBefore: more ? Buffer.from(JSON.stringify({created: rows[0].created, id: rows[0].id})).toString('base64url') : null };
 }
+export async function historySyncProgress() { const row = await db().prepare("SELECT value FROM metadata WHERE key = 'historySync'").get() as {value: string} | undefined; try { const value = object(JSON.parse(row?.value || '{}')); return {progress: Number(value.progress) || 0, refused: Boolean(value.refused), lastAt: string(value.lastAt, 40) || null}; } catch { return {progress: 0, refused: false, lastAt: null}; } }
 export async function lastWebhookAt() { return (await db().prepare("SELECT value FROM metadata WHERE key = 'lastWebhookAt'").get() as {value: string} | undefined)?.value || null; }
 
 export function signatureValid(raw: Buffer, signature: string | null, secret = process.env.META_APP_SECRET || process.env.WHATSAPP_APP_SECRET || '') {
@@ -193,6 +194,51 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
       if (entry.id !== config.businessAccountId) { ignored++; continue; }
       for (const changeValue of array(entry.changes)) {
         const change = object(changeValue), value = object(change.value);
+        if (change.field === 'smb_app_state_sync' && object(value.metadata).phone_number_id === config.phoneNumberId) {
+          // Coexistência: contatos da agenda do app WhatsApp Business (pedido único após conectar). Só nome; nunca consentimento.
+          for (const item of array(value.state_sync)) {
+            const event = object(item), contact = object(event.contact);
+            if (event.type !== 'contact' || event.action !== 'add') { ignored++; continue; }
+            let phone: string; try { phone = phoneNumber(contact.phone_number); } catch { ignored++; continue; }
+            await lockContact(phone);
+            if (await suppressed(phone, config.suppressionSecret)) { ignored++; continue; }
+            const at = Number(object(event.metadata).timestamp) * 1000;
+            await ensureContact(phone, string(contact.full_name, 200) || string(contact.first_name, 200), Number.isFinite(at) && at > 0 ? Math.min(at, now) : now);
+            processed++;
+          }
+          continue;
+        }
+        if (change.field === 'history' && object(value.metadata).phone_number_id === config.phoneNumberId) {
+          // Coexistência: histórico de conversas do celular, em lotes. Entra lido e não abre a janela de 24 h.
+          for (const loteValue of array(value.history)) {
+            const lote = object(loteValue), progress = Number(object(lote.metadata).progress);
+            const refused = array(lote.errors).some(error => Number(object(error).code) === 2593109);
+            const previous = await database.prepare("SELECT value FROM metadata WHERE key = 'historySync'").get() as {value: string} | undefined;
+            let state: JsonObject = {}; try { state = object(JSON.parse(previous?.value || '{}')); } catch { /* recomeça */ }
+            const next = {...state, progress: Math.max(Number(state.progress) || 0, Number.isFinite(progress) && progress >= 0 && progress <= 100 ? progress : 0), refused: Boolean(state.refused) || refused, lastAt: new Date(now).toISOString()};
+            await database.prepare('INSERT INTO metadata VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('historySync', JSON.stringify(next));
+            for (const threadValue of array(lote.threads)) {
+              const thread = object(threadValue);
+              let phone: string; try { phone = phoneNumber(thread.id); } catch { ignored++; continue; }
+              await lockContact(phone);
+              if (await suppressed(phone, config.suppressionSecret)) { ignored++; continue; }
+              for (const item of array(thread.messages)) {
+                const message = object(item), id = string(message.id, 300), type = string(message.type, 30) || 'unknown';
+                const timestamp = Number(message.timestamp) * 1000;
+                if (!id || !Number.isFinite(timestamp) || timestamp < now - config.retentionDays * DAY || timestamp > now + 300_000) { ignored++; continue; }
+                if (!(await database.prepare('INSERT INTO webhook_events VALUES (?, ?) ON CONFLICT(event_key) DO NOTHING').run(digest(`history:${id}`), now)).changes) { ignored++; continue; }
+                const inbound = string(message.from, 30).replace(/\D/g, '') === phone;
+                const media = object(message[type]);
+                const text = type === 'text' ? string(object(message.text).body, 4096) : string(media.caption, 4096) || `[${type}]`;
+                const created = Math.min(timestamp, now);
+                await ensureContact(phone, undefined, created);
+                await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1) ON CONFLICT(id) DO NOTHING`).run(id, phone, inbound ? 'inbound' : 'outbound', type, text, inbound ? 'received' : 'sent', inbound ? 0 : 3, created);
+                processed++;
+              }
+            }
+          }
+          continue;
+        }
         if (change.field === 'smb_message_echoes' && object(value.metadata).phone_number_id === config.phoneNumberId) {
           // Coexistência: mensagens que a equipe enviou pelo app WhatsApp Business do celular entram como enviadas.
           for (const item of array(value.message_echoes)) {

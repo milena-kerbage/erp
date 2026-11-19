@@ -26,7 +26,7 @@ const TOKEN = `EAA${'x'.repeat(250)}`;
 const VERIFY_EXISTENTE = 'token-de-verificacao-ja-cadastrado-na-meta';
 
 /** Meta simulada: responde por rota e registra as chamadas. */
-function metaFalsa({ numeros = [{ id: FONE, display_phone_number: '+55 85 99999-0000', verified_name: 'Ateliê Milena Kerbage', quality_rating: 'GREEN' }], appDoToken = APP_ID, escopos = ['whatsapp_business_management', 'whatsapp_business_messaging'], segredoValido = true } = {}) {
+function metaFalsa({ naApp = true, numeros = [{ id: FONE, display_phone_number: '+55 85 99999-0000', verified_name: 'Ateliê Milena Kerbage', quality_rating: 'GREEN' }], appDoToken = APP_ID, escopos = ['whatsapp_business_management', 'whatsapp_business_messaging'], segredoValido = true } = {}) {
   const chamadas = [];
   const fetcher = async (endereco, opcoes = {}) => {
     const url = new URL(String(endereco)), caminho = url.pathname.replace(/^\/v\d+\.0\//, ''), metodo = opcoes.method || 'GET';
@@ -37,6 +37,8 @@ function metaFalsa({ numeros = [{ id: FONE, display_phone_number: '+55 85 99999-
     if (caminho === `${WABA}/phone_numbers`) return Response.json({ data: numeros });
     if (caminho === `${WABA}/subscribed_apps`) return Response.json(metodo === 'POST' ? { success: true } : { data: [{ whatsapp_business_api_data: { id: APP_ID, name: 'App' } }] });
     if (caminho === `${FONE}/register`) return Response.json({ success: true });
+    if (caminho === `${FONE}/smb_app_data`) return Response.json({ request_id: `req-${JSON.parse(opcoes.body).sync_type}` });
+    if (caminho === FONE && url.searchParams.get('fields')?.includes('is_on_biz_app')) return Response.json({ id: FONE, is_on_biz_app: naApp, platform_type: naApp ? 'CLOUD_API' : 'NOT_APPLICABLE' });
     if (caminho === FONE) return Response.json({ id: FONE, display_phone_number: '+55 85 99999-0000', verified_name: 'Ateliê Milena Kerbage', quality_rating: 'GREEN' });
     return Response.json({ error: { code: 100 } }, { status: 400 });
   };
@@ -134,4 +136,51 @@ test('coexistência: mensagem enviada pelo app do celular entra na conversa como
   const mensagem = await core.db().prepare("SELECT direction, text, status FROM messages WHERE id = 'wamid.eco1'").get();
   assert.deepEqual({ ...mensagem }, { direction: 'outbound', text: 'Oi! Seu kit fica pronto amanhã.', status: 'sent' });
   assert.equal((await core.receiveWebhook({ object: 'whatsapp_business_account', entry: [{ id: WABA, changes: [{ field: 'smb_message_echoes', value: { metadata: { phone_number_id: FONE }, message_echoes: [{ id: 'wamid.eco1', to: '5585988887777', timestamp: String(Math.floor(agora / 1000)), type: 'text', text: { body: 'x' } }] } }] }] }, agora)).processed, 0, 'eco repetido é ignorado');
+});
+
+test('histórico do celular: agenda 5 min após conectar, espera o número, pede contatos e depois histórico uma única vez', async () => {
+  const usuario = { id: 'gestor-1', development: false };
+  const liberar = () => core.db().prepare('DELETE FROM rate_limits').run();
+  const preparo = await conexao.prepararConexao(usuario, 'sessao-do-gestor');
+  await conexao.concluirConexao({ state: preparo.state, code: 'codigo', modo: 'coexistencia', wabaId: WABA, phoneNumberId: FONE }, usuario, 'sessao-do-gestor', metaFalsa().fetcher);
+  let situacao = await conexao.situacaoConexao('https://localhost');
+  assert.equal(situacao.historico.estado, 'agendado');
+  assert.ok(Date.parse(situacao.historico.agendadoPara) > Date.now() + 4 * 60_000);
+  assert.equal((await conexao.sincronizarHistorico(ator, true, metaFalsa().fetcher, 0)).resultado, 'aguardando_horario');
+
+  const vencer = async () => { const linha = await core.db().prepare("SELECT value FROM metadata WHERE key = 'historyRequest'").get(); await core.db().prepare("UPDATE metadata SET value = ? WHERE key = 'historyRequest'").run(JSON.stringify({ ...JSON.parse(linha.value), agendadoPara: new Date(Date.now() - 1000).toISOString() })); };
+  await vencer(); await liberar();
+  const foraDoApp = metaFalsa({ naApp: false });
+  assert.equal((await conexao.sincronizarHistorico(ator, true, foraDoApp.fetcher, 0)).resultado, 'esperando');
+  assert.ok(!foraDoApp.chamadas.some((chamada) => chamada.includes('smb_app_data')), 'sem o número confirmado, nada é pedido');
+
+  await vencer(); await liberar();
+  const meta = metaFalsa();
+  assert.equal((await conexao.sincronizarHistorico(ator, true, meta.fetcher, 0)).resultado, 'pedido');
+  const pedidos = meta.chamadas.filter((chamada) => chamada.includes('smb_app_data'));
+  assert.deepEqual(pedidos, [`POST ${FONE}/smb_app_data`, `POST ${FONE}/smb_app_data`]);
+  await liberar();
+  const de_novo = metaFalsa();
+  assert.equal((await conexao.sincronizarHistorico(ator, false, de_novo.fetcher, 0)).resultado, 'ja_pedido');
+  assert.equal(de_novo.chamadas.length, 0, 'pedido único: nunca repete');
+  situacao = await conexao.situacaoConexao('https://localhost');
+  assert.equal(situacao.historico.estado, 'importando'); assert.equal(situacao.historico.contatosPedidos, true);
+});
+
+test('histórico do celular: contatos ganham nome e conversas antigas entram lidas, nos dois sentidos', async () => {
+  const agora = Date.now(), ts = String(Math.floor(agora / 1000) - 3600), cliente = '5585977776666';
+  const evento = (field, value) => ({ object: 'whatsapp_business_account', entry: [{ id: WABA, changes: [{ field, value: { metadata: { phone_number_id: FONE }, ...value } }] }] });
+  await core.receiveWebhook(evento('smb_app_state_sync', { state_sync: [{ type: 'contact', action: 'add', contact: { phone_number: cliente, full_name: 'Maria Cliente' }, metadata: { timestamp: ts } }] }), agora);
+  assert.equal((await core.db().prepare('SELECT name FROM contacts WHERE phone = ?').get(cliente)).name, 'Maria Cliente');
+  const lote = (progress, mensagens) => evento('history', { history: [{ metadata: { phase: 0, chunk_order: 1, progress }, threads: [{ id: cliente, messages: mensagens }] }] });
+  await core.receiveWebhook(lote(40, [
+    { id: 'wamid.h1', from: cliente, timestamp: ts, type: 'text', text: { body: 'Oi, queria um kit berço' } },
+    { id: 'wamid.h2', from: '5585999990000', timestamp: ts, type: 'text', text: { body: 'Claro! Qual tema?' } },
+  ]), agora);
+  const linhas = await core.db().prepare("SELECT id, direction, is_read FROM messages WHERE id IN ('wamid.h1', 'wamid.h2') ORDER BY id").all();
+  assert.deepEqual(linhas.map((linha) => [linha.id, linha.direction, linha.is_read]), [['wamid.h1', 'inbound', 1], ['wamid.h2', 'outbound', 1]]);
+  assert.equal((await core.db().prepare('SELECT last_inbound FROM contacts WHERE phone = ?').get(cliente)).last_inbound, null, 'histórico não abre a janela de 24 h');
+  assert.equal((await conexao.situacaoConexao('https://localhost')).historico.progresso, 40);
+  await core.receiveWebhook(lote(100, []), agora);
+  assert.equal((await conexao.situacaoConexao('https://localhost')).historico.estado, 'concluido');
 });

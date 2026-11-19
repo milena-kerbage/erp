@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { COOKIE_NAME } from '@/lib/auth/cookies';
 import { managementApi } from '@/lib/integrations/manager';
-import { concluirConexao, conectarComToken, desconectar, prepararConexao, salvarApp, situacaoConexao, testarConexao } from '@/lib/whatsapp/conexao';
+import { concluirConexao, conectarComToken, desconectar, prepararConexao, salvarApp, sincronizarHistorico, situacaoConexao, testarConexao } from '@/lib/whatsapp/conexao';
 import { WhatsAppError } from '@/lib/whatsapp/core';
 import { jsonBody } from '@/lib/whatsapp/server';
 
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       case 'concluir': return { ...(await concluirConexao(corpo, usuario, sessao)), situacao: await situacaoConexao(origem(request)) };
       case 'token': return { ...(await conectarComToken(corpo, usuario.id)), situacao: await situacaoConexao(origem(request)) };
       case 'testar': return testarConexao(usuario.id);
+      case 'historico': return { ...(await sincronizarHistorico(usuario.id, corpo.automatico === true)), situacao: await situacaoConexao(origem(request)) };
       case 'desconectar': await desconectar(usuario.id); return situacaoConexao(origem(request));
       default: throw new WhatsAppError(400, 'Ação de conexão desconhecida.', 'INVALID_ACTION');
     }

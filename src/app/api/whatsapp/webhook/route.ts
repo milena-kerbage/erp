@@ -1,6 +1,8 @@
 import { verifyEffectiveChallenge, effectiveSignatureValid, receiveWebhook, readBytes, limited, WhatsAppError } from '@/lib/whatsapp/core';
 import { errorResponse, noStore } from '@/lib/whatsapp/server';
 import { queueApplicationEvent } from '@/lib/erp/dispatch';
+import { after } from 'next/server';
+import { sincronizarHistorico } from '@/lib/whatsapp/conexao';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 export async function GET(request: Request) {
@@ -9,7 +11,8 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   try {
-    const bytes = await readBytes(request, 1024 * 1024);
+    // Lotes do histórico do celular (coexistência) são maiores que mensagens comuns; a Vercel aceita até 4,5 MB.
+    const bytes = await readBytes(request, 4 * 1024 * 1024);
     if (!await effectiveSignatureValid(bytes, request.headers.get('x-hub-signature-256'))) throw new WhatsAppError(403, 'Assinatura do webhook inválida.', 'INVALID_SIGNATURE');
     // O limite é aplicado após validar HMAC, para terceiros não consumirem a cota da Meta.
     if (await limited('verified-webhook', 1000)) throw new WhatsAppError(429, 'Limite temporário de eventos atingido.', 'RATE_LIMITED');
@@ -17,6 +20,8 @@ export async function POST(request: Request) {
     const messageIds:string[]=[];
     await receiveWebhook(payload,Date.now(),messageIds);
     for (const id of messageIds) await queueApplicationEvent('message.received',id);
+    // Coexistência: no horário, pede à Meta os contatos e o histórico do celular (pedido único; sem rotina agendada na hospedagem).
+    after(() => sincronizarHistorico('webhook', true).catch(() => null));
     return new Response('EVENT_RECEIVED', {headers: {...noStore, 'Content-Type': 'text/plain; charset=utf-8'}});
   } catch (error) { return errorResponse(error); }
 }

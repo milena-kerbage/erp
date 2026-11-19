@@ -15,7 +15,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { createOAuthState, consumeOAuthState, recordManagementTest } from '../integrations/management.ts';
 import { effectiveSettings, encryptionReady, GRAPH_VERSION_PADRAO, limparSegredo, saveSettings } from './config.ts';
-import { lastWebhookAt, readBytes, WhatsAppError } from './core.ts';
+import { db, historySyncProgress, lastWebhookAt, limited, readBytes, WhatsAppError } from './core.ts';
 
 type Json = Record<string, unknown>;
 const objeto = (valor: unknown): Json => (valor && typeof valor === 'object' && !Array.isArray(valor) ? valor as Json : {});
@@ -25,7 +25,7 @@ const ehId = (valor: unknown) => /^[0-9]{5,30}$/.test(texto(valor));
 const ESCOPOS = ['whatsapp_business_management', 'whatsapp_business_messaging'];
 
 /** Campos que a Meta deve enviar ao webhook (Meta for Developers > WhatsApp > Configuração). */
-export const CAMPOS_WEBHOOK = ['messages', 'smb_message_echoes', 'account_update', 'message_template_status_update', 'phone_number_quality_update'];
+export const CAMPOS_WEBHOOK = ['messages', 'smb_message_echoes', 'history', 'smb_app_state_sync', 'account_update', 'message_template_status_update', 'phone_number_quality_update'];
 
 export type ModoConexao = 'coexistencia' | 'novo' | 'token';
 
@@ -96,6 +96,7 @@ export async function situacaoConexao(origemDaRequisicao: string) {
       conectado, numero: values.connectedPhone, nome: values.connectedName, modo: values.connectionMode || (conectado ? 'token' : ''),
       desde: values.connectedAt, phoneNumberId: values.phoneNumberId, wabaId: values.businessAccountId,
     },
+    historico: conectado && values.connectionMode === 'coexistencia' ? await situacaoHistorico(values.connectedAt) : null,
     webhook: { url: `${base}/api/whatsapp/webhook`, verifyToken: secrets.verifyToken, campos: CAMPOS_WEBHOOK, ultimoEvento: await lastWebhookAt() },
     meta: {
       dominio: new URL(base).host, paginaDoBotao: `${base}/configuracoes/whatsapp`, privacidade: `${base}/privacidade`, termos: `${base}/termos`,
@@ -236,6 +237,9 @@ async function finalizarConexao(token: string, opcoes: { modo: ModoConexao; waba
     secrets: { accessToken: token },
   }, ator);
   await garantirSegredosLocais(ator);
+  // Coexistência: contatos e histórico do celular são pedidos 5 min depois (a Meta valida o número antes).
+  await gravarPedido(opcoes.modo === 'coexistencia' ? { agendadoPara: new Date(Date.now() + ESPERA_SYNC_MS).toISOString() } : null);
+  await db().prepare("DELETE FROM metadata WHERE key = 'historySync'").run();
   await recordManagementTest('conexao', true, `WhatsApp conectado: ${numero.numero || numero.id}${numero.nome ? ` (${numero.nome})` : ''}.`, [`Modo: ${opcoes.modo}.`, `Conta: ${waba}.`, ...avisos], ator);
   return { conectado: true, numero: numero.numero, nome: numero.nome, qualidade: numero.qualidade, avisos };
 }
@@ -267,6 +271,95 @@ export async function desconectar(ator: string) {
     values: { phoneNumberId: '', businessAccountId: '', connectedPhone: '', connectedName: '', connectionMode: '', connectedAt: '' },
     ...(secrets.accessToken ? { removeSecrets: ['accessToken'] } : {}),
   }, ator);
+  await gravarPedido(null);
   await recordManagementTest('conexao', true, 'WhatsApp desconectado no ERP. As conversas foram mantidas.', [], ator);
   return { conectado: false };
+}
+
+/* ------------------------------------------------------------------ histórico e contatos do celular */
+// Coexistência (roteiro do ERP da Le Ange): passados 5 min da conexão, confirma o número no app e na Cloud API, pede os
+// contatos (smb_app_state_sync) e, segundos depois, o histórico (history). Cada pedido sai uma única vez e só vale até 24 h
+// após conectar; a Meta entrega o resultado pelo webhook (core.ts guarda contatos e mensagens). Sem rotina agendada na
+// hospedagem, o pedido dispara quando a tela de conexão está aberta, a cada webhook recebido e pelo botão "Importar agora".
+
+const ESPERA_SYNC_MS = 5 * 60_000;
+const PRAZO_SYNC_MS = 24 * 3600_000;
+const INTERVALO_SYNC_MS = 8_000;
+type Passo = { estado: 'pedido' | 'erro'; em: string; requestId?: string; erro?: string };
+type Pedido = { agendadoPara?: string; contatos?: Passo; historico?: Passo; esperando?: string; bloqueio?: string };
+
+async function lerPedido(): Promise<Pedido> {
+  const linha = await db().prepare("SELECT value FROM metadata WHERE key = 'historyRequest'").get() as { value: string } | undefined;
+  try { return objeto(JSON.parse(linha?.value || '{}')) as Pedido; } catch { return {}; }
+}
+async function gravarPedido(pedido: Pedido | null) {
+  if (!pedido) { await db().prepare("DELETE FROM metadata WHERE key IN ('historyRequest', 'historySync')").run(); return; }
+  await db().prepare('INSERT INTO metadata VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('historyRequest', JSON.stringify(pedido).slice(0, 4000));
+}
+
+async function situacaoHistorico(conectadoEm: string) {
+  const pedido = await lerPedido(), recebido = await historySyncProgress();
+  const limite = Date.parse(conectadoEm) + PRAZO_SYNC_MS;
+  const estado = recebido.refused ? 'recusado'
+    : pedido.historico?.estado === 'pedido' ? (recebido.progress >= 100 ? 'concluido' : 'importando')
+    : pedido.bloqueio || pedido.historico?.estado === 'erro' ? 'erro'
+    : Number.isFinite(limite) && Date.now() > limite ? 'expirado'
+    : 'agendado';
+  return {
+    estado, progresso: recebido.progress, ultimoLote: recebido.lastAt, agendadoPara: pedido.agendadoPara ?? null, prazo: Number.isFinite(limite) ? new Date(limite).toISOString() : null,
+    contatosPedidos: pedido.contatos?.estado === 'pedido', esperando: pedido.esperando ?? null, erro: pedido.bloqueio ?? pedido.historico?.erro ?? pedido.contatos?.erro ?? null,
+  };
+}
+
+export type ResultadoSync = { resultado: 'pedido' | 'ja_pedido' | 'esperando' | 'aguardando_horario' | 'parado' | 'ocupado' | 'nao_se_aplica' | 'expirado'; mensagem: string };
+
+/** Pede contatos e histórico quando chega a hora. `automatico`: só age no horário e não repete pedido com erro. */
+export async function sincronizarHistorico(ator: string, automatico = false, fetcher: typeof fetch = fetch, intervaloMs = INTERVALO_SYNC_MS): Promise<ResultadoSync> {
+  const { values, secrets, versao } = await configuracaoAtual();
+  const conectado = secrets.accessToken.length >= 20 && ehId(values.phoneNumberId) && ehId(values.businessAccountId);
+  if (!conectado || values.connectionMode !== 'coexistencia') return { resultado: 'nao_se_aplica', mensagem: 'O histórico do celular só existe na conexão com o app WhatsApp Business.' };
+  const pedido = await lerPedido();
+  if (pedido.historico?.estado === 'pedido') return { resultado: 'ja_pedido', mensagem: 'O histórico já foi pedido; a Meta entrega em lotes.' };
+  if (Date.parse(values.connectedAt) + PRAZO_SYNC_MS < Date.now()) return { resultado: 'expirado', mensagem: 'A Meta só aceita o pedido do histórico nas primeiras 24 horas após conectar. Para importar, conecte o número de novo.' };
+  if (automatico && (pedido.bloqueio || pedido.historico?.estado === 'erro' || pedido.contatos?.estado === 'erro')) return { resultado: 'parado', mensagem: pedido.bloqueio || 'O pedido parou com erro; use "Importar agora".' };
+  if (automatico && pedido.agendadoPara && Date.parse(pedido.agendadoPara) > Date.now()) return { resultado: 'aguardando_horario', mensagem: 'O pedido sai 5 minutos depois da conexão.' };
+  // Uma execução por vez (tela aberta, webhook e botão podem coincidir).
+  if (await limited('whatsapp-sync-historico', 1, 45_000)) return { resultado: 'ocupado', mensagem: 'O pedido já está em andamento.' };
+  const token = secrets.accessToken, fone = values.phoneNumberId;
+  const agora = () => new Date().toISOString();
+  const atual: Pedido = { ...pedido, bloqueio: undefined, esperando: undefined };
+  const parar = async (motivo: string, esperar = false) => {
+    if (esperar) await gravarPedido({ ...atual, esperando: motivo, agendadoPara: new Date(Date.now() + 60_000).toISOString() });
+    else await gravarPedido({ ...atual, bloqueio: motivo });
+    await recordManagementTest('historico', false, esperar ? `Histórico do celular: aguardando (${motivo}).` : `Histórico do celular parado: ${motivo}`, [], ator);
+    return { resultado: esperar ? 'esperando' as const : 'parado' as const, mensagem: motivo };
+  };
+
+  // 1) O app inscrito na conta (repetível).
+  try { await meta(versao, `${values.businessAccountId}/subscribed_apps`, { token, metodo: 'POST', corpo: {}, contexto: 'inscrição do webhook' }, fetcher); }
+  catch (erro) { return parar(erro instanceof Error ? erro.message : 'Inscrição não confirmada.', erro instanceof WhatsAppError && erro.code === 'META_80008'); }
+  // 2) O número no app do celular e na Cloud API.
+  try {
+    const numero = await meta(versao, fone, { token, query: { fields: 'id,is_on_biz_app,platform_type' }, contexto: 'consulta do número' }, fetcher);
+    if (numero.is_on_biz_app !== true || numero.platform_type !== 'CLOUD_API') return parar('A Meta ainda está confirmando o número no app e na API. Tentamos de novo em 1 minuto.', true);
+  } catch (erro) { return parar(erro instanceof Error ? erro.message : 'Número não confirmado.', true); }
+  // 3) Contatos (pedido único) e 4) histórico (pedido único), com alguns segundos entre eles.
+  const pedir = async (tipo: 'smb_app_state_sync' | 'history'): Promise<Passo> => {
+    try {
+      const resposta = await meta(versao, `${fone}/smb_app_data`, { token, metodo: 'POST', corpo: { messaging_product: 'whatsapp', sync_type: tipo }, contexto: tipo === 'history' ? 'pedido do histórico' : 'pedido dos contatos' }, fetcher);
+      const requestId = texto(resposta.request_id, 200);
+      return requestId ? { estado: 'pedido', em: agora(), requestId } : { estado: 'erro', em: agora(), erro: 'A Meta não confirmou o pedido.' };
+    } catch (erro) { return { estado: 'erro', em: agora(), erro: erro instanceof Error ? erro.message : 'Pedido recusado.' }; }
+  };
+  if (!atual.contatos) {
+    atual.contatos = await pedir('smb_app_state_sync');
+    await gravarPedido(atual);
+    if (atual.contatos.estado === 'erro') return parar(`Contatos: ${atual.contatos.erro}`);
+    await new Promise((ok) => setTimeout(ok, intervaloMs));
+  } else if (atual.contatos.estado === 'erro') return parar(`Contatos: ${atual.contatos.erro} O pedido é único: para tentar de novo, conecte o número outra vez.`);
+  atual.historico = await pedir('history');
+  await gravarPedido({ ...atual, agendadoPara: undefined });
+  if (atual.historico.estado === 'erro') return parar(`Histórico: ${atual.historico.erro}`);
+  await recordManagementTest('historico', true, 'Contatos e histórico do celular pedidos à Meta. Chegam pelo webhook em lotes.', [], ator);
+  return { resultado: 'pedido', mensagem: 'Pedido feito. Contatos e conversas chegam em lotes nos próximos minutos.' };
 }

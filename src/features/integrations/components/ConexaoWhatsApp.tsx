@@ -27,6 +27,7 @@ type Situacao = {
   criptografiaPronta: boolean;
   app: { appId: string; configId: string; versao: string; appSecretSalvo: boolean; cadastroIncorporadoPronto: boolean; faltando: string[]; tokenPossivel: boolean };
   conexao: { conectado: boolean; numero: string; nome: string; modo: string; desde: string; phoneNumberId: string; wabaId: string };
+  historico: Historico | null;
   webhook: { url: string; verifyToken: string; campos: string[]; ultimoEvento: string | null };
   meta: { dominio: string; paginaDoBotao: string; privacidade: string; termos: string; exclusao: string; exclusaoCallback: string };
 };
@@ -34,6 +35,8 @@ type Preparo = { appId: string; configId: string; versao: string; state: string 
 type ResultadoConexao = { numero: string; nome: string; avisos: string[]; situacao: Situacao };
 type ResultadoTeste = { numero: string; nome: string; qualidade: string; inscrito: boolean; reinscrito: boolean; ultimoEvento: string | null };
 type Escolha = { id: string; numero: string; nome: string };
+type Historico = { estado: "agendado" | "importando" | "concluido" | "recusado" | "erro" | "expirado"; progresso: number; ultimoLote: string | null; agendadoPara: string | null; prazo: string | null; contatosPedidos: boolean; esperando: string | null; erro: string | null };
+type ResultadoHistorico = { resultado: string; mensagem: string; situacao: Situacao };
 
 const MODOS = {
   coexistencia: { titulo: "Usar o número do app WhatsApp Business", texto: "O número continua funcionando no celular e as conversas também chegam ao ERP." },
@@ -115,6 +118,7 @@ function CartaoConexao({ situacao, aoMudar }: { situacao: Situacao; aoMudar: (s:
             </div>
           </Numero>
           <Note>Última mensagem recebida pelo webhook: {formatWhatsAppDate(situacao.webhook.ultimoEvento)}. Mande um “oi” para o número e confira em Conversas.</Note>
+          {situacao.historico && <HistoricoCelular historico={situacao.historico} aoMudar={aoMudar} />}
           {teste && (
             <Notice role="status">
               {teste.inscrito ? "Tudo certo: a Meta respondeu pelo número" : "O número respondeu, mas a inscrição do webhook não foi confirmada"} {teste.numero}
@@ -143,6 +147,54 @@ function CartaoConexao({ situacao, aoMudar }: { situacao: Situacao; aoMudar: (s:
       {sucesso && <Notice role="status">{sucesso}</Notice>}
       {erro && <Notice $error role="alert">{erro}</Notice>}
     </Painel>
+  );
+}
+
+/** Contatos e conversas do app do celular (coexistência): pedido 5 min depois de conectar, uma vez, até 24 h. */
+function HistoricoCelular({ historico, aoMudar }: { historico: Historico; aoMudar: (s: Situacao) => void }) {
+  const [pedindo, setPedindo] = useState(false);
+  const [aviso, setAviso] = useState("");
+
+  const pedir = useCallback(async (automatico: boolean) => {
+    setPedindo(true);
+    try {
+      const resposta = await whatsappRequest<ResultadoHistorico>("conexao", { body: { acao: "historico", automatico } });
+      aoMudar(resposta.situacao);
+      if (!automatico || !["aguardando_horario", "ocupado"].includes(resposta.resultado)) setAviso(resposta.mensagem);
+    } catch (falha) { setAviso(errorMessage(falha)); }
+    finally { setPedindo(false); }
+  }, [aoMudar]);
+
+  // Com a tela aberta: no horário marcado, o próprio navegador dispara o pedido; importando, acompanha o progresso.
+  useEffect(() => {
+    if (historico.estado === "agendado") {
+      const espera = Math.max(2_000, (historico.agendadoPara ? Date.parse(historico.agendadoPara) : Date.now()) - Date.now() + 1_000);
+      const timer = window.setTimeout(() => void pedir(true), Math.min(espera, 10 * 60_000));
+      return () => window.clearTimeout(timer);
+    }
+    if (historico.estado === "importando") {
+      const timer = window.setInterval(async () => { try { aoMudar(await whatsappRequest<Situacao>("conexao")); } catch { /* tenta no próximo */ } }, 20_000);
+      return () => window.clearInterval(timer);
+    }
+  }, [historico.estado, historico.agendadoPara, pedir, aoMudar]);
+
+  const texto = {
+    agendado: historico.esperando ?? `Os contatos e as conversas do celular são pedidos à Meta ${historico.agendadoPara ? `às ${formatWhatsAppDate(historico.agendadoPara, false)}` : "em instantes"} (5 minutos depois de conectar).`,
+    importando: `Importando contatos e conversas do celular${historico.progresso ? `: ${historico.progresso}%` : ""}. Os lotes chegam pelo webhook.`,
+    concluido: "Contatos e conversas do celular importados.",
+    recusado: "No celular, foi recusado o compartilhamento do histórico. Só as conversas novas chegam ao ERP.",
+    erro: historico.erro ?? "O pedido do histórico parou com erro.",
+    expirado: "O prazo de 24 horas para pedir o histórico passou. Só as conversas novas chegam ao ERP.",
+  }[historico.estado];
+
+  return (
+    <Notice $error={historico.estado === "erro"} role="status">
+      <Actions>
+        <span><strong>Histórico do celular:</strong> {texto}</span>
+        {["agendado", "erro"].includes(historico.estado) && <Button size="sm" variant="secondary" loading={pedindo} onClick={() => void pedir(false)}>{historico.estado === "erro" ? "Tentar de novo" : "Importar agora"}</Button>}
+      </Actions>
+      {aviso && aviso !== texto && <Note>{aviso}</Note>}
+    </Notice>
   );
 }
 
