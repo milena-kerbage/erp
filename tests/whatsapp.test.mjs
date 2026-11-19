@@ -34,10 +34,11 @@ beforeEach(async () => {
 });
 after(async () => { (await core.closeDatabase()); rmSync(folder, {recursive: true, force: true}); });
 
-test('configuração exige versão explícita e segredos apenas servidor', async () => {
+test('configuração usa versão explícita (padrão quando ausente) e segredos apenas servidor', async () => {
   assert.equal(core.configuration().configured, true);
   const version = process.env.WHATSAPP_GRAPH_VERSION; delete process.env.WHATSAPP_GRAPH_VERSION;
-  assert.equal(core.configuration().configured, false); process.env.WHATSAPP_GRAPH_VERSION = version;
+  assert.equal(core.configuration().apiVersion, managedConfig.GRAPH_VERSION_PADRAO); assert.equal(core.configuration().configured, true);
+  process.env.WHATSAPP_GRAPH_VERSION = 'v24'; assert.equal(core.configuration().configured, false); process.env.WHATSAPP_GRAPH_VERSION = version;
   const base = process.env.PUBLIC_BASE_URL; process.env.PUBLIC_BASE_URL = 'https://user:password@example.test';
   assert.equal(core.configuration().configured, false); process.env.PUBLIC_BASE_URL = base;
   assert.equal(statSync(process.env.WHATSAPP_DB_PATH).mode & 0o777, 0o600);

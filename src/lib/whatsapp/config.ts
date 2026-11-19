@@ -2,21 +2,27 @@ import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:
 import { databaseFor, storageConfiguration } from '../database.ts';
 
 export class IntegrationConfigurationError extends Error {
-  status: number; code: string;
-  constructor(status: number, message: string, code = 'INTEGRATION_CONFIG_ERROR') { super(message); this.status = status; this.code = code; }
+  status: number; code: string; field?: string;
+  constructor(status: number, message: string, code = 'INTEGRATION_CONFIG_ERROR', field?: string) { super(message); this.status = status; this.code = code; this.field = field; }
 }
+/** Versão da Graph API usada quando a instalação não define outra (a mesma do ERP da Le Ange em produção). */
+export const GRAPH_VERSION_PADRAO = 'v26.0';
+const NOMES_SEGREDOS: Record<string, string> = {accessToken: 'Token de acesso da Meta', appSecret: 'App Secret (Chave secreta do aplicativo)', verifyToken: 'Token de verificação do webhook', suppressionSecret: 'Chave de proteção da supressão'};
+const MINIMOS_SEGREDOS: Record<string, number> = {accessToken: 20, appSecret: 16, verifyToken: 16, suppressionSecret: 32};
+/** Limpa o que costuma vir junto ao colar (espaços, quebras, "Bearer "); credenciais da Meta não têm espaços. */
+export function limparSegredo(value: string) { return value.replace(/^\s*bearer\s+/i, '').replace(/[\s\u00a0\u200b-\u200d\ufeff]+/g, ''); }
 export const secretKeys = ['appSecret', 'accessToken', 'verifyToken', 'suppressionSecret'] as const;
 export type SecretKey = typeof secretKeys[number];
-export type IntegrationValues = {graphVersion: string; appId: string; phoneNumberId: string; businessAccountId: string; publicBaseUrl: string; retentionDays: number; legalEntityName: string; legalCnpj: string; legalAddress: string; legalPrivacyEmail: string; legalSupportEmail: string; legalWhatsAppPhone: string};
+export type IntegrationValues = {graphVersion: string; appId: string; embeddedConfigId: string; phoneNumberId: string; businessAccountId: string; connectedPhone: string; connectedName: string; connectionMode: string; connectedAt: string; publicBaseUrl: string; retentionDays: number; legalEntityName: string; legalCnpj: string; legalAddress: string; legalPrivacyEmail: string; legalSupportEmail: string; legalWhatsAppPhone: string};
 export const integrationSettingsSchema = `CREATE TABLE IF NOT EXISTS integration_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, encrypted INTEGER NOT NULL DEFAULT 0, updated INTEGER NOT NULL, actor TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS integration_audit (id TEXT PRIMARY KEY, action TEXT NOT NULL, keys_json TEXT NOT NULL, actor TEXT NOT NULL, created INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS suppression (phone_hash TEXT PRIMARY KEY, created INTEGER NOT NULL);`;
 export const settingsDb = () => databaseFor('whatsapp', process.env.WHATSAPP_DB_PATH || '.data/whatsapp.sqlite', integrationSettingsSchema);
 const environmentSecrets = (): Record<SecretKey, string> => ({appSecret: process.env.META_APP_SECRET || process.env.WHATSAPP_APP_SECRET || '', accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '', verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || '', suppressionSecret: process.env.WHATSAPP_SUPPRESSION_SECRET || ''});
-const valueKeys: Array<keyof IntegrationValues> = ['graphVersion','appId','phoneNumberId','businessAccountId','publicBaseUrl','retentionDays','legalEntityName','legalCnpj','legalAddress','legalPrivacyEmail','legalSupportEmail','legalWhatsAppPhone'];
+const valueKeys: Array<keyof IntegrationValues> = ['graphVersion','appId','embeddedConfigId','phoneNumberId','businessAccountId','connectedPhone','connectedName','connectionMode','connectedAt','publicBaseUrl','retentionDays','legalEntityName','legalCnpj','legalAddress','legalPrivacyEmail','legalSupportEmail','legalWhatsAppPhone'];
 export function environmentValues(): IntegrationValues {
   const days = Number(process.env.WHATSAPP_RETENTION_DAYS || 90);
-  return {graphVersion: process.env.WHATSAPP_GRAPH_VERSION || '', appId: process.env.META_APP_ID || '', phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '', businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '', publicBaseUrl: process.env.PUBLIC_BASE_URL || process.env.WHATSAPP_PUBLIC_BASE_URL || process.env.AUTH_ORIGIN || '', retentionDays: Number.isInteger(days) && days >= 1 && days <= 3650 ? days : 90, legalEntityName: process.env.LEGAL_ENTITY_NAME || 'Milena Cavalcante Kerbage', legalCnpj: process.env.LEGAL_CNPJ || '13.592.162/0001-08', legalAddress: process.env.LEGAL_ADDRESS || 'Rua Professor Heraclito, 233, Vicente Pinzon, Fortaleza - CE, CEP 60181-245', legalPrivacyEmail: process.env.LEGAL_PRIVACY_EMAIL || 'milenakerbageatelie@gmail.com', legalSupportEmail: process.env.LEGAL_SUPPORT_EMAIL || 'milenakerbageatelie@gmail.com', legalWhatsAppPhone: process.env.LEGAL_WHATSAPP_PHONE || ''};
+  return {graphVersion: process.env.WHATSAPP_GRAPH_VERSION || GRAPH_VERSION_PADRAO, appId: process.env.META_APP_ID || '', embeddedConfigId: process.env.WHATSAPP_EMBEDDED_CONFIG_ID || '', phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '', businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '', connectedPhone: '', connectedName: '', connectionMode: '', connectedAt: '', publicBaseUrl: process.env.PUBLIC_BASE_URL || process.env.WHATSAPP_PUBLIC_BASE_URL || process.env.AUTH_ORIGIN || '', retentionDays: Number.isInteger(days) && days >= 1 && days <= 3650 ? days : 90, legalEntityName: process.env.LEGAL_ENTITY_NAME || 'Milena Cavalcante Kerbage', legalCnpj: process.env.LEGAL_CNPJ || '13.592.162/0001-08', legalAddress: process.env.LEGAL_ADDRESS || 'Rua Professor Heraclito, 233, Vicente Pinzon, Fortaleza - CE, CEP 60181-245', legalPrivacyEmail: process.env.LEGAL_PRIVACY_EMAIL || 'milenakerbageatelie@gmail.com', legalSupportEmail: process.env.LEGAL_SUPPORT_EMAIL || 'milenakerbageatelie@gmail.com', legalWhatsAppPhone: process.env.LEGAL_WHATSAPP_PHONE || ''};
 }
 function encryptionKey() {
   const encoded = process.env.INTEGRATION_ENCRYPTION_KEY || '';
@@ -100,10 +106,12 @@ function validateValues(input: Record<string, unknown>) {
   for (const [key, value] of Object.entries(input)) {
     if (!valueKeys.includes(key as keyof IntegrationValues)) throw new IntegrationConfigurationError(400, 'Campo de configuração desconhecido.', 'INVALID_CONFIG_FIELD');
     if (key === 'retentionDays') { if (!Number.isInteger(value) || Number(value) < 1 || Number(value) > 3650) throw new IntegrationConfigurationError(400, 'Retenção deve ter de 1 a 3650 dias.', 'INVALID_RETENTION'); Object.assign(result, {[key]: value}); continue; }
-    if (typeof value !== 'string' || value.length > 1000) throw new IntegrationConfigurationError(400, 'Campo de configuração inválido.', 'INVALID_CONFIG_VALUE');
+    if (typeof value !== 'string' || value.length > 1000) throw new IntegrationConfigurationError(400, 'Campo de configuração inválido.', 'INVALID_CONFIG_VALUE', key);
     const text = value.trim();
-    if (text && key === 'graphVersion' && !/^v[0-9]{2,3}\.0$/.test(text)) throw new IntegrationConfigurationError(400, 'Use uma versão Graph explícita no formato vXX.0.', 'INVALID_GRAPH_VERSION');
-    if (text && ['appId','phoneNumberId','businessAccountId'].includes(key) && !/^[0-9]{5,30}$/.test(text)) throw new IntegrationConfigurationError(400, 'Os IDs Meta devem conter de 5 a 30 dígitos.', 'INVALID_META_ID');
+    if (text && key === 'graphVersion' && !/^v[0-9]{2,3}\.0$/.test(text)) throw new IntegrationConfigurationError(400, 'Use uma versão Graph explícita no formato vXX.0.', 'INVALID_GRAPH_VERSION', key);
+    if (text && ['appId','embeddedConfigId','phoneNumberId','businessAccountId'].includes(key) && !/^[0-9]{5,30}$/.test(text)) throw new IntegrationConfigurationError(400, key === 'appId' ? 'O App ID tem só números (de 5 a 30 dígitos). Copie em Meta for Developers > Configurações do app > Básico.' : key === 'embeddedConfigId' ? 'O ID da configuração tem só números. Copie em Login do Facebook para Empresas > Configurações.' : 'Os IDs Meta devem conter de 5 a 30 dígitos.', 'INVALID_META_ID', key);
+    if (key === 'connectionMode' && text && !['coexistencia', 'novo', 'token'].includes(text)) throw new IntegrationConfigurationError(400, 'Modo de conexão inválido.', 'INVALID_CONFIG_VALUE', key);
+    if (['connectedPhone','connectedName','connectedAt'].includes(key) && text.length > 200) throw new IntegrationConfigurationError(400, 'Dado da conexão inválido.', 'INVALID_CONFIG_VALUE', key);
     if (text && key === 'publicBaseUrl') { try { const url = new URL(text); if (url.protocol !== 'https:' || url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw new Error(); } catch { throw new IntegrationConfigurationError(400, 'Informe somente a origem pública HTTPS, sem caminho ou credenciais.', 'INVALID_PUBLIC_URL'); } }
     if (text && ['legalPrivacyEmail','legalSupportEmail'].includes(key) && (text.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text))) throw new IntegrationConfigurationError(400, 'E-mail de contato inválido.', 'INVALID_LEGAL_EMAIL');
     if (text && key === 'legalWhatsAppPhone' && !/^[1-9][0-9]{7,14}$/.test(text)) throw new IntegrationConfigurationError(400, 'Telefone de contato deve conter DDI e somente dígitos.', 'INVALID_LEGAL_PHONE');
@@ -117,10 +125,11 @@ export async function saveSettings(input: Record<string, unknown>, actor: string
   if (input.values !== undefined && !isObject(input.values) || input.secrets !== undefined && !isObject(input.secrets) || input.removeSecrets !== undefined && !Array.isArray(input.removeSecrets)) throw new IntegrationConfigurationError(400, 'Formato de configuração inválido.', 'INVALID_CONFIG_VALUE');
   const values = validateValues(isObject(input.values) ? input.values : {}), secrets: Partial<Record<SecretKey, string>> = {};
   for (const [key, value] of Object.entries(isObject(input.secrets) ? input.secrets : {})) {
-    if (!secretKeys.includes(key as SecretKey) || typeof value !== 'string') throw new IntegrationConfigurationError(400, 'Segredo inválido.', 'INVALID_SECRET');
-    if (!value.trim()) continue;
-    if (value.length > 4096 || value.length < (key === 'accessToken' ? 20 : key === 'suppressionSecret' ? 32 : 16) || /\s/.test(value)) throw new IntegrationConfigurationError(400, 'Segredo fora do formato ou tamanho permitido.', 'INVALID_SECRET');
-    secrets[key as SecretKey] = value;
+    if (!secretKeys.includes(key as SecretKey) || typeof value !== 'string') throw new IntegrationConfigurationError(400, 'Segredo inválido.', 'INVALID_SECRET', key);
+    const limpo = limparSegredo(value);
+    if (!limpo) continue;
+    if (limpo.length > 8192 || limpo.length < MINIMOS_SEGREDOS[key]) throw new IntegrationConfigurationError(400, `${NOMES_SEGREDOS[key]}: ${limpo.length < MINIMOS_SEGREDOS[key] ? `tem ${limpo.length} caracteres e o mínimo é ${MINIMOS_SEGREDOS[key]}. Confira se o navegador não preencheu uma senha salva no lugar` : 'é longo demais'}.`, 'INVALID_SECRET', key);
+    secrets[key as SecretKey] = limpo;
   }
   for (const key of Array.isArray(input.removeSecrets) ? input.removeSecrets : []) {
     if (!secretKeys.includes(key as SecretKey) || secrets[key as SecretKey] !== undefined) throw new IntegrationConfigurationError(400, 'Remoção de segredo inválida.', 'INVALID_SECRET');

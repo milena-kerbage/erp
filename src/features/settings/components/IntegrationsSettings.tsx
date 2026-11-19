@@ -27,7 +27,6 @@ import { Menu, MenuItem } from "@/components/ui/Menu";
 import { TextField } from "@/components/ui/TextField";
 import { formatDate } from "@/lib/format";
 import { maskEmail, maskInstagram } from "@/lib/masks";
-import { IntegrationManagerPanel } from "@/features/integrations/components/IntegrationManagerPanel";
 import { Notice } from "@/features/whatsapp/components/shared";
 import type { Tone } from "@/styles/theme";
 import { useWorkspace } from "../store";
@@ -272,9 +271,7 @@ export function IntegrationsSettings() {
         description="Gerencie as integrações oficiais de WhatsApp e Instagram do Ateliê."
       />
 
-      <IntegrationManagerPanel />
-
-      <Notice>O WhatsApp é configurado no painel acima. Abra Configurar no Instagram para conectar o perfil e consultar as URLs da Meta.</Notice>
+      <Notice>O WhatsApp se conecta em <a href="/configuracoes/whatsapp">Configurações &gt; WhatsApp</a>: clique em Conectar com a Meta e escolha o número. Abra Configurar no Instagram para conectar o perfil.</Notice>
 
       {view === "table" ? (
         <TableCard>

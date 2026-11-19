@@ -3,11 +3,17 @@ import { requestOnce } from '@/lib/request';
 export class WhatsAppRequestError extends Error {
   readonly status: number;
   readonly code?: string;
-  constructor(message: string, status: number, code?: string) {
+  /** Campo da tela que causou o erro, quando o servidor informa. */
+  readonly field?: string;
+  /** Dados extras seguros (ex.: números para escolher). */
+  readonly details?: unknown;
+  constructor(message: string, status: number, code?: string, field?: string, details?: unknown) {
     super(message);
     this.name = "WhatsAppRequestError";
     this.status = status;
     this.code = code;
+    this.field = field;
+    this.details = details;
   }
 }
 
@@ -21,12 +27,14 @@ export async function whatsappRequest<T>(path: string, options: { body?: unknown
     headers: options.body === undefined ? undefined : { "Content-Type": "application/json" },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
-  const data = await response.json().catch(() => null) as T & { error?: string; code?: string } | null;
+  const data = await response.json().catch(() => null) as T & { error?: string; code?: string; field?: string; details?: unknown } | null;
   if (!response.ok) {
     throw new WhatsAppRequestError(
       response.status === 401 ? "Sua sessão expirou. Entre novamente para continuar." : data?.error || `A solicitação falhou (HTTP ${response.status}).`,
       response.status,
       data?.code,
+      data?.field,
+      data?.details,
     );
   }
   if (!data) throw new WhatsAppRequestError("O servidor retornou uma resposta inválida.", response.status);

@@ -7,7 +7,9 @@ import { createHash, createHmac, timingSafeEqual, randomUUID } from 'node:crypto
 export class WhatsAppError extends Error {
   status: number;
   code: string;
-  constructor(status: number, message: string, code = 'WHATSAPP_ERROR') { super(message); this.status = status; this.code = code; }
+  field?: string; // campo da tela que causou o erro (a interface destaca e foca nele)
+  details?: unknown; // dados seguros para a interface (ex.: números para escolher)
+  constructor(status: number, message: string, code = 'WHATSAPP_ERROR', field?: string, details?: unknown) { super(message); this.status = status; this.code = code; this.field = field; this.details = details; }
 }
 export type JsonObject = Record<string, unknown>;
 export type ConsentStatus = 'unknown' | 'granted' | 'revoked';
@@ -191,6 +193,25 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
       if (entry.id !== config.businessAccountId) { ignored++; continue; }
       for (const changeValue of array(entry.changes)) {
         const change = object(changeValue), value = object(change.value);
+        if (change.field === 'smb_message_echoes' && object(value.metadata).phone_number_id === config.phoneNumberId) {
+          // Coexistência: mensagens que a equipe enviou pelo app WhatsApp Business do celular entram como enviadas.
+          for (const item of array(value.message_echoes)) {
+            const echo = object(item), id = string(echo.id, 300), type = string(echo.type, 30) || 'unknown';
+            let phone: string; try { phone = phoneNumber(echo.to); } catch { ignored++; continue; }
+            const timestamp = Number(echo.timestamp) * 1000;
+            if (!id || !Number.isFinite(timestamp) || timestamp < now - config.retentionDays * DAY || timestamp > now + 300_000) { ignored++; continue; }
+            await lockContact(phone);
+            if (await suppressed(phone, config.suppressionSecret)) { ignored++; continue; }
+            if (!(await database.prepare('INSERT INTO webhook_events VALUES (?, ?) ON CONFLICT(event_key) DO NOTHING').run(digest(`echo:${id}`), now)).changes) { ignored++; continue; }
+            const media = object(echo[type]);
+            const text = type === 'text' ? string(object(echo.text).body, 4096) : string(media.caption, 4096) || `[${type}]`;
+            const created = Math.min(timestamp, now);
+            await ensureContact(phone, undefined, created);
+            await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read) VALUES (?, ?, 'outbound', ?, ?, 'sent', 3, ?, 1) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, text, created);
+            processed++;
+          }
+          continue;
+        }
         if (change.field !== 'messages' || object(value.metadata).phone_number_id !== config.phoneNumberId) { ignored++; continue; }
         const names = new Map(array(value.contacts).map(item => { const contact = object(item); return [string(contact.wa_id, 20), string(object(contact.profile).name, 200)]; }));
         for (const item of array(value.messages)) {

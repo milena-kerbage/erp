@@ -6,6 +6,21 @@ Este documento descreve por que a integração existe, o que foi implementado, c
 
 Código pronto e testes locais não equivalem a uma conta Meta ativada, URL publicada ou mensagem real entregue. O usuário informou que a conta/aplicativo Meta e o número ainda não foram criados. Também faltam acessos/configurações reais de Vercel e Supabase. Tokens, número, WABA, DNS, HTTPS, banco e canais de contato precisam ser fornecidos e validados. A aplicação informa configuração pendente e não apresenta uma integração fictícia como conectada. O gestor encontra a sequência de dependências e aceite em `docs/pendencias-implantacao-whatsapp.md` e a operação pelo painel em `docs/painel-gestor-whatsapp.md`.
 
+## 0. Conectar em poucos cliques (nov/2026)
+
+Fluxo trazido do ERP da Le Ange (`src/lib/whatsapp/conexao.ts`, tela `ConexaoWhatsApp` em **Configurações > WhatsApp**, API `GET|POST /api/whatsapp/conexao`). O painel técnico antigo continua em "Diagnóstico técnico (avançado)".
+
+1. **App da Meta (uma vez):** App ID, App Secret e o ID da configuração do cadastro incorporado (Login do Facebook para Empresas > Configurações). O par App ID + App Secret é conferido na Meta (`client_credentials`) antes de gravar; erro aponta o campo. Ao salvar, o token de verificação do webhook e a chave de supressão são gerados **só se ainda não existirem**.
+2. **Conectar com a Meta:** cadastro incorporado v4 pelo SDK JS (`facebookSdk.ts`). Modo "app WhatsApp Business" (coexistência: o número continua no celular; `featureType=whatsapp_business_app_onboarding`) ou "número novo" (registra o número com PIN). O `state` é de uso único, preso à sessão do gestor (`management_oauth_states`, 10 min). O servidor troca o `code`, confere o token (`debug_token`: app certo e escopos `whatsapp_business_management` + `whatsapp_business_messaging`), descobre conta e número, inscreve o app (`POST /{waba}/subscribed_apps`) e grava tudo cifrado.
+3. **Alternativa sem cadastro incorporado:** colar um token de usuário do sistema; conta e número são descobertos pelo próprio token (com vários números, o gestor escolhe).
+4. **Conectado:** "Testar conexão" consulta o número e refaz a inscrição se tiver caído; "Desconectar" apaga só o acesso e os IDs (conversas, App Secret, token de verificação e chave de supressão ficam).
+
+**Chaves do webhook nunca mudam sozinhas:** URL `/api/whatsapp/webhook`, token de verificação e App Secret só mudam se o gestor digitar um novo (teste `tests/whatsapp-conexao.test.mjs`). Trocar o número ou reconectar não exige mexer no app da Meta.
+
+**Cadastro na Meta (a tela mostra com botão de copiar):** domínio do SDK JS e URI de redirecionamento = `https://app.<domínio>/configuracoes/whatsapp`; webhook e token de verificação; campos `messages`, `smb_message_echoes` (mensagens enviadas pelo celular entram na conversa), `account_update`, `message_template_status_update`, `phone_number_quality_update`. O cadastro incorporado exige o app como Tech Provider/Solution Partner; sem isso, use o token de usuário do sistema.
+
+**Erro antigo "Segredo fora do formato ou tamanho permitido":** o navegador preenchia a senha salva no campo do token (campo `password`). Os campos de segredo agora são texto mascarado sem preenchimento automático, os valores colados são limpos (`Bearer`, espaços) e a mensagem diz o campo e o tamanho.
+
 ## 1. Uso previsto e fronteiras do produto
 
 ### 1.1 Por que conectar o WhatsApp
