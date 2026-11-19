@@ -183,4 +183,11 @@ test('histórico do celular: contatos ganham nome e conversas antigas entram lid
   assert.equal((await conexao.situacaoConexao('https://localhost')).historico.progresso, 40);
   await core.receiveWebhook(lote(100, []), agora);
   assert.equal((await conexao.situacaoConexao('https://localhost')).historico.estado, 'concluido');
+  // A lista mostra só quem tem conversa, da mais recente para a mais antiga; contato só da agenda fica fora.
+  await core.receiveWebhook(evento('smb_app_state_sync', { state_sync: [{ type: 'contact', action: 'add', contact: { phone_number: '5585966665555', full_name: 'Só agenda' }, metadata: { timestamp: String(Math.floor(agora / 1000)) } }] }), agora);
+  const lista = await core.conversations();
+  assert.ok(!lista.some((conversa) => conversa.phone === '5585966665555'));
+  assert.ok(lista.some((conversa) => conversa.phone === cliente));
+  const datas = lista.map((conversa) => Date.parse(conversa.lastMessageAt));
+  assert.deepEqual(datas, [...datas].sort((a, b) => b - a));
 });

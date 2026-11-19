@@ -132,7 +132,8 @@ export async function conversation(phone: string) {
 }
 export async function conversations(limit = 100, offset = 0) {
   await maintenance();
-  const rows = await db().prepare(`${summarySql} WHERE opted_out = 0 ORDER BY updated DESC LIMIT ? OFFSET ?`).all(limit, offset) as ConversationRow[];
+  // Só quem tem mensagem, da mais recente para a mais antiga. Contatos da agenda do celular sem conversa ficam fora da lista.
+  const rows = await db().prepare(`SELECT * FROM (${summarySql} WHERE opted_out = 0 AND EXISTS (SELECT 1 FROM messages WHERE messages.phone = contacts.phone)) AS conversas ORDER BY last_created DESC, phone DESC LIMIT ? OFFSET ?`).all(limit, offset) as ConversationRow[];
   return rows.map(conversationFromRow);
 }
 export async function unreadConversationCount() {
@@ -202,8 +203,8 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
             let phone: string; try { phone = phoneNumber(contact.phone_number); } catch { ignored++; continue; }
             await lockContact(phone);
             if (await suppressed(phone, config.suppressionSecret)) { ignored++; continue; }
-            const at = Number(object(event.metadata).timestamp) * 1000;
-            await ensureContact(phone, string(contact.full_name, 200) || string(contact.first_name, 200), Number.isFinite(at) && at > 0 ? Math.min(at, now) : now);
+            // Só o nome: não mexe na data do contato (a importação não pode jogar a agenda para o topo da lista).
+            await ensureContact(phone, string(contact.full_name, 200) || string(contact.first_name, 200), 0);
             processed++;
           }
           continue;
