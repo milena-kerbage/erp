@@ -12,7 +12,8 @@ import type { WhatsAppConversation, WhatsAppMessage, WhatsAppSendPayload, WhatsA
 import { Actions, ConfirmationLabel, formatWhatsAppDate, Note, Notice, Stack } from "./shared";
 
 export function SendForm({ phone, conversation, ready, onSent }: { phone: string; conversation?: WhatsAppConversation; ready: boolean; onSent: () => void }) {
-  const [kind, setKind] = useState<"text" | "template">("template");
+  const janelaInicial = Date.parse(conversation?.serviceWindowExpiresAt ?? "") > Date.now();
+  const [kind, setKind] = useState<"text" | "template">(janelaInicial ? "text" : "template");
   const [text, setText] = useState("");
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [templateLoading, setTemplateLoading] = useState(false);
@@ -26,7 +27,8 @@ export function SendForm({ phone, conversation, ready, onSent }: { phone: string
   const retry = useRef<{ serialized: string; id: string } | null>(null);
   const expiresAt = Date.parse(conversation?.serviceWindowExpiresAt ?? "");
   const windowOpen = Number.isFinite(expiresAt) && expiresAt > Date.now();
-  const authorized = conversation?.consent.status === "granted" && !conversation.optedOut;
+  // Como na pousada: só o pedido de parada bloqueia; responder na janela de 24 h é livre.
+  const authorized = !conversation?.optedOut;
   const template = templates.find((item) => templateKey(item) === selection);
   const support = template ? templateSupport(template) : null;
   const approvedTemplates = templates.filter((item) => item.status.toUpperCase() === "APPROVED");
@@ -52,7 +54,7 @@ export function SendForm({ phone, conversation, ready, onSent }: { phone: string
   }, [ready]);
 
   const hasContent = kind === "text" ? text.trim().length > 0 && windowOpen : Boolean(template && support?.supported && parameters.length === support.parameters && parameters.every((value) => value.trim().length > 0));
-  const canSend = ready && authorized && confirmed && hasContent;
+  const canSend = ready && authorized && (kind === "text" || confirmed) && hasContent;
 
   async function send() {
     if (!canSend || sending) return;
@@ -90,7 +92,7 @@ export function SendForm({ phone, conversation, ready, onSent }: { phone: string
   return (
     <Stack>
       {!ready && <Notice>A configuração do WhatsApp precisa estar completa para enviar. Consulte as configurações da integração.</Notice>}
-      {!authorized && <Notice $error>Envio bloqueado: registre uma autorização válida para este número. Pedidos de parada impedem novos envios.</Notice>}
+      {!authorized && <Notice $error>Envio bloqueado: esta pessoa pediu para não receber mais mensagens (PARAR/STOP). Só volte a enviar se ela pedir de novo.</Notice>}
       <Note>
         {windowOpen ? `Janela de atendimento aberta até ${formatWhatsAppDate(conversation?.serviceWindowExpiresAt)}. Texto livre está disponível durante 24 horas após a última mensagem da pessoa.` : "A janela de atendimento está fechada ou ainda não foi aberta. Para iniciar ou retomar o contato, selecione um modelo aprovado pela Meta."}
       </Note>
@@ -115,10 +117,10 @@ export function SendForm({ phone, conversation, ready, onSent }: { phone: string
         {support?.body && <Notice aria-label="Prévia do corpo do modelo">{templatePreview(support.body, parameters)}</Notice>}
         <Note>Disponíveis nesta etapa: modelos simples com texto no corpo e variáveis numéricas. Modelos com mídia, autenticação ou parâmetros de cabeçalho/botões exigem implementação adicional.</Note>
       </>}
-      <ConfirmationLabel>
-        <Checkbox label={`Confirmo que o destinatário +${phone} autorizou esta finalidade e revisei o conteúdo. O envio é real.`} checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
-        <span>Confirmo a autorização e o conteúdo para o destinatário +{phone}. O envio é real.</span>
-      </ConfirmationLabel>
+      {kind === "template" && <ConfirmationLabel>
+        <Checkbox label={`Confirmo o modelo e o destinatário +${phone}. O envio é real e pode gerar cobrança da Meta.`} checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+        <span>Confirmo o modelo e o destinatário +{phone}. O envio é real e pode gerar cobrança da Meta.</span>
+      </ConfirmationLabel>}
       <Actions>
         <Button icon={PaperPlaneTiltIcon} loading={sending} disabled={!canSend} onClick={() => void send()}>{sending ? "Enviando à Meta…" : "Enviar pelo WhatsApp"}</Button>
       </Actions>

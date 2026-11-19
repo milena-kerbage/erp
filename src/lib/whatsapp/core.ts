@@ -345,8 +345,9 @@ export async function diagnostics(fetcher: typeof fetch = fetch) {
 async function permissionToSend(phone: string, type: string) {
   const row = await db().prepare('SELECT * FROM contacts WHERE phone = ?').get(phone) as ContactRow | undefined;
   if (await suppressed(phone) || row?.opted_out) throw new WhatsAppError(409, 'Contato retirado da lista de comunicações. Obtenha uma nova autorização comprovada antes de contatar.', 'OPTED_OUT');
-  if (row?.consent_status !== 'granted') throw new WhatsAppError(409, 'Registre uma autorização comprovada para este contato antes de enviar.', 'CONSENT_REQUIRED');
-  if (type === 'text' && (!row.last_inbound || Date.now() >= row.last_inbound + DAY)) throw new WhatsAppError(409, 'A janela de atendimento de 24 horas está fechada. Use um template aprovado.', 'WINDOW_CLOSED');
+  // Como no ERP da Le Ange: só pedido de parada bloqueia. Texto livre vale na janela de 24 h aberta pela pessoa; fora dela,
+  // modelo aprovado pela Meta. A autorização registrada continua disponível como evidência, mas não trava a resposta.
+  if (type === 'text' && (!row?.last_inbound || Date.now() >= row.last_inbound + DAY)) throw new WhatsAppError(409, 'A janela de atendimento de 24 horas está fechada. Use um template aprovado.', 'WINDOW_CLOSED');
 }
 export async function sendMessage(input: JsonObject, fetcher: typeof fetch = fetch) {
   const config = await configured(), phone = phoneNumber(input.phone), type = input.type;
@@ -394,6 +395,7 @@ export async function sendMessage(input: JsonObject, fetcher: typeof fetch = fet
   await database.transaction(async () => {
     await lockContact(phone);
     await permissionToSend(phone, type);
+    await ensureContact(phone, undefined, now); // modelo para número que ainda não escreveu: cria o contato antes do envio
     const reserved = await database.prepare('INSERT INTO send_requests VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(request_key) DO NOTHING').run(requestKey, hash, localId, phone, 'sending', now);
     if (!reserved.changes) throw new WhatsAppError(409, 'Este envio já foi iniciado.', 'SEND_ALREADY_STARTED');
     await database.prepare("INSERT INTO messages (id, phone, direction, type, text, status, created) VALUES (?, ?, 'outbound', ?, ?, 'sending', ?)").run(localId, phone, type, display, now);

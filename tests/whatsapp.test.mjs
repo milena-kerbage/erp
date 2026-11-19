@@ -80,10 +80,10 @@ test('mais nova mensagem abre janela; eventos atrasados nunca regressam o prazo'
   (await core.receiveWebhook(webhook([incoming('new', 'Olá', now()), incoming('late', 'Mais antiga', now() - core.DAY)])));
   assert.ok(Date.parse((await core.conversation(phone)).serviceWindowExpiresAt) > now());
 });
-test('texto bloqueia falta consent, optout e janela encerrada antes de fetch', async () => {
+test('texto bloqueia optout e janela encerrada antes de fetch; resposta na janela não exige autorização registrada', async () => {
   let calls = 0; const fetcher = async () => { calls++; return response({messages: [{id: 'wamid.out'}]}); };
   (await core.receiveWebhook(webhook([incoming()])));
-  await reject(core.sendMessage(request(), fetcher), 'CONSENT_REQUIRED');
+  await reject(core.sendMessage({...request(), phone: '5585900000001'}, fetcher), 'WINDOW_CLOSED');
   (await consent()); (await core.db().prepare('UPDATE contacts SET last_inbound = ? WHERE phone = ?').run(now() - core.DAY - 1, phone));
   await reject(core.sendMessage(request(), fetcher), 'WINDOW_CLOSED');
   (await core.setConsent({phone, status: 'revoked', source: 'Solicitação externa verificada pelo operador'}, 'operator-test'));
