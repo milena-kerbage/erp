@@ -22,9 +22,21 @@ export type WhatsAppConversation = {
   archived?: boolean;
   starred?: boolean;
   labels?: string[];
+  /** Situação do atendimento (padrão da Le Ange). */
+  status?: WhatsAppSituacao;
+  /** Id de quem responde pela conversa na equipe. */
+  assignee?: string | null;
+  /** Desde quando o cliente espera a equipe (escreveu por último, ao vivo). */
+  waitingSince?: string | null;
+  /** Escreveu e ainda não teve nenhuma resposta da equipe. */
+  isNew?: boolean;
+  /** O cliente falou por último (notas internas não contam). */
+  lastFromContact?: boolean;
   /** Trecho da mensagem encontrada pela busca no histórico. */
   match?: string;
 };
+
+export type WhatsAppSituacao = "aberta" | "aguardando" | "resolvida";
 
 export type WhatsAppReaction = { emoji: string; from: "contact" | "me"; at: number };
 

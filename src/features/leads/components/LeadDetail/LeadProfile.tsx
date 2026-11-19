@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTheme } from "@emotion/react";
 import {
   ArchiveIcon,
@@ -96,6 +96,8 @@ import {
 } from "./styles";
 
 type Tab = "details" | "campaign" | "files";
+/** Aba a mais na ficha (ex.: "WhatsApp" quando ela abre ao lado da conversa). */
+export type LeadProfileExtraTab = { value: string; label: string; count?: number; content: ReactNode };
 
 export type LeadPatch = Partial<Pick<Lead, "name" | "phone" | "budget" | "tags">>;
 export type DetailsPatch = Partial<LeadDetails>;
@@ -113,6 +115,14 @@ type LeadProfileProps = {
   onAddFiles: (files: FileList | File[]) => void;
   onRemoveFile: (id: string) => void;
   onArchive: () => void;
+  /** Ao lado da conversa: o "voltar" vira "fechar a ficha". */
+  onClose?: () => void;
+  closeLabel?: string;
+  /** Abas a mais, depois de Arquivos. */
+  extraTabs?: readonly LeadProfileExtraTab[];
+  defaultTab?: string;
+  /** Itens a mais no menu de ações (ex.: abrir a oportunidade inteira). */
+  menuItems?: ReactNode;
 };
 
 /** Ficha da oportunidade: os campos das abas mudam direto no clique. */
@@ -128,8 +138,13 @@ export function LeadProfile({
   onAddFiles,
   onRemoveFile,
   onArchive,
+  onClose,
+  closeLabel = "Fechar a ficha",
+  extraTabs = [],
+  defaultTab,
+  menuItems,
 }: LeadProfileProps) {
-  const [tab, setTab] = useState<Tab>("details");
+  const [tab, setTab] = useState<string>(defaultTab ?? "details");
   const { funnels } = useFunnels();
   const scrollRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
@@ -178,12 +193,16 @@ export function LeadProfile({
       {/* Voltar, ações e cliente ficam fixos no topo ao rolar a ficha */}
       <ProfileDock ref={dockRef}>
         <TopBar>
-          <IconButton
-            href={`/leads?funil=${lead.funnelId}`}
-            icon={CaretLeftIcon}
-            label="Voltar para leads"
-            tooltip="bottom"
-          />
+          {onClose ? (
+            <IconButton icon={CaretLeftIcon} label={closeLabel} tooltip="bottom" onClick={onClose} />
+          ) : (
+            <IconButton
+              href={`/leads?funil=${lead.funnelId}`}
+              icon={CaretLeftIcon}
+              label="Voltar para leads"
+              tooltip="bottom"
+            />
+          )}
 
           <TopBarActions>
             <OwnerSelect
@@ -218,6 +237,7 @@ export function LeadProfile({
                 />
               )}
             >
+              {menuItems}
               <MenuItem
                 icon={EnvelopeSimpleIcon}
                 href={details.email ? `mailto:${details.email}` : undefined}
@@ -301,6 +321,7 @@ export function LeadProfile({
             { value: "details", label: "Detalhes" },
             { value: "campaign", label: "Campanha" },
             { value: "files", label: "Arquivos", count: details.attachments.length },
+            ...extraTabs.map(({ value, label, count }) => ({ value, label, count })),
           ]}
         >
           {tab === "details" && (
@@ -314,6 +335,7 @@ export function LeadProfile({
           )}
           {tab === "campaign" && <CampaignTab details={details} onUpdateDetails={onUpdateDetails} />}
           {tab === "files" && <FilesTab details={details} onAddFiles={onAddFiles} onRemoveFile={onRemoveFile} />}
+          {extraTabs.map((extra) => (tab === extra.value ? <Fragment key={extra.value}>{extra.content}</Fragment> : null))}
         </Tabs>
       </TabsArea>
     </Scroll>

@@ -19,7 +19,7 @@ if (postgres) {
   const port = Number(process.env.CONVERSAS_POSTGRES_TEST_PORT || 55451);
   socket = new PGLiteSocketServer({ db: engine, host: '127.0.0.1', port });
   await engine.exec('CREATE ROLE anon; CREATE ROLE authenticated;');
-  for (const file of ['002_whatsapp.sql', '004_integration_settings.sql', '017_whatsapp_conversas.sql']) await engine.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
+  for (const file of ['002_whatsapp.sql', '004_integration_settings.sql', '017_whatsapp_conversas.sql', '018_whatsapp_atendimento.sql']) await engine.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
   await socket.start();
   process.env.DATABASE_URL = `postgresql://postgres:postgres@127.0.0.1:${port}/postgres`;
   process.env.DATABASE_SSL_MODE = 'disable';
@@ -27,7 +27,7 @@ if (postgres) {
 } else { delete process.env.DATABASE_URL; process.env.ALLOW_LOCAL_SQLITE = 'true'; }
 const folder = mkdtempSync(join(tmpdir(), 'mk-conversas-'));
 Object.assign(process.env, {
-  WHATSAPP_DB_PATH: join(folder, 'whatsapp.sqlite'), WHATSAPP_ACCESS_TOKEN: 'fake-token-for-unit-tests-only-12345',
+  WHATSAPP_DB_PATH: join(folder, 'whatsapp.sqlite'), ERP_DB_PATH: join(folder, 'erp.sqlite'), AUTH_DB_PATH: join(folder, 'auth.sqlite'), WHATSAPP_ACCESS_TOKEN: 'fake-token-for-unit-tests-only-12345',
   WHATSAPP_APP_SECRET: 'fake-app-secret-for-tests-12345', WHATSAPP_VERIFY_TOKEN: 'fake-verify-token-for-tests-12345',
   WHATSAPP_PHONE_NUMBER_ID: '123456789', WHATSAPP_BUSINESS_ACCOUNT_ID: '987654321', WHATSAPP_GRAPH_VERSION: 'v24.0',
   WHATSAPP_PUBLIC_BASE_URL: 'https://example.test', PUBLIC_BASE_URL: 'https://example.test',
@@ -51,7 +51,8 @@ test('abas, fixar, favoritar por pessoa, arquivar, não lida, etiquetas e revis�
   await core.receiveWebhook(mensagem(C, 'wamid.c1', 'Obrigada!', 1000));
   const revisao = await core.currentRevision();
   let lista = (await core.conversations({ userId: 'u1' })).conversations;
-  assert.deepEqual(lista.map((c) => c.phone), [C, B, A], 'mais recente primeiro');
+  assert.deepEqual(lista.map((c) => c.phone), [A, B, C], 'quem espera a equipe há mais tempo vem primeiro');
+  assert.ok(lista.every((c) => c.waitingSince && c.isNew && c.status === 'aberta'), 'escreveu ao vivo e ninguém respondeu: aguardando e novo');
   await core.updateConversation(A, { fixar: true, favoritar: true, etiquetas: ['Orçamento', ' Orçamento ', 'Kit berço'] }, 'u1');
   assert.notEqual(await core.currentRevision(), revisao, 'organizar avança a revisão');
   lista = (await core.conversations({ userId: 'u1' })).conversations;
@@ -61,10 +62,11 @@ test('abas, fixar, favoritar por pessoa, arquivar, não lida, etiquetas e revis�
   assert.deepEqual((await core.conversations({ userId: 'u1', aba: 'favoritas' })).conversations.map((c) => c.phone), [A]);
   assert.deepEqual((await core.conversations({ userId: 'u1', etiqueta: 'Kit berço' })).conversations.map((c) => c.phone), [A]);
   await core.updateConversation(B, { arquivar: true }, 'u1');
-  assert.ok(!(await core.conversations({ userId: 'u1' })).conversations.some((c) => c.phone === B), 'arquivada sai de Todas');
+  assert.ok(!(await core.conversations({ userId: 'u1' })).conversations.some((c) => c.phone === B), 'arquivada (resolvida) sai de Todas');
+  assert.deepEqual((await core.conversations({ userId: 'u1', aba: 'resolvidas' })).conversations.map((c) => c.status), ['resolvida']);
   assert.deepEqual((await core.conversations({ userId: 'u1', aba: 'arquivadas' })).conversations.map((c) => c.phone), [B]);
   await core.receiveWebhook(mensagem(B, 'wamid.b2', 'Voltei!', 0));
-  assert.ok((await core.conversations({ userId: 'u1' })).conversations.some((c) => c.phone === B), 'mensagem nova desarquiva');
+  assert.equal((await core.conversations({ userId: 'u1' })).conversations.find((c) => c.phone === B)?.status, 'aberta', 'mensagem nova reabre a conversa');
   await core.markConversationRead(C, async () => json({ success: true }));
   await core.updateConversation(C, { naoLida: true }, 'u1');
   const c = (await core.conversations({ userId: 'u1', aba: 'nao_lidas' })).conversations.find((item) => item.phone === C);
@@ -135,4 +137,122 @@ test('mídia do celular e do histórico guarda o id para baixar depois; resposta
   const lista = await core.quickReplies();
   assert.deepEqual(lista.map((r) => r.shortcut), ['prazo']);
   assert.deepEqual(await core.deleteQuickReply(lista[0].id), []);
+});
+
+const D = '5585911110004', E = '5585911110005', F = '5585911110006';
+const eco = (para, id, texto, atras = 0) => evento('smb_message_echoes', { message_echoes: [{ to: para, id, timestamp: segundos(atras), type: 'text', text: { body: texto } }] });
+
+test('atendimento: aguardando a equipe, responsável, nota interna, situação, filtros, fechar em massa e exportação', async () => {
+  await core.receiveWebhook(mensagem(D, 'wamid.d1', 'Vocês fazem kit cama de solteiro?', 5000));
+  await core.receiveWebhook(mensagem(E, 'wamid.e1', 'Qual o prazo?', 4000));
+  // Histórico importado do celular: entra lido, sem abrir a janela e sem pôr ninguém na fila de espera.
+  await core.receiveWebhook(evento('history', { history: [{ metadata: { phase: 0, chunk_order: 1, progress: 100 }, threads: [{ id: F, messages: [{ from: F, id: 'wamid.f1', timestamp: segundos(86_400_000), type: 'text', text: { body: 'Mensagem antiga do celular' } }] }] }] }));
+  const de = async (phone, filtro = {}) => (await core.conversations({ userId: 'u1', limit: 200, ...filtro })).conversations.find((c) => c.phone === phone);
+  assert.ok((await de(D)).waitingSince, 'cliente escreveu ao vivo: aguardando a equipe');
+  assert.equal((await de(F)).waitingSince, null, 'histórico importado não entra na espera');
+  assert.equal((await de(F)).isNew, false);
+  const antes = (await core.conversations({ userId: 'u1' })).counts;
+  assert.ok(antes.aguardando >= 2 && antes.nao_lidas >= 2, 'os números dos recortes vêm na primeira página');
+
+  // Nota interna: fica na conversa, aparece na prévia, mas não conta como resposta nem vai para a Meta.
+  let chamadas = 0;
+  const nota = await core.addNote({ phone: D, text: ' Quer em linho; retornar até sexta ', clientRequestId: 'nota-d-0001' }, 'u1');
+  assert.equal(nota.message.type, 'note'); assert.equal(nota.message.text, 'Quer em linho; retornar até sexta'); assert.equal(nota.message.author, 'u1');
+  await core.addNote({ phone: D, text: 'Quer em linho; retornar até sexta', clientRequestId: 'nota-d-0001' }, 'u1');
+  assert.equal((await core.messagesFor(D, undefined, 50, 'u1')).messages.filter((m) => m.type === 'note').length, 1, 'a mesma chave não duplica a nota');
+  let d = await de(D);
+  assert.equal(d.lastType, 'note'); assert.ok(d.waitingSince, 'a nota não tira o cliente da espera'); assert.equal(d.lastFromContact, true);
+  await assert.rejects(() => core.addNote({ phone: D, text: '   ' }, 'u1'), (e) => e.code === 'INVALID_NOTE');
+  // Responder a uma nota não vira "context" para a Meta (a nota não existe lá).
+  await core.sendMessage({ phone: D, type: 'text', text: 'Fazemos sim!', clientRequestId: 'resposta-d-0001', replyTo: nota.message.id, author: 'u1' }, async (_url, init) => { chamadas++; assert.equal(JSON.parse(init.body).context, undefined); return json({ messages: [{ id: 'wamid.d2' }] }); });
+  assert.equal(chamadas, 1);
+  d = await de(D);
+  assert.equal(d.waitingSince, null, 'a equipe respondeu: sai da espera'); assert.equal(d.isNew, false); assert.equal(d.lastFromContact, false);
+  assert.ok(await de(D, { resposta: 'respondida' })); assert.equal(await de(D, { resposta: 'sem-resposta' }), undefined);
+  assert.ok(await de(E, { resposta: 'sem-resposta' }));
+
+  // Responsável: assume, aparece em "Minhas", sai de "Aguardando" e deixa o registro na conversa.
+  await core.updateConversation(E, { responsavel: 'u1' }, 'u1', 'Maria Souza');
+  assert.equal((await de(E)).assignee, 'u1');
+  assert.ok(await de(E, { aba: 'minhas' })); assert.equal(await de(E, { aba: 'aguardando' }), undefined, 'com responsável, segue em Minhas');
+  assert.equal(await de(E, { userId: 'u2', aba: 'minhas' }), undefined);
+  assert.ok(await de(E, { responsaveis: ['u1'] })); assert.equal(await de(E, { responsaveis: [''] }), undefined); assert.ok(await de(D, { responsaveis: [''] }), '"" é sem responsável');
+  await core.updateConversation(E, { responsavel: 'u2', responsavelNome: 'Ana Lima' }, 'u1', 'Maria Souza');
+  let eventos = (await core.messagesFor(E, undefined, 50, 'u1')).messages.filter((m) => m.type === 'system').map((m) => m.text);
+  assert.deepEqual(eventos, ['Maria assumiu a conversa', 'Maria passou a conversa para Ana Lima']);
+  assert.equal((await de(E)).lastMessage, 'Qual o prazo?', 'evento do sistema não vira prévia da lista');
+  await assert.rejects(() => core.updateConversation(E, { responsavel: 'id inválido!' }, 'u1'), (e) => e.code === 'INVALID_ASSIGNEE');
+
+  // Situação: aguardando o cliente, resolvida (sai da lista) e reaberta quando o cliente escreve.
+  await assert.rejects(() => core.updateConversation(D, { situacao: 'fechada' }, 'u1'), (e) => e.code === 'INVALID_STATUS');
+  await core.updateConversation(D, { situacao: 'aguardando' }, 'u1', 'Maria Souza');
+  assert.equal((await de(D)).status, 'aguardando'); assert.ok(await de(D, { situacoes: ['aguardando'] })); assert.equal(await de(D, { situacoes: ['aberta'] }), undefined);
+  await core.updateConversation(D, { fixar: true, situacao: 'resolvida' }, 'u1', 'Maria Souza');
+  assert.equal(await de(D), undefined, 'resolvida sai da lista do dia a dia');
+  d = await de(D, { aba: 'resolvidas' });
+  assert.equal(d.status, 'resolvida'); assert.equal(d.pinned, false, 'resolver desafixa');
+  assert.ok(await de(D, { situacoes: ['resolvida'] })); assert.ok(await de(D, { busca: 'solteiro' }), 'a busca acha as resolvidas');
+  // O carimbo do webhook vem em segundos: 2 s à frente fazem a mensagem entrar agora, depois do que a equipe acabou de enviar.
+  await core.receiveWebhook(mensagem(D, 'wamid.d3', 'Obrigada! E o frete?', -2000));
+  d = await de(D);
+  assert.equal(d.status, 'aberta', 'cliente escreveu de novo: reabre'); assert.ok(d.waitingSince); assert.equal(d.isNew, false, 'já teve resposta: não é "novo"');
+  eventos = (await core.messagesFor(D, undefined, 50, 'u1')).messages.filter((m) => m.type === 'system').map((m) => m.text);
+  assert.deepEqual(eventos, ['Maria marcou como aguardando o cliente', 'Maria resolveu a conversa']);
+
+  // Janela de 24h e período.
+  assert.ok(await de(D, { janela: 'aberta' })); assert.equal(await de(F, { janela: 'aberta' }), undefined); assert.ok(await de(F, { janela: 'fechada' }));
+  assert.ok(await de(D, { periodo: 'hoje' })); assert.equal(await de(F, { periodo: 'hoje' }), undefined); assert.ok(await de(F, { periodo: '7d' }));
+  assert.ok(await de(D, { soFixadas: false })); assert.equal(await de(E, { soFixadas: true }), undefined);
+
+  // Fechar em massa: só as abertas contam; telefone inválido é ignorado.
+  const fechadas = await core.resolveConversations([D, E, 'abc', D], 'u1', 'Maria Souza');
+  assert.equal(fechadas.resolved, 2);
+  assert.equal(await de(D), undefined); assert.equal(await de(E), undefined);
+  assert.equal((await core.resolveConversations([D], 'u1')).resolved, 0, 'já resolvida não conta de novo');
+  await assert.rejects(() => core.resolveConversations([], 'u1'), (e) => e.code === 'INVALID_SELECTION');
+
+  // Exportação em texto: cliente, equipe, nota e evento; sem as notas quando pedido.
+  const completa = await core.exportConversation(D), semNotas = await core.exportConversation(D, false);
+  assert.match(completa.filename, /^conversa-contato-4\.txt$/);
+  assert.match(completa.text, /Contato 4: Vocês fazem kit cama de solteiro\?/); assert.match(completa.text, /Ateliê: Fazemos sim!/);
+  assert.match(completa.text, /Nota interna: Quer em linho/); assert.match(completa.text, /— Maria resolveu a conversa —/);
+  assert.doesNotMatch(semNotas.text, /Nota interna/);
+
+  // A nota pode ser apagada; mensagem entregue, não.
+  await core.discardFailedMessage(D, nota.message.id);
+  assert.ok(!(await core.messagesFor(D, undefined, 50, 'u1')).messages.some((m) => m.type === 'note'));
+  await assert.rejects(() => core.discardFailedMessage(D, 'wamid.d1'), (e) => e.code === 'NOT_FAILED');
+
+  // Mensagem enviada pelo celular (coexistência) também tira o cliente da espera.
+  await core.updateConversation(D, { situacao: 'aberta' }, 'u1', 'Maria Souza');
+  await core.receiveWebhook(mensagem(D, 'wamid.d4', 'Oi?', -2000));
+  assert.ok((await de(D)).waitingSince);
+  await core.receiveWebhook(eco(D, 'wamid.d5', 'Oi! Já te respondo.', -2000));
+  assert.equal((await de(D)).waitingSince, null);
+});
+
+test('respostas rápidas com nome; a ficha acha a oportunidade do CRM pelo telefone (com e sem 55 e nono dígito)', async () => {
+  const lista = await core.saveQuickReply({ title: 'Prazo de produção', shortcut: 'prazo-novo', body: 'Olá, {nome}! O prazo é de 15 dias úteis.' });
+  const salva = lista.find((r) => r.shortcut === 'prazo-novo');
+  assert.equal(salva.title, 'Prazo de produção');
+  assert.equal((await core.saveQuickReply({ shortcut: 'sem-nome', body: 'Texto' })).find((r) => r.shortcut === 'sem-nome').title, 'sem-nome', 'sem nome, vale o atalho');
+  await core.saveQuickReply({ id: salva.id, title: 'Prazo', shortcut: 'prazo-novo', body: 'Novo texto' });
+  assert.equal((await core.quickReplies()).find((r) => r.id === salva.id).body, 'Novo texto');
+
+  const ficha = await import('../src/lib/whatsapp/ficha.ts');
+  assert.deepEqual(new Set(ficha.variantesDoTelefone('5585988887777')), new Set(['5585988887777', '85988887777', '8588887777', '558588887777']));
+  assert.ok(ficha.variantesDoTelefone('558588887777').includes('85988887777'), 'o WhatsApp sem o nono dígito acha o cadastro com ele');
+  assert.deepEqual(ficha.variantesDoTelefone('351912345678'), ['351912345678'], 'número de fora do Brasil fica como veio');
+  if (!postgres) {
+    // No SQLite o CRM é um arquivo ao lado; no PGlite deste teste só as migrações do WhatsApp são aplicadas.
+    const erp = await import('../src/lib/erp/core.ts');
+    const funil = (await erp.workspaceSnapshot()).funnels[0];
+    const ator = { id: 'u1', name: 'Maria Souza', email: 'maria@example.test', permission: 'admin', authMode: 'session' };
+    const { lead } = await erp.createLead({ lead: { funnelId: funil.id, stage: funil.stages[0].id, name: 'Cliente da ficha', phone: '85988887777', budget: 0, tags: [] }, details: { source: 'WhatsApp' } }, ator);
+    assert.equal((await ficha.leadDoTelefone('5585988887777')).id, lead.id);
+    assert.equal((await ficha.leadDoTelefone('558588887777')).id, lead.id, 'sem o nono dígito também acha');
+    assert.equal(await ficha.leadDoTelefone('5585911119999'), null);
+    await erp.archiveLead(lead.id, lead.revision, ator);
+    assert.equal(await ficha.leadDoTelefone('5585988887777'), null, 'oportunidade arquivada não vira ficha');
+  }
 });

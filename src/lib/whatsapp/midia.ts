@@ -110,3 +110,16 @@ export async function midiaParaVer(messageId: string, fetcher: typeof fetch = fe
   }
   return baixada;
 }
+
+/** Os bytes da mídia de uma mensagem (do R2 quando já guardada; senão, da Meta), para copiar para a ficha da oportunidade. */
+export async function midiaBytes(messageId: string, fetcher: typeof fetch = fetch): Promise<{ bytes: Buffer; mime: string; filename: string; duration?: number; type: string }> {
+  const encontrada = await messageById(messageId);
+  if (!encontrada) throw new WhatsAppError(404, 'Mídia não encontrada.', 'MEDIA_NOT_FOUND');
+  const { row } = encontrada, mime = tipoBase(row.mime_type) || 'application/octet-stream';
+  const nome = row.filename || `whatsapp-${row.type}-${new Date(row.created).toISOString().slice(0, 10)}.${extensaoDe(mime)}`;
+  const duration = row.duration ? Number(row.duration) : undefined;
+  if (row.media_key && storageDriver() === 'r2') return { bytes: await readBinary(row.media_key, 25 * 1024 * 1024), mime, filename: nome, duration, type: row.type };
+  const baixada = await downloadMedia(messageId, fetcher, 25 * 1024 * 1024);
+  if (!MIME_PERMITIDOS.test(baixada.mime)) throw new WhatsAppError(415, 'Tipo de arquivo não suportado.', 'UNSUPPORTED_MEDIA');
+  return { bytes: baixada.bytes, mime: baixada.mime, filename: row.filename || baixada.filename || nome, duration, type: row.type };
+}

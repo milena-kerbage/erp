@@ -4,16 +4,22 @@
 // e conversa quando algo mudou), envio otimista com reconciliação, leitura automática ao abrir, pré-carga no hover.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { errorMessage, whatsappRequest } from "../client";
-import type { WhatsAppConversation, WhatsAppMessage } from "../types";
+import type { WhatsAppConversation, WhatsAppMessage, WhatsAppSituacao } from "../types";
 import { gravarConversa, gravarLista, lerConversa, lerLista } from "./cache";
 import { statusMaisNovo } from "./formato";
 import { enviarPreparado, ErroMidia, prepararArquivo, type Preparado } from "./midiaCliente";
 import { tocar } from "./sons";
 
-export type Aba = "todas" | "nao_lidas" | "favoritas" | "fixadas" | "arquivadas";
-type Lista = { conversations: WhatsAppConversation[]; nextOffset: number | null };
+export type Aba = "todas" | "nao_lidas" | "aguardando" | "minhas" | "favoritas" | "fixadas" | "resolvidas";
+/** Os filtros do menu ao lado da busca (vários juntos: cada grupo soma com E; as opções do grupo, com OU). */
+export type Filtros = { periodo: "" | "hoje" | "7d" | "30d"; resposta: "" | "sem-resposta" | "respondida"; janela: "" | "aberta" | "fechada"; situacoes: WhatsAppSituacao[]; responsaveis: string[]; etiquetas: string[]; soFixadas: boolean };
+export const SEM_FILTROS: Filtros = { periodo: "", resposta: "", janela: "", situacoes: [], responsaveis: [], etiquetas: [], soFixadas: false };
+/** Quantos grupos estão em vigor: é o número no canto do botão de filtros. */
+export const filtrosAtivos = (f: Filtros) => [f.periodo, f.resposta, f.janela, f.situacoes.length, f.responsaveis.length, f.etiquetas.length, f.soFixadas].filter(Boolean).length;
+export type Contagens = { nao_lidas: number; aguardando: number; minhas: number };
+type Lista = { conversations: WhatsAppConversation[]; nextOffset: number | null; counts?: Contagens };
 export type Fio = { messages: WhatsAppMessage[]; nextBefore: string | null; carregado: boolean; carregandoAntigas?: boolean; conversation?: WhatsAppConversation | null };
-type AcaoConversa = { fixar?: boolean; arquivar?: boolean; naoLida?: boolean; favoritar?: boolean; etiquetas?: string[] };
+export type AcaoConversa = { fixar?: boolean; naoLida?: boolean; favoritar?: boolean; etiquetas?: string[]; situacao?: WhatsAppSituacao; responsavel?: string | null; responsavelNome?: string };
 
 const PAGINA = 60, RECENTES = 80;
 const novoId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -30,7 +36,7 @@ export function mesclar(atuais: WhatsAppMessage[], doServidor: WhatsAppMessage[]
   // Envio otimista some quando o servidor já tem a mesma mensagem (mesmo tipo e texto, até 2 min de diferença).
   // Se o envio falhou, fica o local (que tem "Tentar de novo") e o registro de falha do servidor não aparece duplicado.
   const usados = new Set<string>(), escondidos = new Set<string>();
-  const par = (temp: WhatsAppMessage) => servidor.find((m) => !usados.has(m.id) && m.direction === "outbound" && m.type === temp.type && (temp.type !== "text" || m.text === temp.text) && Math.abs(Date.parse(m.createdAt) - Date.parse(temp.createdAt)) < 120_000 && !atuais.some((outra) => outra.id === m.id && !outra.id.startsWith("temp-")));
+  const par = (temp: WhatsAppMessage) => servidor.find((m) => !usados.has(m.id) && m.direction === "outbound" && m.type === temp.type && ((temp.type !== "text" && temp.type !== "note") || m.text === temp.text) && Math.abs(Date.parse(m.createdAt) - Date.parse(temp.createdAt)) < 120_000 && !atuais.some((outra) => outra.id === m.id && !outra.id.startsWith("temp-")));
   const locais = atuais.filter((temp) => {
     if (!temp.id.startsWith("temp-")) return false;
     const achado = par(temp);
@@ -51,7 +57,9 @@ export function useConversas(inicial?: string) {
   const [aba, setAba] = useState<Aba>("todas");
   const [busca, setBusca] = useState("");
   const [buscaAtiva, setBuscaAtiva] = useState("");
-  const [etiqueta, setEtiqueta] = useState("");
+  const [filtros, setFiltros] = useState<Filtros>(SEM_FILTROS);
+  const [contagens, setContagens] = useState<Contagens>({ nao_lidas: 0, aguardando: 0, minhas: 0 });
+  const [leads, setLeads] = useState<Record<string, string | null>>({});
   const [lista, setLista] = useState<Lista | null>(null);
   const [carregandoLista, setCarregandoLista] = useState(true);
   const [maisLista, setMaisLista] = useState(false);
@@ -64,18 +72,28 @@ export function useConversas(inicial?: string) {
   const ultimaRecebida = useRef(0);
   const fiosRef = useRef(fios);
   fiosRef.current = fios;
-  const chaveLista = `${aba}|${etiqueta}|${buscaAtiva}`;
+  const chaveLista = JSON.stringify([aba, filtros, buscaAtiva]);
   const chaveListaRef = useRef(chaveLista);
   chaveListaRef.current = chaveLista;
+  const abaRef = useRef(aba);
+  abaRef.current = aba;
+  const filtrosRef = useRef(filtros);
+  filtrosRef.current = filtros;
 
   // Busca com espera de 350 ms (no servidor, em todo o histórico).
   useEffect(() => { const t = window.setTimeout(() => setBuscaAtiva(busca.trim().length >= 2 ? busca.trim() : ""), 350); return () => window.clearTimeout(t); }, [busca]);
 
   const consultaLista = useCallback((offset = 0) => {
-    const [a, e, q] = chaveListaRef.current.split("|");
+    const [a, f, q] = JSON.parse(chaveListaRef.current) as [Aba, Filtros, string];
     const params = new URLSearchParams({ aba: a, limit: String(PAGINA), offset: String(offset) });
-    if (e) params.set("etiqueta", e);
     if (q) params.set("q", q);
+    if (f.periodo) params.set("periodo", f.periodo);
+    if (f.resposta) params.set("resposta", f.resposta);
+    if (f.janela) params.set("janela", f.janela);
+    if (f.soFixadas) params.set("fixadas", "1");
+    if (f.situacoes.length) params.set("situacao", f.situacoes.join("|"));
+    if (f.etiquetas.length) params.set("etiquetas", f.etiquetas.join("|"));
+    if (f.responsaveis.length) params.set("responsavel", f.responsaveis.join("|"));
     return whatsappRequest<Lista>(`conversations?${params}`);
   }, []);
 
@@ -93,7 +111,9 @@ export function useConversas(inicial?: string) {
         const extras = anterior && chave === chaveListaRef.current ? anterior.conversations.slice(PAGINA).filter((c) => !atual.conversations.some((n) => n.phone === c.phone)) : [];
         return { conversations: [...atual.conversations, ...extras], nextOffset: extras.length ? anterior!.nextOffset : atual.nextOffset };
       });
-      if (!buscaAtivaRef.current) void gravarLista(chave, atual);
+      if (atual.counts) setContagens(atual.counts);
+      // Só a lista sem busca nem filtro vai para o cache (os recortes filtrados mudam demais para valer guardar).
+      if (!buscaAtivaRef.current && !filtrosAtivos(filtrosRef.current)) void gravarLista(chave, atual);
       setErro("");
     } catch (falha) { setErro(errorMessage(falha)); }
     finally { setCarregandoLista(false); }
@@ -207,19 +227,59 @@ export function useConversas(inicial?: string) {
   useEffect(() => { void whatsappRequest<{ labels: string[] }>("etiquetas").then((d) => setEtiquetas(d.labels)).catch(() => undefined); }, []);
 
   /* ---------------------------------------------------------- organização (otimista, com volta em caso de erro) */
+  /** A conversa resolvida sai da lista do dia a dia; aparece no recorte "Resolvidas", com o filtro de situação ou na busca. */
+  const mostraResolvidas = useCallback(() => abaRef.current === "resolvidas" || filtrosRef.current.situacoes.includes("resolvida") || buscaAtivaRef.current.length >= 2, []);
   const organizar = useCallback(async (phone: string, acao: AcaoConversa) => {
     const antes = lista;
-    setLista((atual) => atual && { ...atual, conversations: atual.conversations.map((c) => c.phone !== phone ? c : {
-      ...c, ...(acao.fixar !== undefined ? { pinned: acao.fixar } : {}), ...(acao.favoritar !== undefined ? { starred: acao.favoritar } : {}), ...(acao.arquivar !== undefined ? { archived: acao.arquivar, pinned: acao.arquivar ? false : c.pinned } : {}),
+    const aplicar = (c: WhatsAppConversation): WhatsAppConversation => ({
+      ...c, ...(acao.fixar !== undefined ? { pinned: acao.fixar } : {}), ...(acao.favoritar !== undefined ? { starred: acao.favoritar } : {}),
+      ...(acao.situacao !== undefined ? { status: acao.situacao, archived: acao.situacao === "resolvida", pinned: acao.situacao === "resolvida" ? false : c.pinned, ...(acao.situacao === "resolvida" ? { waitingSince: null, isNew: false } : {}) } : {}),
+      ...(acao.responsavel !== undefined ? { assignee: acao.responsavel } : {}),
       ...(acao.naoLida !== undefined ? { markedUnread: acao.naoLida, unreadCount: acao.naoLida ? Math.max(1, c.unreadCount) : 0 } : {}), ...(acao.etiquetas ? { labels: acao.etiquetas } : {}),
-    }).filter((c) => (aba === "arquivadas" ? c.archived : !c.archived)) });
+    });
+    setLista((atual) => atual && { ...atual, conversations: atual.conversations.map((c) => (c.phone !== phone ? c : aplicar(c))).filter((c) => (abaRef.current === "resolvidas" ? c.status === "resolvida" : c.status !== "resolvida" || mostraResolvidas())) });
+    setFios((todos) => (todos[phone]?.conversation ? { ...todos, [phone]: { ...todos[phone], conversation: aplicar(todos[phone].conversation!) } } : todos));
     if (acao.naoLida && phone === selecionado) setSelecionado(undefined);
     try {
       await whatsappRequest("conversations", { body: { phone, ...acao } });
       if (acao.etiquetas) setEtiquetas((atuais) => [...new Set([...atuais, ...acao.etiquetas!])].sort((a, b) => a.localeCompare(b, "pt-BR")));
       void recarregarLista();
+      // Resolver, reabrir e trocar o responsável deixam o registro na conversa.
+      if ((acao.situacao !== undefined || acao.responsavel !== undefined) && phone === selecionadoRef.current) void carregarFio(phone, true);
     } catch (falha) { setLista(antes); setErro(errorMessage(falha)); }
-  }, [lista, aba, selecionado, recarregarLista]);
+  }, [lista, selecionado, recarregarLista, carregarFio, mostraResolvidas]);
+
+  /** Fechar em massa: as marcadas ou todas as do filtro. */
+  const resolverEmMassa = useCallback(async (phones: string[]) => {
+    if (!phones.length) return 0;
+    const antes = lista, alvo = new Set(phones);
+    setLista((atual) => atual && { ...atual, conversations: atual.conversations.map((c) => (alvo.has(c.phone) ? { ...c, status: "resolvida" as const, pinned: false, waitingSince: null } : c)).filter((c) => c.status !== "resolvida" || mostraResolvidas()) });
+    if (selecionado && alvo.has(selecionado) && !mostraResolvidas()) setSelecionado(undefined);
+    try {
+      const { resolved } = await whatsappRequest<{ resolved: number }>("conversations", { body: { resolver: phones } });
+      void recarregarLista();
+      return resolved;
+    } catch (falha) { setLista(antes); setErro(errorMessage(falha)); return 0; }
+  }, [lista, selecionado, recarregarLista, mostraResolvidas]);
+
+  /* ---------------------------------------------------------- ficha: a oportunidade do CRM com o mesmo telefone */
+  const leadsRef = useRef(leads);
+  leadsRef.current = leads;
+  const buscarLead = useCallback(async (phone: string, forcar = false) => {
+    if (!forcar && phone in leadsRef.current) return leadsRef.current[phone];
+    try {
+      const { lead } = await whatsappRequest<{ lead: { id: string } | null }>(`ficha?phone=${encodeURIComponent(phone)}`);
+      setLeads((todos) => ({ ...todos, [phone]: lead?.id ?? null }));
+      return lead?.id ?? null;
+    } catch { return null; }
+  }, []);
+  const definirLead = useCallback((phone: string, id: string | null) => setLeads((todos) => ({ ...todos, [phone]: id })), []);
+  useEffect(() => { if (selecionado) void buscarLead(selecionado); }, [selecionado, buscarLead]);
+  /** "Salvar na ficha": a mídia da mensagem vira arquivo da oportunidade. */
+  const salvarNaFicha = useCallback(async (messageId: string, leadId: string) => {
+    try { await whatsappRequest("ficha", { body: { messageId, leadId } }); return true; }
+    catch (falha) { setErro(errorMessage(falha)); return false; }
+  }, []);
 
   /* ---------------------------------------------------------- envio (otimista) */
   const colocarLocal = useCallback((phone: string, mensagem: WhatsAppMessage) => atualizarFio(phone, (f) => ({ ...f, messages: [...f.messages, mensagem] })), [atualizarFio]);
@@ -243,6 +303,21 @@ export function useConversas(inicial?: string) {
     colocarLocal(phone, otimista);
     await tentar();
   }, [colocarLocal, trocarLocal, confirmar]);
+
+  /** Nota interna: só a equipe vê; não vai para o WhatsApp (vale também com a janela fechada). */
+  const enviarNota = useCallback(async (phone: string, texto: string) => {
+    const tempId = `temp-${novoId()}`, chave = novoId();
+    const tentar = async () => {
+      trocarLocal(phone, tempId, (m) => ({ ...m, status: "sending", error: undefined }));
+      try {
+        const { message } = await whatsappRequest<{ message: WhatsAppMessage }>("messages", { body: { phone, type: "note", text: texto, clientRequestId: chave } });
+        atualizarFio(phone, (f) => ({ ...f, messages: mesclar(f.messages.filter((m) => m.id !== tempId), [message]) }));
+        void recarregarLista();
+      } catch (falha) { trocarLocal(phone, tempId, (m) => ({ ...m, status: "failed", error: errorMessage(falha), local: { retry: () => void tentar() } })); }
+    };
+    colocarLocal(phone, { id: tempId, phone, direction: "outbound", type: "note", text: texto, status: "sending", createdAt: new Date().toISOString() });
+    await tentar();
+  }, [colocarLocal, trocarLocal, atualizarFio, recarregarLista]);
 
   const enviarArquivo = useCallback(async (phone: string, arquivo: File, extra: { legenda?: string; replyTo?: WhatsAppMessage; voz?: boolean; duracao?: number } = {}) => {
     const tempId = `temp-${novoId()}`, chave = novoId(), previa = /^(image|video|audio)\//.test(arquivo.type) ? URL.createObjectURL(arquivo) : undefined;
@@ -302,10 +377,10 @@ export function useConversas(inicial?: string) {
   }, []);
 
   return {
-    aba, setAba, busca, setBusca, buscaAtiva, etiqueta, setEtiqueta, etiquetas, naoLidas,
+    aba, setAba, busca, setBusca, buscaAtiva, filtros, setFiltros, contagens, etiquetas, naoLidas,
     lista: lista?.conversations ?? [], temMais: Boolean(lista?.nextOffset), carregarMaisLista, carregandoLista, maisLista, erro, setErro,
     selecionado, setSelecionado, conversaSelecionada, fio: selecionado ? fios[selecionado] : undefined,
-    carregarAntigas, organizar, enviarTexto, enviarArquivo, descartarFalha, reenviarFalha, reagir, preCarregar, cancelarPreCarga, recarregarLista, removerDaLista,
-    recarregarFio: carregarFio,
+    carregarAntigas, organizar, resolverEmMassa, enviarTexto, enviarNota, enviarArquivo, descartarFalha, reenviarFalha, reagir, preCarregar, cancelarPreCarga, recarregarLista, removerDaLista,
+    recarregarFio: carregarFio, leadId: selecionado ? leads[selecionado] : undefined, buscarLead, definirLead, salvarNaFicha,
   };
 }

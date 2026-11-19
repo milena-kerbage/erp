@@ -14,7 +14,7 @@ export function errorResponse(error: unknown) {
   if (error instanceof DatabaseConfigurationError || error instanceof DatabaseOperationError) return Response.json({error: error.message, code: error.code}, {status: error.status, headers: noStore});
   return Response.json({error: 'A operação não pôde ser concluída. Verifique a configuração e tente novamente.'}, {status: 500, headers: noStore});
 }
-export async function api(request: Request, action: (user: {id: string}) => Promise<unknown> | unknown, mutation = false, maximum = 120) {
+export async function api(request: Request, action: (user: {id: string; name?: string}) => Promise<unknown> | unknown, mutation = false, maximum = 120) {
   try {
     const session = await getSession(mutation);
     if (!session && !developmentAccess()) throw new WhatsAppError(401, 'Entre no sistema para usar esta integração.', 'UNAUTHORIZED');

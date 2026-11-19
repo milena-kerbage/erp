@@ -34,6 +34,19 @@ Fluxo trazido do ERP da Le Ange (`src/lib/whatsapp/conexao.ts`, tela `ConexaoWha
 - **Velocidade:** lista e conversa em cache no IndexedDB (abrem na hora); `/api/whatsapp/revisao` a cada 3 s com a aba visível e lista/conversa só quando muda; pré-carga ao passar o mouse; som de mensagem nova (liga/desliga).
 - **Testes:** `npm run test:conversas` (SQLite) e `npm run test:conversas:postgres` (PGlite com as migrações reais).
 
+### 0.2 Atendimento e ficha (igual à Le Ange, nov/2026)
+
+A tela ocupa o painel do ERP de ponta a ponta (`data-flush`) e segue o `inbox.module.css` da Le Ange regra por regra, nas cores do tema daqui (`conversas/estilos.ts`). Migração `018_whatsapp_atendimento.sql`.
+
+- **Situação da conversa:** Aberta, Aguardando (o cliente) e Resolvida (`contacts.status`). A resolvida sai da lista do dia a dia e volta sozinha quando o cliente escreve; aparece no recorte "Resolvidas", no filtro de situação e na busca. O "arquivar" antigo virou "resolver". Dá para fechar em massa (as marcadas ou todas as do filtro).
+- **Responsável:** uma pessoa da equipe por conversa (`contacts.assignee`); "Assumir a conversa" no cabeçalho e no botão direito. O recorte "Minhas" mostra as de quem está na tela.
+- **Aguardando a equipe:** grupo no topo da lista com quem escreveu por último, ao vivo, e ainda não tem responsável, do mais antigo para o mais novo. O histórico importado do celular não entra nessa fila. Selos: "Novo" (nunca teve resposta) e "Sem resposta" (lida, sem resposta).
+- **Recortes e filtros:** chips Todas / Não lidas / Aguardando + seta (Minhas, Favoritas, Fixadas, Resolvidas). O botão de filtros soma: última mensagem, resposta, situação, só fixadas, janela de 24h, responsável e etiquetas.
+- **Nota interna:** o seletor "Mensagem | Nota interna" do campo. A nota é uma linha de `messages` com `type = 'note'`: fica na conversa (balão amarelo com cadeado), aparece na prévia da lista, nunca vai para a Meta e não conta como resposta. Com a janela fechada o campo segue aberto só para nota; a faixa acima oferece o modelo aprovado.
+- **Eventos:** resolver, reabrir e trocar o responsável deixam uma pílula no meio da conversa (`type = 'system'`), que não vira prévia nem conta como resposta.
+- **Ficha lateral:** é a ficha da oportunidade do CRM (`LeadProfile`, a mesma da tela de Leads) com a aba "WhatsApp" a mais. A oportunidade é a que tem o mesmo telefone da conversa (`src/lib/whatsapp/ficha.ts`: com e sem 55, com e sem o nono dígito). Sem oportunidade, a ficha mostra o contato e o botão "Criar oportunidade". A etapa do funil fica presa abaixo do cabeçalho da conversa. "Salvar na ficha" copia a foto, o áudio ou o documento da mensagem para os arquivos da oportunidade.
+- **Outros:** lista recolhida em trilho, álbum de fotos seguidas, aviso "Sem entrega" com "Mandar de novo", respostas rápidas com nome em painel de duas colunas, ouvir a nota de voz antes de enviar e "Exportar conversa" em texto (`/api/whatsapp/exportar`).
+
 ## 1. Uso previsto e fronteiras do produto
 
 ### 1.1 Por que conectar o WhatsApp

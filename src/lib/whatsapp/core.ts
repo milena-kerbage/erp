@@ -15,7 +15,7 @@ export type JsonObject = Record<string, unknown>;
 export type ConsentStatus = 'unknown' | 'granted' | 'revoked';
 export type Reaction = { emoji: string; from: 'contact' | 'me'; at: number };
 export type Message = { id: string; phone: string; direction: 'inbound' | 'outbound'; type: string; text: string; status: string; createdAt: string; isRead: boolean; error?: string; mediaId?: string; mimeType?: string; filename?: string; hasMedia?: boolean; size?: number; duration?: number; voice?: boolean; author?: string; reactions?: Reaction[]; replyTo?: { id: string; text: string; type: string; direction: 'inbound' | 'outbound' } };
-type ContactRow = { phone: string; name: string; consent_status: ConsentStatus; consent_source: string; consent_updated: number | null; opted_out: number; last_inbound: number | null; updated: number; pinned_at?: number | null; archived?: number; marked_unread?: number; labels?: string };
+type ContactRow = { phone: string; name: string; consent_status: ConsentStatus; consent_source: string; consent_updated: number | null; opted_out: number; last_inbound: number | null; updated: number; pinned_at?: number | null; archived?: number; marked_unread?: number; labels?: string; status?: string | null; assignee?: string | null };
 type MessageRow = { id: string; phone: string; direction: 'inbound' | 'outbound'; type: string; text: string; status: string; created: number; status_rank: number; error: string | null; media_id: string | null; mime_type: string | null; filename: string | null; is_read: number; reply_to?: string | null; reactions?: string | null; media_key?: string | null; media_size?: number | null; duration?: number | null; voice?: number | null; author?: string | null; reply_text?: string | null; reply_type?: string | null; reply_direction?: 'inbound' | 'outbound' | null };
 type SendRow = { request_key: string; payload_hash: string; message_id: string; state: string; created: number };
 export type Template = { id?: string; name: string; language: string; status: string; category: string; parameter_format?: string; components: JsonObject[] };
@@ -40,10 +40,10 @@ export function configuration() { return environmentConfiguration(); }
 async function configured() { const config = await effectiveConfiguration(); if (!config.configured) throw new WhatsAppError(503, 'Complete a configuração da integração no servidor.', 'NOT_CONFIGURED'); return config; }
 
 const sqliteSchema = `PRAGMA journal_mode = DELETE; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON;
-    CREATE TABLE IF NOT EXISTS contacts (phone TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', consent_status TEXT NOT NULL DEFAULT 'unknown', consent_source TEXT NOT NULL DEFAULT '', consent_updated INTEGER, opted_out INTEGER NOT NULL DEFAULT 0, last_inbound INTEGER, updated INTEGER NOT NULL, pinned_at INTEGER, archived INTEGER NOT NULL DEFAULT 0, marked_unread INTEGER NOT NULL DEFAULT 0, labels TEXT NOT NULL DEFAULT '[]');
+    CREATE TABLE IF NOT EXISTS contacts (phone TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', consent_status TEXT NOT NULL DEFAULT 'unknown', consent_source TEXT NOT NULL DEFAULT '', consent_updated INTEGER, opted_out INTEGER NOT NULL DEFAULT 0, last_inbound INTEGER, updated INTEGER NOT NULL, pinned_at INTEGER, archived INTEGER NOT NULL DEFAULT 0, marked_unread INTEGER NOT NULL DEFAULT 0, labels TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'aberta', assignee TEXT);
     CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, phone TEXT NOT NULL REFERENCES contacts(phone) ON DELETE CASCADE, direction TEXT NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, status TEXT NOT NULL, status_rank INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, error TEXT, media_id TEXT, mime_type TEXT, filename TEXT, is_read INTEGER NOT NULL DEFAULT 0, reply_to TEXT, reactions TEXT NOT NULL DEFAULT '[]', media_key TEXT, media_size INTEGER, duration INTEGER, voice INTEGER NOT NULL DEFAULT 0, author TEXT);
     CREATE TABLE IF NOT EXISTS stars (phone TEXT NOT NULL REFERENCES contacts(phone) ON DELETE CASCADE, user_id TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (phone, user_id));
-    CREATE TABLE IF NOT EXISTS quick_replies (id TEXT PRIMARY KEY, shortcut TEXT NOT NULL UNIQUE, body TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS quick_replies (id TEXT PRIMARY KEY, shortcut TEXT NOT NULL UNIQUE, body TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, title TEXT NOT NULL DEFAULT '');
     CREATE INDEX IF NOT EXISTS messages_phone_created ON messages(phone, created);
     CREATE TABLE IF NOT EXISTS consent_audit (id TEXT PRIMARY KEY, phone TEXT NOT NULL REFERENCES contacts(phone) ON DELETE CASCADE, status TEXT NOT NULL, source TEXT NOT NULL, actor TEXT NOT NULL, created INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS webhook_events (event_key TEXT PRIMARY KEY, created INTEGER NOT NULL);
@@ -155,58 +155,98 @@ function mediaFields(media: JsonObject) {
   return {mediaId: /^[0-9]{5,40}$/.test(id) ? id : null, mime: string(media.mime_type, 100) || null, filename: string(media.filename, 200) || null, voice: media.voice === true ? 1 : 0};
 }
 const messageSelect = `SELECT m.*, r.text AS reply_text, r.type AS reply_type, r.direction AS reply_direction FROM messages m LEFT JOIN messages r ON r.id = m.reply_to`;
-type ConversationRow = ContactRow & {last_text: string | null; last_created: number | null; last_type: string | null; last_direction: string | null; last_status: string | null; unread_count: number; starred: number};
+type ConversationRow = ContactRow & {last_text: string | null; last_created: number | null; last_type: string | null; last_direction: string | null; last_status: string | null; real_direction: string | null; real_created: number | null; replied: number; unread_count: number; starred: number};
+export const SITUACOES = ['aberta', 'aguardando', 'resolvida'] as const;
+export type Situacao = typeof SITUACOES[number];
+// Nota interna e evento do sistema moram na conversa, mas nunca saem para a Meta nem contam como resposta.
+const INTERNAS = "('note', 'system')";
 // Resumo da lista: última mensagem (texto, tipo, sentido e status para os ticks), não lidas e favorito de quem consulta.
-// Cada subconsulta usa o índice (phone, created DESC, id DESC).
-const lastOf = (column: string) => `(SELECT ${column} FROM messages WHERE messages.phone = contacts.phone ORDER BY created DESC, id DESC LIMIT 1)`;
-const summarySql = `SELECT contacts.*, ${lastOf('text')} AS last_text, ${lastOf('created')} AS last_created, ${lastOf('type')} AS last_type, ${lastOf('direction')} AS last_direction, ${lastOf('status')} AS last_status, (SELECT COUNT(*) FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0) AS unread_count, (SELECT COUNT(*) FROM stars WHERE stars.phone = contacts.phone AND stars.user_id = ?) AS starred FROM contacts`;
+// "last_*" ignora só os eventos do sistema (a nota aparece na prévia, com o cadeado); "real_*" ignora também as notas:
+// é por ele que se sabe quem falou por último com o cliente. Cada subconsulta usa o índice (phone, created).
+const lastOf = (column: string) => `(SELECT ${column} FROM messages WHERE messages.phone = contacts.phone AND type <> 'system' ORDER BY created DESC, id DESC LIMIT 1)`;
+const lastReal = (column: string) => `(SELECT ${column} FROM messages WHERE messages.phone = contacts.phone AND type NOT IN ${INTERNAS} ORDER BY created DESC, id DESC LIMIT 1)`;
+const summarySql = `SELECT contacts.*, ${lastOf('text')} AS last_text, ${lastOf('created')} AS last_created, ${lastOf('type')} AS last_type, ${lastOf('direction')} AS last_direction, ${lastOf('status')} AS last_status, ${lastReal('direction')} AS real_direction, ${lastReal('created')} AS real_created, CASE WHEN EXISTS (SELECT 1 FROM messages WHERE messages.phone = contacts.phone AND direction = 'outbound' AND type NOT IN ${INTERNAS}) THEN 1 ELSE 0 END AS replied, (SELECT COUNT(*) FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0) AS unread_count, (SELECT COUNT(*) FROM stars WHERE stars.phone = contacts.phone AND stars.user_id = ?) AS starred FROM contacts`;
+// Aguardando a equipe (padrão da Le Ange): o cliente escreveu por último, ao vivo (o histórico importado não abre espera),
+// a conversa não foi resolvida e ninguém assumiu.
+const ESPERA = "(status <> 'resolvida' AND real_direction = 'inbound' AND last_inbound IS NOT NULL AND real_created >= last_inbound)";
 function labelsOf(value: string | null | undefined) { try { return array(JSON.parse(value || '[]')).filter((item): item is string => typeof item === 'string').slice(0, 20); } catch { return []; } }
+const situacaoDe = (value: unknown): Situacao => SITUACOES.includes(value as Situacao) ? value as Situacao : 'aberta';
 function conversationFromRow(row: ConversationRow) {
-  const unread = Number(row.unread_count) || 0;
+  const unread = Number(row.unread_count) || 0, status = situacaoDe(row.status);
+  const esperando = status !== 'resolvida' && row.real_direction === 'inbound' && row.last_inbound !== null && Number(row.real_created) >= Number(row.last_inbound);
   return {phone: row.phone, name: row.name || row.phone, lastMessage: row.last_text || '', lastMessageAt: iso(row.last_created ?? row.updated), lastType: row.last_type || '', lastDirection: (row.last_direction || '') as '' | 'inbound' | 'outbound', lastStatus: row.last_status || '',
-    unreadCount: unread || (row.marked_unread ? 1 : 0), markedUnread: Boolean(row.marked_unread), pinned: Boolean(row.pinned_at), archived: Boolean(row.archived), starred: Number(row.starred) > 0, labels: labelsOf(row.labels),
+    unreadCount: unread || (row.marked_unread ? 1 : 0), markedUnread: Boolean(row.marked_unread), pinned: Boolean(row.pinned_at), archived: status === 'resolvida', starred: Number(row.starred) > 0, labels: labelsOf(row.labels),
+    status, assignee: row.assignee || null, waitingSince: esperando ? iso(row.last_inbound) : null, isNew: esperando && !Number(row.replied), lastFromContact: row.real_direction === 'inbound',
     serviceWindowExpiresAt: iso(row.last_inbound === null ? null : row.last_inbound + DAY), consent: {status: row.consent_status, source: row.consent_source, updatedAt: iso(row.consent_updated)}, optedOut: Boolean(row.opted_out)};
 }
 export async function conversation(phone: string, userId = '') {
   const row = await db().prepare(`${summarySql} WHERE phone = ?`).get(userId, phone) as ConversationRow | undefined;
   return row ? conversationFromRow(row) : null;
 }
-export type FiltroConversas = { userId?: string; aba?: string; busca?: string; etiqueta?: string; limit?: number; offset?: number };
+export type FiltroConversas = { userId?: string; aba?: string; busca?: string; etiqueta?: string; limit?: number; offset?: number; periodo?: string; resposta?: string; janela?: string; situacoes?: string[]; responsaveis?: string[]; etiquetas?: string[]; soFixadas?: boolean };
 const semAcento = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-/** Lista no padrão da Le Ange: fixadas no topo, depois pela última mensagem; abas, etiqueta e busca no histórico. */
+/** Lista no padrão da Le Ange: quem espera a equipe no topo (do mais antigo), depois as fixadas e as recentes; recortes (abas), filtros e busca no histórico. */
 export async function conversations(limitOrFilter: number | FiltroConversas = 100, offsetArg = 0) {
   await maintenance();
   const filtro: FiltroConversas = typeof limitOrFilter === 'number' ? {limit: limitOrFilter, offset: offsetArg} : limitOrFilter;
-  const limit = Math.min(Math.max(filtro.limit ?? 100, 1), 200), offset = Math.max(filtro.offset ?? 0, 0), userId = filtro.userId ?? '', aba = filtro.aba ?? 'todas';
+  const limit = Math.min(Math.max(filtro.limit ?? 100, 1), 200), offset = Math.max(filtro.offset ?? 0, 0), userId = filtro.userId ?? '', agora = Date.now();
+  const aba = filtro.aba === 'arquivadas' ? 'resolvidas' : filtro.aba ?? 'todas';
   // Parâmetros na ordem em que aparecem na consulta: trecho da busca (SELECT), favorito do usuário (resumo), filtros, página.
-  const condicoes = ['opted_out = 0', 'last_created IS NOT NULL'], filtros: Array<string | number> = [];
-  if (aba === 'arquivadas') condicoes.push('archived = 1'); else condicoes.push('archived = 0');
-  if (aba === 'nao_lidas') condicoes.push('(unread_count > 0 OR marked_unread = 1)');
-  if (aba === 'favoritas') condicoes.push('starred > 0');
-  if (aba === 'fixadas') condicoes.push('pinned_at IS NOT NULL');
-  if (filtro.etiqueta) { condicoes.push('labels LIKE ?'); filtros.push(`%${JSON.stringify(filtro.etiqueta.slice(0, 40))}%`); }
+  const base = ['opted_out = 0', 'last_created IS NOT NULL'], condicoes = [...base], filtros: Array<string | number> = [];
   const busca = semAcento((filtro.busca ?? '').trim()).slice(0, 80);
+  const situacoes = (filtro.situacoes ?? []).filter((item): item is Situacao => SITUACOES.includes(item as Situacao));
+  // A conversa resolvida sai da lista do dia a dia (como na Le Ange); volta pelo recorte "Resolvidas", pelo filtro de situação,
+  // pela busca ou quando o cliente escreve de novo.
+  if (aba === 'resolvidas') condicoes.push("status = 'resolvida'");
+  else if (situacoes.length) { condicoes.push(`status IN (${situacoes.map(() => '?').join(', ')})`); filtros.push(...situacoes); }
+  else if (busca.length < 2) condicoes.push("status <> 'resolvida'");
+  if (aba === 'nao_lidas') condicoes.push('(unread_count > 0 OR marked_unread = 1)');
+  if (aba === 'aguardando') condicoes.push(`${ESPERA} AND assignee IS NULL`);
+  if (aba === 'minhas') { condicoes.push('assignee = ?'); filtros.push(userId); }
+  if (aba === 'favoritas') condicoes.push('starred > 0');
+  if (aba === 'fixadas' || filtro.soFixadas) condicoes.push('pinned_at IS NOT NULL');
+  const etiquetas = [...new Set([filtro.etiqueta ?? '', ...(filtro.etiquetas ?? [])].map(item => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
+  if (etiquetas.length) { condicoes.push(`(${etiquetas.map(() => 'labels LIKE ?').join(' OR ')})`); filtros.push(...etiquetas.map(item => `%${JSON.stringify(item)}%`)); }
+  const desde = filtro.periodo === 'hoje' ? new Date(agora).setHours(0, 0, 0, 0) : filtro.periodo === '7d' ? agora - 7 * DAY : filtro.periodo === '30d' ? agora - 30 * DAY : null;
+  if (desde !== null) { condicoes.push('last_created >= ?'); filtros.push(desde); }
+  if (filtro.resposta === 'sem-resposta') condicoes.push("real_direction = 'inbound'");
+  if (filtro.resposta === 'respondida') condicoes.push("real_direction = 'outbound'");
+  if (filtro.janela === 'aberta') { condicoes.push('last_inbound IS NOT NULL AND last_inbound > ?'); filtros.push(agora - DAY); }
+  if (filtro.janela === 'fechada') { condicoes.push('(last_inbound IS NULL OR last_inbound <= ?)'); filtros.push(agora - DAY); }
+  const responsaveis = [...new Set((filtro.responsaveis ?? []).map(item => item.slice(0, 100)))].slice(0, 30);
+  if (responsaveis.length) {
+    const ids = responsaveis.filter(Boolean), partes = [...(ids.length ? [`assignee IN (${ids.map(() => '?').join(', ')})`] : []), ...(responsaveis.includes('') ? ['assignee IS NULL'] : [])];
+    condicoes.push(`(${partes.join(' OR ')})`); filtros.push(...ids);
+  }
   let trecho = '';
   const inicio: Array<string | number> = [];
   if (busca.length >= 2) {
     const digitos = busca.replace(/\D/g, ''), termo = `%${busca.replace(/[%_\\]/g, '')}%`;
     // Nome, telefone ou qualquer mensagem do histórico (sem acento no Postgres; no SQLite, minúsculas).
     const normalizar = (coluna: string) => db().backend === 'postgres' ? `translate(lower(${coluna}), 'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc')` : `sem_acento(${coluna})`;
-    condicoes.push(`(${normalizar('name')} LIKE ?${digitos.length >= 3 ? ' OR phone LIKE ?' : ''} OR EXISTS (SELECT 1 FROM messages b WHERE b.phone = conversas.phone AND ${normalizar('b.text')} LIKE ?))`);
+    condicoes.push(`(${normalizar('name')} LIKE ?${digitos.length >= 3 ? ' OR phone LIKE ?' : ''} OR EXISTS (SELECT 1 FROM messages b WHERE b.phone = conversas.phone AND b.type <> 'system' AND ${normalizar('b.text')} LIKE ?))`);
     filtros.push(termo, ...(digitos.length >= 3 ? [`%${digitos}%`] : []), termo);
-    trecho = `, (SELECT text FROM messages b WHERE b.phone = conversas.phone AND ${normalizar('b.text')} LIKE ? ORDER BY created DESC LIMIT 1) AS match_text`;
+    trecho = `, (SELECT text FROM messages b WHERE b.phone = conversas.phone AND b.type <> 'system' AND ${normalizar('b.text')} LIKE ? ORDER BY created DESC LIMIT 1) AS match_text`;
     inicio.push(termo);
   }
-  const ordem = aba === 'todas' ? 'CASE WHEN pinned_at IS NULL THEN 0 ELSE 1 END DESC, pinned_at DESC, ' : '';
+  const espera = `${ESPERA} AND assignee IS NULL`;
+  const ordem = aba === 'todas' || aba === 'aguardando' ? `CASE WHEN ${espera} THEN 0 WHEN pinned_at IS NOT NULL THEN 1 ELSE 2 END, CASE WHEN ${espera} THEN last_inbound END ASC, pinned_at DESC, ` : '';
   const sql = `SELECT *${trecho} FROM (${summarySql}) AS conversas WHERE ${condicoes.join(' AND ')} ORDER BY ${ordem}last_created DESC, phone DESC LIMIT ? OFFSET ?`;
   const rows = await db().prepare(sql).all(...inicio, userId, ...filtros, limit + 1, offset) as Array<ConversationRow & {match_text?: string | null}>;
   const mais = rows.length > limit; rows.length = Math.min(rows.length, limit);
   const lista = rows.map(row => ({...conversationFromRow(row), ...(row.match_text ? {match: row.match_text.slice(0, 300)} : {})}));
-  return typeof limitOrFilter === 'number' ? lista : {conversations: lista, nextOffset: mais ? offset + limit : null};
+  if (typeof limitOrFilter === 'number') return lista;
+  // Os números dos recortes só na primeira página: é uma passada a mais pela lista inteira.
+  let counts: {nao_lidas: number; aguardando: number; minhas: number} | undefined;
+  if (offset === 0) {
+    const row = await db().prepare(`SELECT SUM(CASE WHEN status <> 'resolvida' AND (unread_count > 0 OR marked_unread = 1) THEN 1 ELSE 0 END) AS nao_lidas, SUM(CASE WHEN ${espera} THEN 1 ELSE 0 END) AS aguardando, SUM(CASE WHEN status <> 'resolvida' AND assignee = ? THEN 1 ELSE 0 END) AS minhas FROM (${summarySql}) AS conversas WHERE ${base.join(' AND ')}`).get(userId, userId) as {nao_lidas: number | null; aguardando: number | null; minhas: number | null} | undefined;
+    counts = {nao_lidas: Number(row?.nao_lidas) || 0, aguardando: Number(row?.aguardando) || 0, minhas: Number(row?.minhas) || 0};
+  }
+  return {conversations: lista, nextOffset: mais ? offset + limit : null, ...(counts ? {counts} : {})};
 }
 export async function unreadConversationCount() {
   await maintenance();
-  const row = await db().prepare(`SELECT COUNT(*) AS count FROM contacts WHERE opted_out = 0 AND archived = 0 AND (marked_unread = 1 OR EXISTS (SELECT 1 FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0))`).get() as {count: number};
+  const row = await db().prepare(`SELECT COUNT(*) AS count FROM contacts WHERE opted_out = 0 AND status <> 'resolvida' AND (marked_unread = 1 OR EXISTS (SELECT 1 FROM messages WHERE messages.phone = contacts.phone AND direction = 'inbound' AND is_read = 0))`).get() as {count: number};
   return row.count;
 }
 export async function messagesFor(phoneInput: unknown, before?: string, limit = 100, userId = '') {
@@ -237,13 +277,34 @@ export async function currentRevision() {
 }
 
 /* -------------------------------------------------------------- organização da conversa */
-export type AcaoConversa = { fixar?: boolean; arquivar?: boolean; naoLida?: boolean; favoritar?: boolean; etiquetas?: unknown };
-export async function updateConversation(phoneInput: unknown, acao: AcaoConversa, userId: string) {
+export type AcaoConversa = { fixar?: boolean; arquivar?: boolean; naoLida?: boolean; favoritar?: boolean; etiquetas?: unknown; situacao?: unknown; responsavel?: unknown; responsavelNome?: unknown };
+// Evento do sistema: a pílula no meio da conversa que conta o que a equipe fez (resolveu, reabriu, trocou o responsável).
+async function registrarEvento(database: Database, phone: string, text: string, now: number) {
+  await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read) VALUES (?, ?, 'outbound', 'system', ?, 'read', 9, ?, 1)`).run(`sys.${randomUUID()}`, phone, text.slice(0, 300), now);
+}
+const primeiroNome = (value: unknown) => string(value, 80).trim().split(/\s+/)[0] || 'A equipe';
+export async function updateConversation(phoneInput: unknown, acao: AcaoConversa, userId: string, autorNome = '') {
   const phone = phoneNumber(phoneInput), database = db(), now = Date.now();
-  if (!(await database.prepare('SELECT 1 FROM contacts WHERE phone = ?').get(phone))) throw new WhatsAppError(404, 'Conversa não encontrada.', 'NOT_FOUND');
+  const atual = await database.prepare('SELECT status, assignee FROM contacts WHERE phone = ?').get(phone) as {status: string | null; assignee: string | null} | undefined;
+  if (!atual) throw new WhatsAppError(404, 'Conversa não encontrada.', 'NOT_FOUND');
+  const quem = primeiroNome(autorNome);
+  // "Arquivar" de antes virou a situação "resolvida" (uma coisa só, como na Le Ange).
+  const pedida = acao.situacao !== undefined ? acao.situacao : acao.arquivar === undefined ? undefined : acao.arquivar ? 'resolvida' : 'aberta';
+  if (pedida !== undefined && !SITUACOES.includes(pedida as Situacao)) throw new WhatsAppError(400, 'Situação inválida.', 'INVALID_STATUS', 'situacao');
+  const situacao = pedida as Situacao | undefined;
+  const responsavel = acao.responsavel === undefined ? undefined : acao.responsavel === null || acao.responsavel === '' ? null : string(acao.responsavel, 100);
+  if (typeof responsavel === 'string' && !/^[A-Za-z0-9_-]{1,100}$/.test(responsavel)) throw new WhatsAppError(400, 'Responsável inválido.', 'INVALID_ASSIGNEE', 'responsavel');
   await database.transaction(async () => {
     if (acao.fixar !== undefined) await database.prepare('UPDATE contacts SET pinned_at = ? WHERE phone = ?').run(acao.fixar ? now : null, phone);
-    if (acao.arquivar !== undefined) await database.prepare('UPDATE contacts SET archived = ?, pinned_at = CASE WHEN ? = 1 THEN NULL ELSE pinned_at END WHERE phone = ?').run(acao.arquivar ? 1 : 0, acao.arquivar ? 1 : 0, phone);
+    if (situacao !== undefined && situacao !== situacaoDe(atual.status)) {
+      await database.prepare("UPDATE contacts SET status = ?, pinned_at = CASE WHEN ? = 'resolvida' THEN NULL ELSE pinned_at END WHERE phone = ?").run(situacao, situacao, phone);
+      await registrarEvento(database, phone, situacao === 'resolvida' ? `${quem} resolveu a conversa` : situacao === 'aguardando' ? `${quem} marcou como aguardando o cliente` : `${quem} reabriu a conversa`, now);
+    }
+    if (responsavel !== undefined && responsavel !== (atual.assignee || null)) {
+      await database.prepare('UPDATE contacts SET assignee = ? WHERE phone = ?').run(responsavel, phone);
+      const nome = string(acao.responsavelNome, 80).trim();
+      await registrarEvento(database, phone, responsavel === null ? `${quem} deixou a conversa sem responsável` : responsavel === userId ? `${quem} assumiu a conversa` : `${quem} passou a conversa para ${nome || 'outra pessoa'}`, now + 1);
+    }
     if (acao.naoLida !== undefined) await database.prepare('UPDATE contacts SET marked_unread = ? WHERE phone = ?').run(acao.naoLida ? 1 : 0, phone);
     if (acao.favoritar !== undefined) {
       if (acao.favoritar) await database.prepare('INSERT INTO stars VALUES (?, ?, ?) ON CONFLICT(phone, user_id) DO NOTHING').run(phone, userId, now);
@@ -256,6 +317,51 @@ export async function updateConversation(phoneInput: unknown, acao: AcaoConversa
   });
   await bumpRevision();
   return conversation(phone, userId);
+}
+/** Fechar em massa (as marcadas ou todas as do filtro): resolve cada conversa aberta, com o evento na conversa. */
+export async function resolveConversations(phonesInput: unknown, userId: string, autorNome = '') {
+  const phones = [...new Set(array(phonesInput).map(item => { try { return phoneNumber(item); } catch { return ''; } }).filter(Boolean))].slice(0, 500);
+  if (!phones.length) throw new WhatsAppError(400, 'Escolha ao menos uma conversa.', 'INVALID_SELECTION');
+  const database = db(), now = Date.now(), quem = primeiroNome(autorNome);
+  let resolved = 0;
+  await database.transaction(async () => {
+    for (const phone of phones) {
+      const mudou = (await database.prepare("UPDATE contacts SET status = 'resolvida', pinned_at = NULL WHERE phone = ? AND status <> 'resolvida'").run(phone)).changes;
+      if (mudou) { await registrarEvento(database, phone, `${quem} resolveu a conversa`, now); resolved++; }
+    }
+  });
+  if (resolved) await bumpRevision();
+  return {success: true, resolved};
+}
+/** Nota interna: fica na conversa, só a equipe vê e nunca vai para a Meta (vale também com a janela de 24 h fechada). */
+export async function addNote(input: JsonObject, userId: string) {
+  const phone = phoneNumber(input.phone), text = string(input.text, 4096).trim(), database = db(), now = Date.now();
+  if (!text) throw new WhatsAppError(400, 'Escreva a nota.', 'INVALID_NOTE', 'text');
+  if (!(await database.prepare('SELECT 1 FROM contacts WHERE phone = ?').get(phone))) throw new WhatsAppError(404, 'Conversa não encontrada.', 'NOT_FOUND');
+  const key = string(input.clientRequestId, 100), id = `note.${/^[A-Za-z0-9_.:-]{8,100}$/.test(key) ? key : randomUUID()}`;
+  await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, status_rank, created, is_read, author) VALUES (?, ?, 'outbound', 'note', ?, 'read', 9, ?, 1, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, text, now, userId);
+  await bumpRevision();
+  const row = await database.prepare(`${messageSelect} WHERE m.id = ?`).get(id) as MessageRow;
+  return {success: true, message: messageFromRow(row)};
+}
+/** A conversa inteira em texto, para guardar ou mandar a alguém (sem as notas internas quando pedido). */
+export async function exportConversation(phoneInput: unknown, incluirNotas = true) {
+  const phone = phoneNumber(phoneInput), database = db();
+  const contato = await database.prepare('SELECT name FROM contacts WHERE phone = ?').get(phone) as {name: string} | undefined;
+  if (!contato) throw new WhatsAppError(404, 'Conversa não encontrada.', 'NOT_FOUND');
+  const rows = await database.prepare("SELECT direction, type, text, created, filename FROM messages WHERE phone = ? ORDER BY created ASC, id ASC LIMIT 20000").all(phone) as Array<{direction: string; type: string; text: string; created: number; filename: string | null}>;
+  const data = new Intl.DateTimeFormat('pt-BR', {timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'});
+  const rotulo: Record<string, string> = {image: 'Foto', video: 'Vídeo', audio: 'Áudio', document: 'Documento', sticker: 'Figurinha', location: 'Localização', contacts: 'Contato', template: 'Modelo'};
+  const nome = contato.name || phone, linhas = [`Conversa com ${nome} (+${phone})`, `Exportada em ${data.format(Date.now())}`, ''];
+  for (const row of rows) {
+    if (row.type === 'note' && !incluirNotas) continue;
+    const quando = data.format(row.created).replace(',', '');
+    if (row.type === 'system') { linhas.push(`[${quando}] — ${row.text} —`); continue; }
+    const quem = row.type === 'note' ? 'Nota interna' : row.direction === 'inbound' ? nome : 'Ateliê';
+    const midia = rotulo[row.type] ? `[${rotulo[row.type]}${row.filename ? `: ${row.filename}` : ''}] ` : '';
+    linhas.push(`[${quando}] ${quem}: ${midia}${/^\[[a-z_]+\]$/.test(row.text) ? '' : row.text}`.trimEnd());
+  }
+  return {filename: `conversa-${nome.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || phone}.txt`, text: linhas.join('\n') + '\n'};
 }
 /** Etiquetas já usadas (para sugerir e filtrar). */
 export async function allLabels() {
@@ -276,14 +382,14 @@ export async function markConversationRead(phoneInput: unknown, fetcher: typeof 
 
 /* -------------------------------------------------------------- respostas rápidas */
 export async function quickReplies() {
-  return (await db().prepare('SELECT id, shortcut, body FROM quick_replies ORDER BY shortcut').all() as Array<{id: string; shortcut: string; body: string}>);
+  return (await db().prepare('SELECT id, shortcut, title, body FROM quick_replies ORDER BY shortcut').all() as Array<{id: string; shortcut: string; title: string; body: string}>).map(item => ({...item, title: item.title || item.shortcut}));
 }
 export async function saveQuickReply(input: JsonObject) {
-  const shortcut = string(input.shortcut, 40).trim().replace(/^\//, '').toLowerCase().replace(/\s+/g, '-'), body = string(input.body, 4096).trim();
+  const shortcut = string(input.shortcut, 40).trim().replace(/^\//, '').toLowerCase().replace(/\s+/g, '-'), body = string(input.body, 4096).trim(), title = string(input.title, 80).trim();
   if (!/^[a-z0-9à-ú_-]{1,40}$/i.test(shortcut)) throw new WhatsAppError(400, 'Use um atalho curto, sem espaços (ex.: preco).', 'INVALID_SHORTCUT', 'shortcut');
   if (!body) throw new WhatsAppError(400, 'Escreva o texto da resposta.', 'INVALID_BODY', 'body');
   const id = typeof input.id === 'string' && input.id ? string(input.id, 60) : randomUUID(), now = Date.now();
-  try { await db().prepare('INSERT INTO quick_replies VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET shortcut = excluded.shortcut, body = excluded.body, updated = excluded.updated').run(id, shortcut, body, now, now); }
+  try { await db().prepare('INSERT INTO quick_replies (id, shortcut, body, created, updated, title) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET shortcut = excluded.shortcut, body = excluded.body, updated = excluded.updated, title = excluded.title').run(id, shortcut, body, now, now, title); }
   catch { throw new WhatsAppError(409, 'Já existe uma resposta com esse atalho.', 'DUPLICATE_SHORTCUT', 'shortcut'); }
   return quickReplies();
 }
@@ -424,8 +530,8 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
           await ensureContact(phone, names.get(phone), created);
           const midia = mediaFields(media);
           await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, created, media_id, mime_type, filename, voice, reply_to) VALUES (?, ?, 'inbound', ?, ?, 'received', ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, text, created, midia.mediaId, midia.mime, midia.filename, midia.voice, string(object(incoming.context).id, 300) || null);
-          // Mensagem nova desarquiva a conversa (como no WhatsApp).
-          await database.prepare('UPDATE contacts SET archived = 0 WHERE phone = ? AND archived = 1').run(phone);
+          // Mensagem nova reabre a conversa resolvida (ela volta para a lista, como na Le Ange).
+          await database.prepare("UPDATE contacts SET status = 'aberta' WHERE phone = ? AND status = 'resolvida'").run(phone);
           await database.prepare('UPDATE contacts SET last_inbound = greatest(COALESCE(last_inbound, 0), ?), updated = greatest(updated, ?) WHERE phone = ?').run(created, created, phone);
           const optout = text.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
           if (['STOP', 'PARAR', 'SAIR', 'CANCELAR', 'DESCADASTRAR', 'PARE', 'NAO QUERO RECEBER MENSAGENS'].includes(optout)) {
@@ -533,7 +639,7 @@ export async function sendMessage(input: JsonObject, fetcher: typeof fetch = fet
   if (!/^[a-zA-Z0-9_-]{8,100}$/.test(requestKey)) throw new WhatsAppError(400, 'Informe uma chave única clientRequestId com 8 a 100 caracteres.', 'INVALID_REQUEST_ID');
   if (typeof type !== 'string' || !['text', 'template', ...MEDIA_TYPES].includes(type)) throw new WhatsAppError(400, 'Envie texto, mídia ou template aprovado.', 'INVALID_MESSAGE_TYPE');
   const payload: JsonObject = { messaging_product: 'whatsapp', recipient_type: 'individual', to: phone, type, biz_opaque_callback_data: requestKey };
-  const replyTo = typeof input.replyTo === 'string' && /^[A-Za-z0-9._=:+/-]{8,300}$/.test(input.replyTo) && !input.replyTo.startsWith('local.') ? input.replyTo : null;
+  const replyTo = typeof input.replyTo === 'string' && /^[A-Za-z0-9._=:+/-]{8,300}$/.test(input.replyTo) && !/^(local|note|sys)\./.test(input.replyTo) ? input.replyTo : null;
   if (replyTo) payload.context = {message_id: replyTo};
   const media = object(input.media);
   let display = '';
@@ -633,13 +739,13 @@ export async function sendReaction(phoneInput: unknown, messageId: unknown, emoj
   await bumpRevision();
   return {reactions};
 }
-/** Descarta uma mensagem que a Meta recusou (só enviada e com falha): some da conversa e libera "tentar de novo". */
+/** Descarta uma mensagem que a Meta recusou (só enviada e com falha) ou apaga uma nota interna: some da conversa. */
 export async function discardFailedMessage(phoneInput: unknown, id: unknown) {
   const phone = phoneNumber(phoneInput);
   if (typeof id !== 'string' || id.length > 300) throw new WhatsAppError(400, 'Mensagem inválida.', 'INVALID_MESSAGE_ID');
   const database = db();
   const removidas = await database.transaction(async () => {
-    const apagadas = (await database.prepare("DELETE FROM messages WHERE id = ? AND phone = ? AND direction = 'outbound' AND status = 'failed'").run(id, phone)).changes;
+    const apagadas = (await database.prepare("DELETE FROM messages WHERE id = ? AND phone = ? AND direction = 'outbound' AND (status = 'failed' OR type = 'note')").run(id, phone)).changes;
     if (apagadas) await database.prepare('DELETE FROM send_requests WHERE message_id = ?').run(id);
     return Number(apagadas);
   });

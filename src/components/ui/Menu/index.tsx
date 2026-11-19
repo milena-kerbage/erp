@@ -127,7 +127,8 @@ export function Menu({
               $side={position?.side ?? side}
               $width={width === "trigger" ? `${popover.triggerWidth}px` : width}
               $ready={position !== null}
-              style={position ? { top: position.top, left: position.left } : { top: 0, left: 0 }}
+              // Menu mais alto que o limite da folha (ex.: filtros com muitos grupos) rola por dentro, sem vazar.
+              style={{ ...(position ? { top: position.top, left: position.left } : { top: 0, left: 0 }), overflowY: "auto", overscrollBehavior: "contain" }}
               onKeyDown={handleKeyDown}
             >
               {children}
@@ -157,6 +158,8 @@ type MenuItemProps = {
   /** Módulo em produção: item apagado (continua clicável). */
   locked?: boolean;
   disabled?: boolean;
+  /** Não fecha o menu ao escolher (filtros que se marcam vários de uma vez). */
+  keepOpen?: boolean;
 };
 
 export function MenuItem({
@@ -171,6 +174,7 @@ export function MenuItem({
   muted = false,
   locked = false,
   disabled = false,
+  keepOpen = false,
 }: MenuItemProps) {
   const menu = useContext(MenuContext);
 
@@ -202,7 +206,7 @@ export function MenuItem({
     onClick: () => {
       if (disabled) return;
       onSelect?.();
-      menu?.close();
+      if (!keepOpen) menu?.close();
     },
     // Hover move o foco (como em menus nativos): um único item destacado.
     onPointerMove: (event: ReactPointerEvent<HTMLElement>) => {
