@@ -4,8 +4,9 @@
 // a situação, a estrela e as ações; a etapa da oportunidade presa logo abaixo; as mensagens por dia sobre o fundo
 // pontilhado; e o campo preso no pé, por cima delas.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useTheme } from "@emotion/react";
 import {
-  ArrowBendUpLeftIcon, ArrowDownIcon, ArrowLeftIcon, ArrowSquareOutIcon, CaretDownIcon, ChatsCircleIcon, CheckCircleIcon, CopyIcon, DotsThreeIcon, DownloadSimpleIcon, ExportIcon, FolderSimplePlusIcon,
+  ArrowBendUpLeftIcon, ArrowDownIcon, ArrowLeftIcon, ArrowSquareOutIcon, CaretDownIcon, ChatsCircleIcon, CheckCircleIcon, CircleDashedIcon, CopyIcon, DotsThreeIcon, DownloadSimpleIcon, ExportIcon, FolderSimplePlusIcon,
   HandIcon, LockSimpleIcon, LockSimpleOpenIcon, PushPinIcon, PushPinSlashIcon, SidebarSimpleIcon, StarIcon, TrashIcon, UserIcon, XIcon,
 } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -13,7 +14,6 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Lightbox } from "@/components/ui/Lightbox";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/Menu";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { StagePipeline } from "@/features/leads/components/StagePipeline";
 import type { Lead } from "@/features/leads/types";
 import type { Funnel } from "@/features/leads/funnels";
 import type { Member } from "@/features/settings/types";
@@ -60,6 +60,9 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
   const situacao: WhatsAppSituacao = conversa?.status ?? "aberta";
   const dono = conversa?.assignee ? equipe.find((membro) => membro.id === conversa.assignee) : undefined;
   const nomeDe = useCallback((id?: string) => (id ? equipe.find((membro) => membro.id === id)?.name : undefined), [equipe]);
+  const theme = useTheme();
+  const indiceEtapa = lead && funil ? funil.stages.findIndex((item) => item.id === lead.stage) : -1;
+  const etapa = funil?.stages[indiceEtapa];
 
   // Troca de conversa: abre no fim e limpa a resposta.
   useEffect(() => { setRespondendo(null); setNovas(0); setNoFim(true); ultimaId.current = undefined; }, [phone]);
@@ -217,11 +220,35 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
       </header>
 
       {/* A etapa da oportunidade, presa abaixo do cabeçalho: muda de etapa sem sair da conversa. */}
-      {lead && funil && (
+      {lead && funil && etapa && (
+        // Uma linha só: a etapa (abre a lista para mover), a régua das etapas (cada trecho leva direto a ela), a posição
+        // no funil e o atalho para a oportunidade.
         <div className="pinnedPipeline">
-          <span>{funil.name}</span>
-          <div className="grow" style={{ minWidth: 0 }}><StagePipeline stages={funil.stages} current={lead.stage} onMove={aoMoverEtapa} /></div>
-          <a href={`/leads/${lead.id}`} className="wideOnly">Abrir oportunidade</a>
+          <Menu label="Mover para outra etapa" align="start" width="15rem" trigger={(props) => (
+            <button {...props} type="button" className="stageButton" aria-label={`Etapa: ${etapa.label}. Mover`}>
+              <CircleDashedIcon weight="bold" color={theme.tones[etapa.tone].fg} aria-hidden />
+              <span>{etapa.label}</span>
+              <CaretDownIcon aria-hidden />
+            </button>
+          )}>
+            <MenuLabel>Mover para</MenuLabel>
+            {funil.stages.map((item, posicao) => <MenuItem key={item.id} selected={item.id === etapa.id} meta={`${posicao + 1}/${funil.stages.length}`} leading={<CircleDashedIcon size={18} weight="bold" color={theme.tones[item.tone].fg} />} onSelect={() => aoMoverEtapa(item.id)}>{item.label}</MenuItem>)}
+          </Menu>
+          <div className="stageTrack" role="group" aria-label="Etapas do funil">
+            {funil.stages.map((item, posicao) => {
+              const atual = posicao === indiceEtapa;
+              return (
+                <Tooltip key={item.id} label={atual ? `Etapa atual: ${item.label}` : `Mover para ${item.label}`} side="bottom" delay={120}>
+                  <button type="button" data-on={posicao <= indiceEtapa || undefined} aria-current={atual ? "step" : undefined} aria-label={atual ? `${item.label}, etapa atual` : `Mover para ${item.label}`}
+                    style={{ "--tone": `color-mix(in srgb, ${theme.tones[item.tone].fg} 60%, ${theme.tones[item.tone].soft})` } as CSSProperties} onClick={() => !atual && aoMoverEtapa(item.id)} />
+                </Tooltip>
+              );
+            })}
+          </div>
+          <span className="stageMeta">{indiceEtapa + 1}/{funil.stages.length}<i> · {funil.name}</i></span>
+          <Tooltip label="Abrir oportunidade" side="bottom">
+            <a className="iconGhost" href={`/leads/${lead.id}`} aria-label="Abrir oportunidade"><ArrowSquareOutIcon /></a>
+          </Tooltip>
         </div>
       )}
 

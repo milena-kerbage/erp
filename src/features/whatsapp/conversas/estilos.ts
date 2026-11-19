@@ -35,9 +35,9 @@ export const Raiz = styled.div`
   --sys-purple: ${({ theme }) => theme.tones.lavender.fg};
   --sys-yellow: ${({ theme }) => (theme.mode === "dark" ? "#ffd60a" : "#c99700")};
   --line: 0.0625rem solid ${({ theme }) => theme.colors.border.subtle};
-  --list-width: 22rem;
-  /* A ficha da oportunidade ganhou a aba WhatsApp: 25rem para as quatro abas caberem numa linha. */
-  --panel-width: 25rem;
+  /* Na Le Ange a lista tem 22rem e a ficha, 23rem; aqui ficaram um pouco mais estreitas, a pedido, para a conversa ganhar largura. */
+  --list-width: 20.5rem;
+  --panel-width: 23.5rem;
   --tone-contact: ${({ theme }) => theme.colors.background.elevated};
   --tone-agent: ${({ theme }) => theme.colors.chat.outgoing};
   --tone-template: ${({ theme }) => theme.tones.green.soft};
@@ -99,7 +99,7 @@ export const ColunaLista = styled.aside`
   background-color: var(--color-bg);
   border-inline-end: var(--line);
 
-  .listHead { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-2); }
+  .listHead { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-3) var(--space-2); }
   .listTitleRow { display: flex; gap: var(--space-2); align-items: center; justify-content: space-between; }
   .listTitle { font-size: var(--text-title-3); font-weight: 600; line-height: 1.2; }
   .listTitleActions { display: inline-flex; flex-shrink: 0; gap: var(--space-2); align-items: center; }
@@ -143,7 +143,7 @@ export const ColunaLista = styled.aside`
   .chips::-webkit-scrollbar { display: none; }
   .chips > * { flex-shrink: 0; }
   .chip {
-    display: inline-flex; gap: 0.3125rem; align-items: center; min-height: 1.875rem; padding-inline: 0.5625rem; font-size: var(--text-footnote); font-weight: 500;
+    display: inline-flex; gap: 0.3125rem; align-items: center; min-height: 1.875rem; padding-inline: var(--space-2); font-size: var(--text-footnote); font-weight: 500;
     color: var(--color-label-secondary); white-space: nowrap; background-color: transparent; border: 0.0625rem solid var(--color-border); border-radius: var(--radius-md);
     transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
   }
@@ -153,6 +153,8 @@ export const ColunaLista = styled.aside`
   .chip[aria-pressed="true"], .chip[data-pressed] { color: var(--color-ink); background-color: var(--color-fill-secondary); border-color: transparent; }
   .chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
   .chipCount { font-variant-numeric: tabular-nums; color: var(--color-label-secondary); }
+  /* O chip da seta (mais recortes) fica sempre à mão: se a linha rolar, os outros passam por baixo dele. */
+  .chips > :last-child { position: sticky; inset-inline-end: 0; background-color: var(--color-bg); border-radius: var(--radius-md); }
 
   .listBody { min-height: 0; padding: 0 var(--space-2) var(--space-4); overflow-y: auto; overscroll-behavior: contain; }
   .listEmpty { padding: var(--space-8) var(--space-4); font-size: var(--text-footnote); color: var(--color-label-secondary); text-align: center; }
@@ -605,20 +607,33 @@ export const ColunaConversa = styled.section`
   /* Conversa estreita (ficha aberta, tela média): os botões ficam só com o sinal. */
   @container thread (max-width: 46rem) { .chipLabel { display: none; } .chipButton, .statusChip { gap: 0.25rem; padding-inline: var(--space-1-5); } }
 
-  /* A etapa da oportunidade presa abaixo do cabeçalho, como o funil fixado da Le Ange. */
-  .pinnedPipeline { z-index: 2; display: flex; flex-shrink: 0; gap: var(--space-2); align-items: center; min-height: 2.5rem; padding: 0.25rem var(--space-3) 0.25rem var(--space-4); font-size: var(--text-footnote); background: var(--color-bg); border-block-end: var(--line); }
-  .pinnedPipeline > span { color: var(--color-label-secondary); white-space: nowrap; }
-  .pinnedPipeline .stageButton { display: inline-flex; gap: var(--space-1-5); align-items: center; height: 1.875rem; min-width: 0; padding-inline: var(--space-2); font-weight: 600; border-radius: var(--radius-md); }
+  /* A etapa da oportunidade presa abaixo do cabeçalho, como o funil fixado da Le Ange, numa linha só: a etapa (abre a
+     lista para mover), a régua das etapas, a posição no funil e o atalho para a oportunidade. */
+  .pinnedPipeline {
+    z-index: 2; display: flex; flex-shrink: 0; gap: var(--space-2); align-items: center; height: 2.25rem; padding-inline: var(--space-2) var(--space-3);
+    font-size: var(--text-footnote); background: var(--color-bg); border-block-end: var(--line);
+  }
+  .pinnedPipeline .stageButton { display: inline-flex; flex-shrink: 0; max-width: 62%; gap: var(--space-1-5); align-items: center; height: 1.75rem; min-width: 0; padding-inline: var(--space-2); font-weight: 600; border-radius: var(--radius-md); transition: background-color var(--duration-fast) var(--ease-standard); }
   .pinnedPipeline .stageButton:hover, .pinnedPipeline .stageButton[aria-expanded="true"] { background-color: var(--color-fill-quaternary); }
-  .pinnedPipeline .stageButton > svg { width: 0.75rem; height: 0.75rem; color: var(--color-label-secondary); }
-  .pinnedPipeline .stageDot { flex-shrink: 0; width: 0.5rem; height: 0.5rem; background-color: var(--tone); border-radius: 50%; }
-  .pinnedPipeline .stageSteps { display: flex; flex: 1; gap: 0.1875rem; min-width: 2rem; max-width: 12rem; }
-  .pinnedPipeline .stageSteps i { flex: 1; height: 0.25rem; background-color: var(--color-fill-secondary); border-radius: 0.125rem; }
-  .pinnedPipeline .stageSteps i[data-on] { background-color: var(--tone); }
-  .pinnedPipeline .grow { flex: 1; }
-  .pinnedPipeline a, .pinnedPipeline .linkButton { flex-shrink: 0; font-weight: 500; color: var(--color-label-secondary); white-space: nowrap; text-decoration: none; }
-  .pinnedPipeline a:hover, .pinnedPipeline .linkButton:hover { color: var(--color-ink); text-decoration: underline; }
-  @container thread (max-width: 34rem) { .pinnedPipeline .stageSteps, .pinnedPipeline > span { display: none; } }
+  .pinnedPipeline .stageButton:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+  .pinnedPipeline .stageButton > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pinnedPipeline .stageButton > svg { flex-shrink: 0; width: 0.9375rem; height: 0.9375rem; }
+  .pinnedPipeline .stageButton > svg:last-child { width: 0.75rem; height: 0.75rem; color: var(--color-label-secondary); }
+  /* A régua: um trecho por etapa, na cor dela até a atual; o trecho engrossa ao passar o mouse e o clique move para lá. */
+  .pinnedPipeline .stageTrack { display: flex; flex: 1 1 3rem; gap: 0.1875rem; min-width: 2.5rem; max-width: 11rem; }
+  .pinnedPipeline .stageTrack button { display: flex; flex: 1; align-items: center; height: 1.5rem; padding: 0; }
+  .pinnedPipeline .stageTrack button[aria-current] { cursor: default; }
+  .pinnedPipeline .stageTrack button::before { flex: 1; height: 0.25rem; content: ""; background-color: var(--color-fill-secondary); border-radius: var(--radius-full); transition: height var(--duration-fast) var(--ease-standard), background-color var(--duration-base) var(--ease-standard); }
+  .pinnedPipeline .stageTrack button[data-on]::before { background-color: var(--tone); }
+  .pinnedPipeline .stageTrack button:not([aria-current]):hover::before, .pinnedPipeline .stageTrack button:focus-visible::before { height: 0.5rem; background-color: var(--tone); }
+  .pinnedPipeline .stageTrack button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-radius: var(--radius-xs); }
+  .pinnedPipeline .stageMeta { flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--color-label-secondary); white-space: nowrap; }
+  .pinnedPipeline .stageMeta i { font-style: normal; }
+  .pinnedPipeline .iconGhost { width: 1.75rem; height: 1.75rem; margin-inline-start: auto; }
+  .pinnedPipeline .iconGhost svg { width: 1rem; height: 1rem; }
+  /* Conversa estreita: sai o nome do funil; mais estreita ainda, a régua (a etapa e a posição continuam). */
+  @container thread (max-width: 34rem) { .pinnedPipeline .stageMeta i { display: none; } }
+  @container thread (max-width: 22rem) { .pinnedPipeline .stageTrack { display: none; } }
 
   .messages {
     display: flex; flex: 1; flex-direction: column; gap: 0.125rem; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
@@ -672,6 +687,11 @@ export const ColunaFicha = styled.aside`
   background-color: var(--color-bg);
   border-inline-start: var(--line);
 
+  /* A ficha da oportunidade ganhou a aba WhatsApp: as quatro abas cabem numa linha com menos vão e letra um ponto menor;
+     com o contador de arquivos, a linha rola de lado sem barra. */
+  [role="tablist"] { gap: var(--space-3); overflow-x: auto; scrollbar-width: none; }
+  [role="tablist"]::-webkit-scrollbar { display: none; }
+  [role="tablist"] > button { flex-shrink: 0; font-size: var(--text-footnote); }
   .fichaVoltar { display: none; }
   @media (max-width: 1024px) {
     .fichaVoltar { display: flex; flex-shrink: 0; padding: var(--space-2) var(--space-3); border-block-end: var(--line); }
