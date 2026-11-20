@@ -10,6 +10,7 @@ import {
   CopyIcon,
   DotsThreeIcon,
   EnvelopeSimpleIcon,
+  KeyIcon,
   PaperPlaneTiltIcon,
   ShieldCheckIcon,
   TableIcon,
@@ -169,12 +170,13 @@ function PermissionSelect({ member, onChange }: { member: Member; onChange: (per
 /** Equipe do ateliê: quem acessa, o que pode fazer e convites. */
 export function UsersSettings() {
   const theme = useTheme();
-  const { members, currentUser, inviteMember, reissueInvitation, updateMember, removeMember, loading, error } = useWorkspace();
+  const { members, currentUser, inviteMember, reissueInvitation, passwordLink, updateMember, removeMember, loading, error } = useWorkspace();
   const [query, setQuery] = useState("");
   const [permissionFilter, setPermissionFilter] = useState<Permission[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | Member["status"]>("all");
   const [inviting, setInviting] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [linkTipo, setLinkTipo] = useState<"convite" | "senha">("convite");
   const [sending, runInvite] = usePending(650);
   const [removing, setRemoving] = useState<Member | null>(null);
   const [draft, setDraft] = useState({ name: "", email: "", role: "", permission: "member" as Permission });
@@ -252,7 +254,8 @@ export function UsersSettings() {
         <IconButton {...props} icon={DotsThreeIcon} label="Ações" variant="ghost" size="sm" tooltip={false} />
       )}
     >
-      {(member.status === "invited" || member.status === "disabled" && member.invitationPending) && <MenuItem icon={EnvelopeSimpleIcon} disabled={sending || currentUser.permission !== "admin"} onSelect={() => void runInvite(async () => { const link = await reissueInvitation(member.id); if (link) setInviteUrl(link); })}>Reemitir convite</MenuItem>}
+      {(member.status === "invited" || member.status === "disabled" && member.invitationPending) && <MenuItem icon={EnvelopeSimpleIcon} disabled={sending || currentUser.permission !== "admin"} onSelect={() => void runInvite(async () => { const link = await reissueInvitation(member.id); if (link) { setLinkTipo("convite"); setInviteUrl(link); } })}>Reemitir convite</MenuItem>}
+      {member.status === "active" && !self && <MenuItem icon={KeyIcon} disabled={sending || currentUser.permission !== "admin"} onSelect={() => void runInvite(async () => { const link = await passwordLink(member.id); if (link) { setLinkTipo("senha"); setInviteUrl(link); } })}>Gerar link de nova senha</MenuItem>}
       {member.status === "disabled" && !member.invitationPending && <MenuItem icon={CheckCircleIcon} disabled={currentUser.permission !== "admin"} onSelect={() => void updateMember(member.id, { status: "active" })}>Reativar acesso</MenuItem>}
       <MenuItem icon={CopyIcon} onSelect={() => void copyText(member.email)}>
         Copiar e-mail
@@ -556,9 +559,9 @@ export function UsersSettings() {
           </>
         }
       />
-      <Dialog open={inviteUrl !== null} onClose={() => setInviteUrl(null)} title="Link de ativação" description="Compartilhe este link em particular com a pessoa convidada. Ela definirá a própria senha. O link deixa de valer após a ativação ou expiração." footer={<><Button variant="secondary" icon={CopyIcon} onClick={() => void copyText(inviteUrl ?? "")}>Copiar link</Button><Button onClick={() => setInviteUrl(null)}>Concluir</Button></>}>
+      <Dialog open={inviteUrl !== null} onClose={() => { setInviteUrl(null); setLinkTipo("convite"); }} title={linkTipo === "senha" ? "Link de nova senha" : "Link de ativação"} description={linkTipo === "senha" ? "Envie este link em particular para a pessoa (por WhatsApp, por exemplo). Ela cria uma senha nova. Vale por 24 horas e uma única vez." : "Compartilhe este link em particular com a pessoa convidada. Ela definirá a própria senha. Vale por 7 dias e deixa de valer após a ativação."} footer={<><Button variant="secondary" icon={CopyIcon} onClick={() => void copyText(inviteUrl ?? "")}>Copiar link</Button><Button onClick={() => setInviteUrl(null)}>Concluir</Button></>}>
         {error && <p role="alert">{error}</p>}
-        <TextField label="Link do convite" readOnly value={inviteUrl ?? ""} />
+        <TextField label={linkTipo === "senha" ? "Link de nova senha" : "Link do convite"} readOnly value={inviteUrl ?? ""} />
       </Dialog>
     </Page>
   );

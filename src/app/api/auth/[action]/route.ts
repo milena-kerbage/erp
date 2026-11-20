@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, context: RouteContext<'/api/aut
     if (action === 'forgot') {
       const email = typeof body.email === 'string' ? normalizeEmail(body.email) : '';
       if (!validEmail(email)) throw new HttpError(400, 'Informe um e-mail válido.');
-      if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD || !process.env.SMTP_FROM || !process.env.AUTH_ORIGIN) throw new HttpError(503, 'Recuperação por e-mail indisponível. Contate a administração.');
+      if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD || !process.env.SMTP_FROM || !process.env.AUTH_ORIGIN) throw new HttpError(503, 'O envio de e-mail não está configurado. Peça a quem administra o ERP: em Configurações > Usuários, no menu da sua conta, "Gerar link de nova senha" (ou "Reemitir convite", se você ainda não ativou o acesso).');
       if (await limited(`forgot:${digest(email)}`, 3)) return json({message: recoveryMessage});
       const user = await findUser(email);
       if (user) {

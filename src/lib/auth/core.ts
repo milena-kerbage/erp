@@ -118,14 +118,14 @@ export async function sessionUser(token?: string, touch = true) {
 export async function revokeSession(token?: string) {
   if (token) await db().prepare('DELETE FROM sessions WHERE hash = ?').run(digest(token));
 }
-export async function issueReset(user: AuthUser) {
+export async function issueReset(user: AuthUser, validadeMs = RESET_TTL) {
   const token = newToken();
   const database = db();
   return database.transaction(async () => {
     const current = await database.prepare(`SELECT password_hash FROM users WHERE id = ?${rowLock()}`).get(user.id) as {password_hash: string} | undefined;
     if (!current) return null;
     await database.prepare('DELETE FROM resets WHERE user_id = ? OR expires < ?').run(user.id, Date.now());
-    await database.prepare('INSERT INTO resets VALUES (?, ?, ?, ?)').run(digest(token), user.id, Date.now() + RESET_TTL, digest(current.password_hash));
+    await database.prepare('INSERT INTO resets VALUES (?, ?, ?, ?)').run(digest(token), user.id, Date.now() + validadeMs, digest(current.password_hash));
     return token;
   });
 }

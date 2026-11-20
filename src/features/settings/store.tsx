@@ -33,6 +33,7 @@ type WorkspaceContextValue = {
   members: readonly Member[]; currentUser: Member;
   inviteMember: (member: Pick<Member, "name" | "email" | "role" | "permission">) => Promise<string | null>;
   reissueInvitation: (id: string) => Promise<string | null>;
+  passwordLink: (id: string) => Promise<string | null>;
   updateMember: (id: string, patch: Partial<Omit<Member, "id">>) => Promise<boolean>;
   removeMember: (id: string) => Promise<boolean>;
   preferences: Preferences; updatePreferences: (patch: Partial<Preferences>) => Promise<boolean>;
@@ -139,6 +140,7 @@ export function WorkspaceProvider({ children, authenticatedUser }: { children: R
     catch (cause) { setError(`O convite foi reemitido. Copie o novo link agora; a listagem ainda precisa ser atualizada. ${errorMessage(cause)}`); }
     return response.inviteUrl;
   }), [mutate, loadTeam]);
+  const passwordLink = useCallback((id: string) => mutate(async () => (await erpRequest<{ resetUrl: string }>(`/team/${encodeURIComponent(id)}/senha`, "POST", {})).resetUrl), [mutate]);
   const updateMember = useCallback<WorkspaceContextValue["updateMember"]>((id, patch) => mutate(async () => {
     await erpRequest(id === authenticatedUser.id && patch.permission === undefined && patch.status === undefined ? "/profile" : `/team/${encodeURIComponent(id)}`, "PATCH", patch); await loadTeam(); return true;
   }).then(Boolean), [mutate, loadTeam, authenticatedUser.id]);
@@ -165,7 +167,7 @@ export function WorkspaceProvider({ children, authenticatedUser }: { children: R
     if (!result.ok) throw new Error(typeof result.error === "string" ? result.error.slice(0, 500) : result.status ? `O destino recusou a entrega com HTTP ${result.status}.` : "O destino não confirmou a entrega do teste.");
     return true;
   }).then(Boolean), [mutate, loadTools]);
-  const value: WorkspaceContextValue = { loading, error, refresh, funnels, addFunnel, updateFunnel: funnelPatch, removeFunnel, moveFunnel, addStage, updateStage, removeStage, moveStage, members, currentUser, inviteMember, reissueInvitation, updateMember, removeMember, preferences, updatePreferences, integrations, apiKeys, createApiKey, revokeApiKey, webhooks, addWebhook, updateWebhook, removeWebhook, testWebhook };
+  const value: WorkspaceContextValue = { loading, error, refresh, funnels, addFunnel, updateFunnel: funnelPatch, removeFunnel, moveFunnel, addStage, updateStage, removeStage, moveStage, members, currentUser, inviteMember, reissueInvitation, passwordLink, updateMember, removeMember, preferences, updatePreferences, integrations, apiKeys, createApiKey, revokeApiKey, webhooks, addWebhook, updateWebhook, removeWebhook, testWebhook };
   // Sem funis vindos do banco não há o que mostrar: carregamento ou erro, nunca dados de exemplo.
   if (funnels.length === 0) return <WorkspaceGate loading={loading} error={error} onRetry={() => { setLoading(true); void refresh(); }} />;
   return <WorkspaceContext.Provider value={value}>{error && <div role="alert" style={{ padding: "1rem", background: "#fff1ef", color: "#8b2920" }}>Dados do ateliê: {error} <button type="button" onClick={() => void refresh()}>Atualizar dados</button></div>}{children}</WorkspaceContext.Provider>;

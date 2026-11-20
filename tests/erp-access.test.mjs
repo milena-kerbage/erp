@@ -98,3 +98,13 @@ test('notificações derivam de auditoria real e escolhas são privadas por usu�
  await notifications.updateNotifications({id:feed[0].id,archived:true},member);assert.equal((await notifications.notifications(member)).notifications[0].archived,true);
  assert.equal((await notifications.notifications(admin)).notifications[0].archived,false);
 });
+test('link de nova senha: só administração, só conta ativada, vale 24 h e uma vez',async()=>{
+ await assert.rejects(access.gerarLinkNovaSenha(member.id,member,'https://app.example.com'),{code:'FORBIDDEN'});
+ const issued=await access.inviteMember({name:'Ainda convidada',email:'invited@example.test',permission:'member',role:'Costura'},admin,'https://app.example.com');
+ await assert.rejects(access.gerarLinkNovaSenha(issued.member.id,admin,'https://app.example.com'),{code:'NOT_ACTIVATED'});
+ const {resetUrl}=await access.gerarLinkNovaSenha(member.id,admin,'https://app.example.com');
+ const url=new URL(resetUrl);assert.equal(url.pathname,'/redefinir-senha');assert.match(url.hash,/^#[a-f0-9]{64}$/);assert.equal(url.search,'');
+ const reset=await auth.db().prepare('SELECT expires FROM resets').get();assert.ok(reset.expires>Date.now()+23*3600_000);
+ assert.equal(await auth.resetPassword(url.hash.slice(1),'Nova!Senha123'),true);
+ assert.equal(await auth.resetPassword(url.hash.slice(1),'Outra!Senha123'),false);
+});

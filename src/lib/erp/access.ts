@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { db as authDb, normalizeEmail, validEmail, hashPassword, digest } from '../auth/core.ts';
+import { db as authDb, normalizeEmail, validEmail, hashPassword, digest, issueReset } from '../auth/core.ts';
 
 export type Permission = 'admin' | 'manager' | 'member';
 export type Actor = { id: string; name: string; email: string; permission: Permission; authMode?: 'session' | 'api-key' | 'development' };
@@ -142,6 +142,18 @@ export async function reissueInvitation(id:string,actor:Actor,origin:string) {
   });
   const member=memberDto(await database.prepare(`${memberSelect} WHERE users.id = ?`).get(id) as MemberRow);
   return {member,inviteUrl:new URL(`/convite#${token}`,origin).toString(),delivery:'manual',emailSent:false};
+}
+/** Sem e-mail configurado: a administração gera o link de nova senha e envia à pessoa (vale 24 h, uma vez). */
+export async function gerarLinkNovaSenha(id:string,actor:Actor,origin:string) {
+  if(actor.permission!=='admin') throw new ApiError(403,'Somente a administração pode gerar link de nova senha.','FORBIDDEN');
+  const row=await accessDb().prepare(`${memberSelect} WHERE users.id = ?`).get(id) as MemberRow | undefined;
+  if(!row) throw new ApiError(404,'Pessoa não encontrada.','NOT_FOUND');
+  if(row.status==='invited') throw new ApiError(409,'Essa pessoa ainda não ativou a conta: use "Reemitir convite".','NOT_ACTIVATED');
+  const token=await issueReset({id:row.id,email:row.email,name:row.name} as Parameters<typeof issueReset>[0],24*3600_000);
+  if(!token) throw new ApiError(404,'Pessoa não encontrada.','NOT_FOUND');
+  await accessAudit(actor.id,'password_link_issued',id);
+  const url=new URL('/redefinir-senha',origin); url.hash=token;
+  return {resetUrl:url.toString()};
 }
 export async function apiKeys() {
   return (await accessDb().prepare('SELECT api_keys.id, api_keys.name, api_keys.scope, api_keys.prefix, api_keys.last4, api_keys.created, api_keys.last_used, users.name AS creator FROM api_keys JOIN users ON users.id = api_keys.user_id ORDER BY created DESC').all() as Array<{id:string;name:string;scope:string;prefix:string;last4:string;created:number;last_used?:number;creator:string}>).map(row => ({id:row.id,name:row.name,scope:row.scope,prefix:row.prefix,last4:row.last4,createdAt:new Date(row.created).toISOString(),createdBy:row.creator,lastUsedAt:row.last_used?new Date(row.last_used).toISOString():undefined}));
