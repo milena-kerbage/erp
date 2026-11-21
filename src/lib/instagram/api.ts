@@ -154,13 +154,17 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
   // Páginas: das permissões granulares do token (escopos de página) e de /me/accounts.
   const granulares = (Array.isArray(info.granular_scopes) ? info.granular_scopes : []).map(object);
   const idsDe = (filtro: (escopo: string) => boolean) => granulares.filter((g) => typeof g.scope === 'string' && filtro(g.scope)).flatMap((g) => (Array.isArray(g.target_ids) ? g.target_ids : []).map(String)).filter((id) => /^\d{1,32}$/.test(id));
-  const candidatas = new Set(idsDe((escopo) => escopo.startsWith('pages_') || escopo === 'business_management'));
-  try {
-    const url = new URL(`${base}/me/accounts`);
-    url.search = new URLSearchParams({ fields: 'id', limit: '100', access_token: userToken }).toString();
-    const resposta = await metaRequest(url, {}, fetcher);
-    for (const pagina of (Array.isArray(resposta.data) ? resposta.data : []).map(object)) if (typeof pagina.id === 'string') candidatas.add(pagina.id);
-  } catch { /* usuário do sistema: sem lista */ }
+  // A página cadastrada na tela (como o FACEBOOK_PAGE_ID da Le Ange) vem primeiro.
+  const candidatas = new Set([config.pageId, ...idsDe((escopo) => escopo.startsWith('pages_') || escopo === 'business_management')].filter((id) => /^\d{1,32}$/.test(id)));
+  // Usuário comum: /me/accounts; usuário do sistema: páginas atribuídas a ele no gerenciador de negócios.
+  for (const caminho of ['me/accounts', 'me/assigned_pages', ...(typeof info.user_id === 'string' && /^\d{1,32}$/.test(info.user_id) ? [`${info.user_id}/assigned_pages`] : [])]) {
+    try {
+      const url = new URL(`${base}/${caminho}`);
+      url.search = new URLSearchParams({ fields: 'id', limit: '100', access_token: userToken }).toString();
+      const resposta = await metaRequest(url, {}, fetcher);
+      for (const pagina of (Array.isArray(resposta.data) ? resposta.data : []).map(object)) if (typeof pagina.id === 'string') candidatas.add(pagina.id);
+    } catch { /* este tipo de token não tem esta lista */ }
+  }
   const contasInstagram = new Set(idsDe((escopo) => escopo.startsWith('instagram_')));
   const paginas: Array<{ id: string; token: string; ig: string; username: string }> = [];
   for (const id of [...candidatas].slice(0, 25)) {
@@ -175,7 +179,7 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
   if (!escolhida) {
     throw new InstagramError(403, paginas.length
       ? `A conta autorizada foi ${paginas.map((p) => `@${p.username || p.ig}`).join(', ')}; na janela da Meta, selecione a página ligada ao @${config.expectedUsername}.`
-      : `A Meta não devolveu nenhuma página com Instagram para este acesso (páginas encontradas: ${candidatas.size}). Na janela da Meta, selecione a página do Facebook e o Instagram @${config.expectedUsername}; confira também se a configuração ${config.configId} inclui as permissões de páginas (pages_show_list, pages_manage_metadata) e de Instagram.`, 'WRONG_ACCOUNT');
+      : `A Meta não informou a página do Facebook ligada ao Instagram (páginas verificadas: ${candidatas.size}; permissões recebidas: ${escopos.join(', ') || 'nenhuma'}). Cadastre o ID da página do Facebook do Ateliê no cartão “App do Instagram” (no Facebook: página > Sobre > Transparência da página) e conecte de novo. Se preferir, inclua pages_show_list e pages_manage_metadata na configuração ${config.configId}.`, 'WRONG_ACCOUNT');
   }
   if (!/^[a-zA-Z0-9._]{1,30}$/.test(escolhida.username)) throw new InstagramError(502, 'Perfil inválido recebido da Meta.');
   const infoPagina = await inspecionar(escolhida.token).catch(() => ({} as ObjectValue));

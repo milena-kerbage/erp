@@ -13,7 +13,7 @@ import { Actions, Note, Notice, Stack } from '@/features/whatsapp/components/sha
 
 type Status = {
   urls: Record<string, string>; checks: { name: string; configured: boolean }[]; scopes: string[]; retentionDays: number;
-  app: { appId: string; appSecretSalvo: boolean; webhookSecretPronto: boolean; versao: string; configId: string; modo: 'facebook' | 'instagram' };
+  app: { appId: string; appSecretSalvo: boolean; webhookSecretPronto: boolean; versao: string; configId: string; modo: 'facebook' | 'instagram'; pageId: string };
   connection: { username: string; expiresAt: string; expired: boolean; scopes: string[]; subscribedFields: string[] } | null;
   events: { total: number; lastReceivedAt: string | null };
 };
@@ -103,14 +103,14 @@ const RECURSOS = [
 function CartaoApp({ status, aoSalvar }: { status: Status; aoSalvar: () => Promise<void> }) {
   const pronto = Boolean(status.app.appId) && status.app.appSecretSalvo;
   const [aberto, setAberto] = useState(!pronto);
-  const [campos, setCampos] = useState({ appId: status.app.appId, appSecret: '', webhookSecret: '', configId: status.app.configId });
+  const [campos, setCampos] = useState({ appId: status.app.appId, appSecret: '', webhookSecret: '', configId: status.app.configId, pageId: status.app.pageId });
   const [recursos, setRecursos] = useState(RECURSOS.map((r) => r.id).filter((id) => status.scopes.includes(id)));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<Erro | null>(null);
   const alterar = (campo: keyof typeof campos) => (evento: React.ChangeEvent<HTMLInputElement>) => setCampos((atual) => ({ ...atual, [campo]: evento.target.value }));
   const salvar = async () => {
     setSalvando(true); setErro(null);
-    try { await api('ajustes', { ...campos, appId: campos.appId.trim(), configId: campos.configId.trim(), recursos }); setCampos((atual) => ({ ...atual, appSecret: '', webhookSecret: '' })); await aoSalvar(); setAberto(false); }
+    try { await api('ajustes', { ...campos, appId: campos.appId.trim(), configId: campos.configId.trim(), pageId: campos.pageId.trim(), recursos }); setCampos((atual) => ({ ...atual, appSecret: '', webhookSecret: '' })); await aoSalvar(); setAberto(false); }
     catch (falha) { setErro(erroDe(falha)); }
     finally { setSalvando(false); }
   };
@@ -123,12 +123,13 @@ function CartaoApp({ status, aoSalvar }: { status: Status; aoSalvar: () => Promi
         <FieldGrid>
           <TextField label="App ID" name="ig-app-id" inputMode="numeric" value={campos.appId} onChange={alterar('appId')} error={erroCampo('appId')} hint="Com o login do Facebook, é o App ID do app (Configurações do app > Básico)." {...semPreenchimento} />
           <TextField label="ID da configuração (Login do Facebook para Empresas)" name="ig-config-id" inputMode="numeric" value={campos.configId} onChange={alterar('configId')} error={erroCampo('configId')} hint="Preenchido: o botão Conectar usa o login do Facebook." {...semPreenchimento} />
+          <TextField label="ID da página do Facebook" name="ig-page-id" inputMode="numeric" value={campos.pageId} onChange={alterar('pageId')} error={erroCampo('pageId')} hint="Página ligada ao Instagram. No Facebook: página > Sobre > Transparência da página." {...semPreenchimento} />
           <TextField label="App Secret do Instagram" name="ig-app-chave" value={campos.appSecret} onChange={alterar('appSecret')} placeholder={status.app.appSecretSalvo ? 'Guardado. Deixe vazio para manter' : '32 letras e números'} error={erroCampo('appSecret')} style={mascarado} {...semPreenchimento} />
           <TextField label="App Secret do app (webhooks)" name="ig-app-webhook" value={campos.webhookSecret} onChange={alterar('webhookSecret')} placeholder={status.app.webhookSecretPronto ? 'Pronto. Deixe vazio para manter' : 'Vazio = o do WhatsApp'} hint="Opcional se o app for o mesmo do WhatsApp." error={erroCampo('webhookSecret')} style={mascarado} {...semPreenchimento} />
         </FieldGrid>
         <Recursos>{RECURSOS.map((r) => <label key={r.id}><input type="checkbox" checked={recursos.includes(r.id)} onChange={(e) => setRecursos((atual) => e.target.checked ? [...atual, r.id] : atual.filter((id) => id !== r.id))} /><span><strong>{r.rotulo}</strong><small>{r.texto} A permissão precisa estar adicionada no app da Meta.</small></span></label>)}</Recursos>
         <Actions><Button type="submit" loading={salvando}>Salvar</Button>{pronto && <Button size="sm" variant="ghost" onClick={() => setAberto(false)}>Fechar</Button>}</Actions>
-        {erro && !['appId', 'appSecret', 'webhookSecret', 'configId'].includes(erro.campo ?? '') && <Notice $error role="alert">{erro.texto}</Notice>}
+        {erro && !['appId', 'appSecret', 'webhookSecret', 'configId', 'pageId'].includes(erro.campo ?? '') && <Notice $error role="alert">{erro.texto}</Notice>}
       </Stack></form>}
   </Painel>;
 }

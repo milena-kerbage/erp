@@ -92,5 +92,26 @@ test('login pelo Facebook: falha mostra o motivo real da Meta (código e mensage
     if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, type: 'SYSTEM_USER', app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic'], granular_scopes: [] } });
     return Response.json({ data: [] });
   };
-  await assert.rejects(api.exchangeCode('codigo', semPagina), (erro) => erro.code === 'WRONG_ACCOUNT' && /milenakerbageatelie/.test(erro.message));
+  await assert.rejects(api.exchangeCode('codigo', semPagina), (erro) => erro.code === 'WRONG_ACCOUNT' && /ID da página/.test(erro.message) && /instagram_basic/.test(erro.message));
+});
+
+test('login pelo Facebook: usuário do sistema acha a página por assigned_pages ou pelo ID cadastrado na tela', async () => {
+  const api = await import('../src/lib/instagram/api.ts');
+  const store = await import('../src/lib/instagram/store.ts');
+  const montar = (comAtribuidas) => async (endereco) => {
+    const caminho = new URL(String(endereco)).pathname.replace(/^\/v\d+\.0\//, '');
+    if (caminho === 'oauth/access_token') return Response.json({ access_token: 'EAAsistema' + 'x'.repeat(40) });
+    if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, type: 'SYSTEM_USER', app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic', 'instagram_manage_messages'], granular_scopes: [{ scope: 'instagram_basic', target_ids: ['17841400000000'] }], expires_at: 0 } });
+    if (caminho === 'me/assigned_pages' && comAtribuidas) return Response.json({ data: [{ id: '123456789012345' }] });
+    if (caminho === '123456789012345') return Response.json({ id: '123456789012345', access_token: 'EAApagina' + 'x'.repeat(40), instagram_business_account: { id: '17841400000000', username: 'milenakerbageatelie' } });
+    return Response.json({ data: [] });
+  };
+  await api.exchangeCode('codigo', montar(true));
+  assert.equal((await store.currentConnection()).username, 'milenakerbageatelie');
+  assert.equal(config.instagramConfig().pageId, '123456789012345');
+  // Sem nenhuma lista, vale o ID da página cadastrado na tela.
+  await ajustes.salvarAjustesInstagram({ pageId: '123456789012345' }, 'gestor');
+  await api.exchangeCode('codigo', montar(false));
+  assert.equal((await store.currentConnection()).account_id, '17841400000000');
+  await assert.rejects(ajustes.salvarAjustesInstagram({ pageId: 'abc' }, 'gestor'), (erro) => erro.field === 'pageId');
 });

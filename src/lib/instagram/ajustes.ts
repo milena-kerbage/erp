@@ -26,7 +26,8 @@ export async function carregarAjustesInstagram(forcar = false) {
 /** Cadastro na tela: App ID e App Secret do Instagram (Login da empresa), App Secret do app (webhooks) e o que receber. */
 export async function salvarAjustesInstagram(entrada: Record<string, unknown>, ator: string) {
   const texto = (valor: unknown, maximo: number) => (typeof valor === 'string' ? valor.slice(0, maximo) : '');
-  const appId = texto(entrada.appId, 40).trim(), configId = texto(entrada.configId, 40).trim();
+  const appId = texto(entrada.appId, 40).trim(), configId = texto(entrada.configId, 40).trim(), pageId = texto(entrada.pageId, 40).trim();
+  if (pageId && !/^\d{5,32}$/.test(pageId)) throw Object.assign(new InstagramError(400, 'O ID da página tem só números. No Facebook: página > Sobre > Transparência da página.', 'INVALID_PAGE_ID'), { field: 'pageId' });
   if (configId && !/^\d{5,32}$/.test(configId)) throw Object.assign(new InstagramError(400, 'O ID da configuração tem só números. Copie em Login do Facebook para Empresas > Configurações.', 'INVALID_CONFIG_ID'), { field: 'configId' });
   const appSecret = limparSegredo(texto(entrada.appSecret, 400)), webhookSecret = limparSegredo(texto(entrada.webhookSecret, 400));
   if (appId && !/^\d{5,32}$/.test(appId)) throw Object.assign(new InstagramError(400, 'O App ID do Instagram tem só números. Copie em Instagram > Configuração da API com login do Instagram > Configurações do login da empresa.', 'INVALID_APP_ID'), { field: 'appId' });
@@ -39,6 +40,7 @@ export async function salvarAjustesInstagram(entrada: Record<string, unknown>, a
   const valores: Record<string, { valor: string; secreto: boolean }> = {};
   if (appId) valores[CHAVES.appId] = { valor: appId, secreto: false };
   if (configId) valores[CHAVES.configId] = { valor: configId, secreto: false };
+  if (pageId) valores[CHAVES.pageId] = { valor: pageId, secreto: false };
   if (appSecret) valores[CHAVES.appSecret] = { valor: appSecret, secreto: true };
   if (webhookSecret) valores[CHAVES.webhookSecret] = { valor: webhookSecret, secreto: true };
   if (!/^v\d{2,3}\.0$/.test(atual.version)) valores[CHAVES.version] = { valor: VERSAO_INSTAGRAM_PADRAO, secreto: false };

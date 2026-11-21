@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const count = await instagramDb().prepare('SELECT count(*) AS total, max(received_at) AS latest FROM instagram_events WHERE app_id = ?').get(config.appId);
     return {
       urls: instagramUrls(), scopes: config.scopes, retentionDays: retentionDays(),
-      app: { appId: config.appId, appSecretSalvo: config.appSecret.length >= 16, webhookSecretPronto: config.webhookSecret.length >= 16, versao: config.version, configId: config.configId, modo: config.modo },
+      app: { appId: config.appId, appSecretSalvo: config.appSecret.length >= 16, webhookSecretPronto: config.webhookSecret.length >= 16, versao: config.version, configId: config.configId, modo: config.modo, pageId: config.pageId },
       checks: [
         { name: 'App ID do Instagram', configured: /^\d{5,32}$/.test(config.appId) },
         { name: 'App Secret do Instagram', configured: config.appSecret.length >= 16 },
