@@ -138,7 +138,7 @@ const Banner = styled(Link)`
 
 /**
  * Conteúdo à esquerda, coluna de apoio à direita, numa grade contínua: sem espaço entre os cartões e sem cantos
- * arredondados, eles se dividem só pela borda (a grade desenha o contorno de cima e da esquerda; cada cartão, a linha
+ * arredondados, eles se dividem só pela borda (a grade desenha o contorno, levemente arredondado; cada cartão, a linha
  * da direita e a de baixo). As duas colunas têm a mesma altura e fecham juntas no fim.
  */
 const Layout = styled.div`
@@ -146,13 +146,22 @@ const Layout = styled.div`
   grid-template-columns: minmax(0, 1fr) clamp(17.5rem, 22vw, 21rem);
   gap: 0;
   align-items: stretch;
-  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  border-left: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  /* Só o contorno da grade é arredondado (pouco). As linhas da direita e de baixo dos cartões da beirada ficam
+     1px para fora e são cortadas, para não dobrar com o contorno. */
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  overflow: hidden;
   --card-border-width: 0 1px 1px 0;
   --card-radius: 0;
 
+  > * { margin-bottom: -1px; }
+  > *:last-child { margin-right: -1px; }
+
   @media (max-width: 1180px) {
     grid-template-columns: minmax(0, 1fr);
+
+    > * { margin-right: -1px; margin-bottom: 0; }
+    > *:last-child { margin-bottom: -1px; }
   }
 `;
 
