@@ -72,7 +72,8 @@ export function itemDoFeed(produto: Produto, agora = new Date()): string {
   const linhas = [
     campo("g:id", texto(produto.sku, 50)),
     campo("title", texto(semMarca(produto.nome), 150)),
-    campo("description", texto([produto.resumo, ...produto.descricao].filter(Boolean).join(" "), 5000)),
+    // Resumo + descrição, sem repetir o parágrafo quando a descrição já começa com o resumo.
+    campo("description", texto([produto.resumo, ...produto.descricao].filter((trecho, indice, todos) => Boolean(trecho) && !todos.slice(0, indice).some((anterior) => anterior && (anterior.trim() === trecho.trim() || anterior.includes(trecho.trim())))).join(" "), 5000)),
     campo("link", `${ORIGEM}/produto/${produto.slug}`),
     campo("g:image_link", principal && absoluta(principal.src)),
     ...outras.slice(0, 10).map((imagem) => campo("g:additional_image_link", absoluta(imagem.src))),
