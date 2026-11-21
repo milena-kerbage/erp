@@ -11,6 +11,7 @@
 //
 // Sem imports locais (só tipos): roda no servidor e no `node --test` (tests/loja/edicoes.test.mjs).
 
+import { rotaOculta } from "../modulos.ts";
 import type { NomeIcone, TomMidia } from "@/loja/componentes/inicio/Midia";
 import type { LadoBloco } from "./listagem";
 
@@ -125,7 +126,9 @@ export const EDICOES: Record<string, Edicao> = {
   },
 };
 
-export const EDICAO_ATUAL: Edicao = EDICOES["primeiros-dias"];
+// Atalhos e blocos que levam a módulos desligados (src/loja/lib/modulos.ts) ficam de fora da edição no ar.
+const semModulosOcultos = (edicao: Edicao): Edicao => ({ ...edicao, atalhos: edicao.atalhos.filter((atalho) => !rotaOculta(atalho.href)), blocos: edicao.blocos.filter((bloco) => !rotaOculta(bloco.href)) });
+export const EDICAO_ATUAL: Edicao = semModulosOcultos(EDICOES["primeiros-dias"]);
 
 // Categorias principais com 1 ou 2 blocos (vídeos do ateliê), depois das 2 primeiras linhas de cards (só na
 // 1ª página). Chave = categoria exata (as subcategorias não herdam).
@@ -243,5 +246,5 @@ export const BLOCOS_POR_CATEGORIA: Record<string, BlocoEditorial[]> = Object.fro
 );
 
 export function blocosDaCategoria(chave: string): BlocoEditorial[] {
-  return BLOCOS_POR_CATEGORIA[chave] ?? [];
+  return (BLOCOS_POR_CATEGORIA[chave] ?? []).filter((bloco) => !rotaOculta(bloco.href));
 }

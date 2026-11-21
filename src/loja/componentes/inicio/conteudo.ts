@@ -4,6 +4,7 @@
 // catálogo ativo em lib/catalogo/apresentacao.ts, usando a mesma curadoria do menu e da busca.
 // Sem uma foto compatível, Midia.tsx mantém a composição nos tons da marca.
 
+import { rotaOculta } from "@/loja/lib/modulos";
 import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import { LINKS_UTILITARIOS } from "@/loja/componentes/layout/cabecalho/navegacao";
 import { EDICAO_ATUAL, ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
@@ -25,7 +26,7 @@ function categoria(chave: string, filtros: Record<string, string[]> = {}, ordem?
 // mídia do bloco de abertura vêm de src/loja/lib/catalogo/edicoes.ts: trocou a edição, trocou o slide).
 export type Slide = { id: string; titulo: string; subtitulo: string; acoes: Acao[]; midia: MidiaConteudo };
 const ABERTURA_EDICAO = EDICAO_ATUAL.blocos[0]?.midia;
-export const SLIDES: Slide[] = [
+const TODOS_OS_SLIDES: Slide[] = [
   {
     id: "edicao-do-mes",
     titulo: EDICAO_ATUAL.titulo,
@@ -81,6 +82,8 @@ export const SLIDES: Slide[] = [
     midia: { tom: "noite", icone: "pacote" },
   },
 ];
+// Slides de módulos desligados (src/loja/lib/modulos.ts) ficam de fora.
+export const SLIDES: Slide[] = TODOS_OS_SLIDES.filter((slide) => !rotaOculta(slide.acoes[0]?.href));
 
 // 2. Par editorial (2 × 1:1 + texto).
 export type Editorial = { id: string; titulo: string; texto: string; acao: Acao; midia: MidiaConteudo; atalho: Acao };

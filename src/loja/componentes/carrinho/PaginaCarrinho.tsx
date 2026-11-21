@@ -1,5 +1,6 @@
 "use client";
 
+import { MODULOS, VITRINE_INICIAL } from "@/loja/lib/modulos";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from "react";
@@ -202,7 +203,7 @@ export function PaginaCarrinho({ catalogo, maisVendidos, cupons }: { catalogo: P
               <p className={css({ mt: "4", fontSize: "md", lineHeight: "texto", color: "textoSuave" })}>
                 Peças a pronta entrega saem do ateliê em até {textoPrazo(PRODUCAO_PRONTA)}. Em Fortaleza, dá para retirar no ateliê.
               </p>
-              <Link href="/pronta-entrega" className={cx(botaoEscuro, largo, css({ mt: "8" }))}>
+              <Link href={VITRINE_INICIAL} className={cx(botaoEscuro, largo, css({ mt: "8" }))}>
                 Ver pronta entrega
               </Link>
             </section>
@@ -500,6 +501,7 @@ function ResumoSacola({ conta }: { conta: Conta }) {
           <ArrowsClockwise size={16} aria-hidden /> Troca ou devolução em até 7 dias (peças sem bordado)
         </li>
       </ul>
+      {MODULOS.personalizado && (
       <p className={css({ mt: "4", fontSize: "xs", lineHeight: "texto", color: "textoSuave" })}>
         Montando o quarto inteiro?{" "}
         <Link href="/personalizado" className={cx(linkAcao, css({ fontSize: "inherit" }))}>
@@ -511,6 +513,7 @@ function ResumoSacola({ conta }: { conta: Conta }) {
         </Link>
         .
       </p>
+      )}
     </aside>
   );
 }

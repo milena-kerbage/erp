@@ -1,3 +1,4 @@
+import { rotaOculta } from "@/loja/lib/modulos";
 import { type NextRequest, NextResponse } from "next/server";
 import { PASTA_PUBLICA_LOJA, PREFIXO_LOJA } from "@/lib/hosts";
 import { CATEGORIAS_EXISTENTES } from "@/loja/lib/catalogo/categorias";
@@ -83,6 +84,15 @@ export function proxyLoja(request: NextRequest): NextResponse {
     const publica = new URL(request.url);
     publica.pathname = caminho.slice(PREFIXO_LOJA.length) || "/";
     return NextResponse.redirect(publica, 308);
+  }
+
+  // Módulos desligados por enquanto (Personalizado e Pronta entrega, src/loja/lib/modulos.ts): 307 para a página
+  // inicial. Temporário de propósito: quando voltarem, os endereços voltam a valer sem cache de redirecionamento.
+  if (rotaOculta(caminho) || (destinoLegado(caminho) && rotaOculta(destinoLegado(caminho)))) {
+    const inicio = new URL(request.url);
+    inicio.pathname = "/";
+    inicio.search = "";
+    return comCabecalhos(NextResponse.redirect(inicio, 307));
   }
 
   // Endereços antigos (ex.: /projetos/** → /personalizado/**): 308 com a busca preservada.

@@ -1,3 +1,4 @@
+import { MODULOS, rotaOculta } from "@/loja/lib/modulos";
 import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,7 +25,8 @@ const ATALHOS: LinkRodape[] = [
   { rotulo: "Minha conta", href: LINKS_UTILITARIOS.conta.href },
   { rotulo: "Nossa história", href: "/sobre" },
   { rotulo: LINKS_UTILITARIOS.indique.rotulo, href: LINKS_UTILITARIOS.indique.href },
-];
+// Sem os módulos desligados (src/loja/lib/modulos.ts).
+].filter((link) => !rotaOculta(link.href));
 
 const REDES = [
   { rotulo: "Instagram", href: REDES_SOCIAIS.instagram },
@@ -70,12 +72,21 @@ export async function Rodape() {
               </span>
               <span className={css({ srOnly: true })}> (abre o WhatsApp em nova aba)</span>
             </a>
+            {MODULOS.personalizado ? (
             <Link href="/personalizado/monte-o-seu" className={botaoEscuro}>
               Monte o seu quartinho
               <span className={setaCirculoClaro}>
                 <ArrowRight size={14} aria-hidden />
               </span>
             </Link>
+            ) : (
+            <Link href="/kit-berco" className={botaoEscuro}>
+              Ver kits de berço
+              <span className={setaCirculoClaro}>
+                <ArrowRight size={14} aria-hidden />
+              </span>
+            </Link>
+            )}
           </div>
         </div>
 

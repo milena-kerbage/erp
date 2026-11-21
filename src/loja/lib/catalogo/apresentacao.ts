@@ -1,3 +1,4 @@
+import { semOcultos } from "@/loja/lib/modulos";
 import {
   SLIDES, PAR_EDITORIAL, NOVIDADES, POR_COR, QUARTO, ENXOVAL,
   FEATURE_PROJETOS, FEATURE_MATERNIDADE, FEATURE_BORDADO,
@@ -25,6 +26,9 @@ export function edicaoComFotos(catalogo: CatalogoLoja) {
     }),
   };
 }
+
+/** Sem os cards (e as abas vazias) que apontam para módulos desligados (src/loja/lib/modulos.ts). */
+const gradeSemOcultos = (grade: Grade): Grade => ({ ...grade, abas: grade.abas.map(aba => ({ ...aba, cards: semOcultos(aba.cards) })).filter(aba => aba.cards.length > 0) });
 
 export function homeComFotos(catalogo: CatalogoLoja) {
   const temFotos = catalogo.produtos.some(p => p.imagens?.length);
@@ -55,8 +59,8 @@ export function homeComFotos(catalogo: CatalogoLoja) {
       midia: slide.midia.src ? slide.midia : { ...slide.midia, ...(slide.id === "edicao-do-mes" ? edicao.blocos[0]?.midia : slide.id === "projetos" ? quarto : fotoDoDestino(catalogo, slide.acoes[0]?.href ?? "")) },
     })).filter(slide => !temFotos || slide.midia.src),
     editorial: PAR_EDITORIAL.map(item => ({ ...item, midia: item.midia.src ? item.midia : { ...item.midia, ...fotoDoDestino(catalogo, item.acao.href) } })),
-    novidades, porCor: completarGrade(POR_COR), quarto: porQuarto.abas.some(a => a.rotulo === "Por peça") ? porQuarto : temas,
-    enxoval: produtosDoDestino(catalogo, "/enxoval").length || !temFotos ? enxoval : acabamentos,
+    novidades: gradeSemOcultos(novidades), porCor: gradeSemOcultos(completarGrade(POR_COR)), quarto: gradeSemOcultos(porQuarto.abas.some(a => a.rotulo === "Por peça") ? porQuarto : temas),
+    enxoval: gradeSemOcultos(produtosDoDestino(catalogo, "/enxoval").length || !temFotos ? enxoval : acabamentos),
     projetos: comFoto(FEATURE_PROJETOS, quarto), maternidade,
     bordado: comFoto(FEATURE_BORDADO, bordado),
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { VITRINE_INICIAL } from "@/loja/lib/modulos";
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
@@ -457,7 +458,7 @@ function Vazio() {
         <p className={css({ mt: "4", fontSize: "md", lineHeight: "texto", color: "textoSuave" })}>
           Escolha as peças e volte aqui para fazer o pedido pelo WhatsApp.
         </p>
-        <Link href="/pronta-entrega" className={cx(botaoEscuro, css({ mt: "8" }))}>
+        <Link href={VITRINE_INICIAL} className={cx(botaoEscuro, css({ mt: "8" }))}>
           Ver pronta entrega
         </Link>
       </div>

@@ -1,3 +1,4 @@
+import { MODULOS } from "@/loja/lib/modulos";
 import { arvoreDaLoja } from "@/lib/loja/catalogo";
 import { EMPRESA, REDES_SOCIAIS } from "@/loja/lib/empresa";
 import { ORIGEM } from "@/loja/lib/seo/config";
@@ -45,8 +46,8 @@ export async function GET() {
     "## Categorias",
     "",
     ...categorias.map((categoria) => `- [${categoria.rotulo}](${ORIGEM}/${categoria.chave})`),
-    `- [Pronta entrega](${ORIGEM}/pronta-entrega): peças que saem do ateliê em até 2 dias úteis`,
-    `- [Personalizado](${ORIGEM}/personalizado): quartinho completo e o montador do zero`,
+    ...(MODULOS.prontaEntrega ? [`- [Pronta entrega](${ORIGEM}/pronta-entrega): peças que saem do ateliê em até 2 dias úteis`] : []),
+    ...(MODULOS.personalizado ? [`- [Personalizado](${ORIGEM}/personalizado): quartinho completo e o montador do zero`] : []),
     "",
     "## Ajuda e políticas",
     "",

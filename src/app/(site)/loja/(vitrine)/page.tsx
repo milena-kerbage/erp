@@ -1,3 +1,4 @@
+import { MODULOS } from "@/loja/lib/modulos";
 import { css } from "styled-system/css";
 import { CarrosselProdutos } from "@/loja/componentes/inicio/CarrosselProdutos";
 import {
@@ -37,7 +38,7 @@ export default async function PaginaInicial() {
       {home.novidades.abas.length > 0 && <GradeAbas grade={home.novidades} />}
       {home.porCor.abas.length > 0 && <GradeAbas grade={home.porCor} />}
       {/* 5 */}
-      <FeatureTelaCheia feature={home.projetos} />
+      {MODULOS.personalizado && <FeatureTelaCheia feature={home.projetos} />}
       {/* 6 */}
       {destaques.length > 0 && <CarrosselProdutos {...(maisVendidos.length ? CARROSSEL_MAIS_VENDIDOS : { id: "selecao-atelie", titulo: "Da nossa costura para o seu quartinho", acao: { rotulo: "Conhecer os kits", href: "/kit-berco/kits" } })} produtos={destaques} />}
       {/* 7 */}
@@ -45,7 +46,7 @@ export default async function PaginaInicial() {
       {/* 8 */}
       <FeatureTelaCheia feature={home.maternidade} />
       {/* 9 */}
-      {prontaEntrega.length > 0 && <CarrosselProdutos {...CARROSSEL_PRONTA_ENTREGA} produtos={prontaEntrega} />}
+      {MODULOS.prontaEntrega && prontaEntrega.length > 0 && <CarrosselProdutos {...CARROSSEL_PRONTA_ENTREGA} produtos={prontaEntrega} />}
       {/* 10 */}
       <FeatureTelaCheia feature={home.bordado} />
       {/* 11 */}

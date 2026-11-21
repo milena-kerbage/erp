@@ -1,5 +1,6 @@
 "use client";
 
+import { VITRINE_INICIAL } from "@/loja/lib/modulos";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { css, cx } from "styled-system/css";
@@ -71,7 +72,7 @@ export function FavoritosAparelho({
             Nenhuma peça salva neste aparelho. Toque no coração da página de produto, ou em Salvar nos favoritos na sacola, para guardar
             peças para depois.
           </p>
-          <Link href="/pronta-entrega" className={cx(botaoEscuro, css({ mt: "6" }))}>
+          <Link href={VITRINE_INICIAL} className={cx(botaoEscuro, css({ mt: "6" }))}>
             Ver pronta entrega
           </Link>
         </div>

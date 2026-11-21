@@ -1,3 +1,4 @@
+import { MODULOS, rotaOculta, semOcultos, VITRINE_INICIAL } from "../../src/loja/lib/modulos.ts";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
@@ -82,14 +83,17 @@ test("intercalarBlocos: começa na linha pedida, não entra sem produto e não m
 });
 
 test("edição atual: produtos do catálogo, sem repetir, e os 3 tipos de bloco", () => {
-  assert.ok(EDICOES[EDICAO_ATUAL.chave] === EDICAO_ATUAL);
+  // A edição no ar é a do cadastro sem os atalhos/blocos de módulos desligados (src/loja/lib/modulos.ts).
+  const cadastro = EDICOES[EDICAO_ATUAL.chave];
+  assert.ok(cadastro && cadastro.titulo === EDICAO_ATUAL.titulo);
+  assert.ok(EDICAO_ATUAL.blocos.every((bloco) => !rotaOculta(bloco.href)) && EDICAO_ATUAL.atalhos.every((atalho) => !rotaOculta(atalho.href)), "nada no ar aponta para módulo desligado");
   assert.match(EDICAO_ATUAL.chave, /^[a-z0-9-]+$/);
   assert.ok(EDICAO_ATUAL.descricao.length <= 160, "meta description curta");
   for (const slug of EDICAO_ATUAL.produtos) assert.ok(SLUGS.has(slug), `produto inexistente: ${slug}`);
   assert.equal(new Set(EDICAO_ATUAL.produtos).size, EDICAO_ATUAL.produtos.length, "produto repetido");
   assert.ok(EDICAO_ATUAL.blocos.some((b) => b.titulo && !b.href), "(a) com texto");
   assert.ok(EDICAO_ATUAL.blocos.some((b) => !b.titulo && !b.href), "(b) só imagem");
-  assert.ok(EDICAO_ATUAL.blocos.some((b) => b.titulo && b.href && b.acao), "(c) clicável");
+  assert.ok(cadastro.blocos.some((b) => b.titulo && b.href && b.acao), "(c) clicável");
 });
 
 test("blocos: links para rotas que existem, alt em toda mídia e src local em /vitrine/edicoes ou /vitrine/videos", () => {
@@ -111,4 +115,13 @@ test("blocos: links para rotas que existem, alt em toda mídia e src local em /v
     assert.ok(blocos.length >= 1 && blocos.length <= 2, `${chave}: 1 ou 2 blocos`);
     assert.ok(ROTAS.has(`/${chave}`), `${chave}: categoria do menu`);
   }
+});
+
+test("módulos desligados: Personalizado e Pronta entrega somem dos links, o resto fica", () => {
+  assert.equal(MODULOS.personalizado, false);
+  assert.equal(MODULOS.prontaEntrega, false);
+  for (const href of ["/personalizado", "/personalizado/monte-o-seu", "/personalizado/floral?cor=rose", "/pronta-entrega", "/kit-berco?entrega=pronta-entrega", "/kit-berco?cor=rose&entrega=pronta-entrega"]) assert.equal(rotaOculta(href), true, href);
+  for (const href of ["/", "/kit-berco", "/kit-berco?entrega=sob-encomenda", "/ajuda/bordado-personalizado", "/produto/kit-berco-bia", "https://wa.me/55", undefined, ""]) assert.equal(rotaOculta(href), false, String(href));
+  assert.deepEqual(semOcultos([{ href: "/kit-berco" }, { href: "/personalizado" }, { href: "/pronta-entrega" }]), [{ href: "/kit-berco" }]);
+  assert.equal(VITRINE_INICIAL, "/kit-berco");
 });

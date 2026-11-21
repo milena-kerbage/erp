@@ -1,3 +1,4 @@
+import { rotaOculta } from "@/loja/lib/modulos";
 import type { MetadataRoute } from "next";
 import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
@@ -20,7 +21,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .filter((partes) => partes[0] !== "personalizado")
     .map((partes) => `/${partes.join("/")}`)
     .sort();
-  const paginas: MetadataRoute.Sitemap = ["", "/pronta-entrega", ROTA_EDICAO, "/personalizado", ...categorias, ...PAGINAS_INSTITUCIONAIS].map((caminho) => ({
+  // Páginas de módulos desligados (src/loja/lib/modulos.ts) ficam fora do sitemap.
+  const paginas: MetadataRoute.Sitemap = ["", "/pronta-entrega", ROTA_EDICAO, "/personalizado", ...categorias, ...PAGINAS_INSTITUCIONAIS].filter((caminho) => !rotaOculta(caminho)).map((caminho) => ({
     url: `${ORIGEM}${caminho}`,
   }));
   const produtos: MetadataRoute.Sitemap = catalogo.origem !== "banco" ? [] : catalogo.produtos.map((produto) => ({

@@ -1,3 +1,4 @@
+import { rotaOculta, semOcultos } from "@/loja/lib/modulos";
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
@@ -71,7 +72,24 @@ export async function arvoreDaLoja(): Promise<ArvoreCategorias> {
 
 /** Menu do cabeçalho: o cadastrado no ERP ou o estático. */
 export async function menuDaLoja(): Promise<ItemMenu[]> {
-  return (await catalogoDaLoja()).menu ?? montarMenu();
+  return menuSemOcultos((await catalogoDaLoja()).menu ?? montarMenu());
+}
+
+/** Tira do menu o que aponta para módulos desligados (src/loja/lib/modulos.ts): itens, colunas, links, cards e promo. */
+function menuSemOcultos(menu: ItemMenu[]): ItemMenu[] {
+  return menu.filter((item) => !rotaOculta(item.href)).map((item) => ({
+    ...item,
+    painel: item.painel.tipo === "cards"
+      ? { ...item.painel, cards: semOcultos(item.painel.cards) }
+      : {
+          ...item.painel,
+          destaques: semOcultos(item.painel.destaques),
+          secundarios: semOcultos(item.painel.secundarios),
+          colunas: semOcultos(item.painel.colunas).map((coluna) => ({ ...coluna, links: semOcultos(coluna.links) })).filter((coluna) => coluna.links.length > 0),
+          cards: semOcultos(item.painel.cards),
+          promo: item.painel.promo && !rotaOculta(item.painel.promo.href) ? item.painel.promo : undefined,
+        },
+  }));
 }
 
 /** O essencial de cada produto para a sacola, o pedido e o recálculo do servidor. */
