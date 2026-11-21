@@ -8,20 +8,23 @@ import { IconTile } from "@/components/ui/IconTile";
 import { Select } from "@/components/ui/Select";
 import { transientOptions } from "@/lib/emotion/transient";
 import { stageIcon, type Funnel } from "@/features/leads/funnels";
-import { formatMoney, type StageValue } from "../metrics";
+import { formatMoney, wholeShares, type StageValue } from "../metrics";
 import { Card, CardHead, EmptyNote } from "./ui";
 
 /* ---------- Estilos ---------- */
 
-// Altura de cada etapa: a mesma nas três colunas (números | funil | taxas), para tudo se alinhar.
+// Altura mínima de cada etapa. As duas colunas (números | funil) usam a mesma grade de linhas iguais e esticam juntas
+// até o fim do cartão: cada linha de números fecha exatamente com a sua gaveta, sem sobra nem falta.
 const ALTURA = 3.75; // rem
+const linhasIguais = `display: grid; grid-auto-rows: minmax(${ALTURA}rem, 1fr);`;
 
 /** Duas colunas: os números de cada etapa e, ao lado, o funil desenhado. */
 const Grade = styled.div`
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1fr) minmax(11rem, 0.9fr);
   gap: ${({ theme }) => theme.spacing(5)};
-  align-items: start;
+  align-items: stretch;
 
   @container (max-width: 460px) {
     grid-template-columns: minmax(0, 1fr) 8.5rem;
@@ -30,15 +33,14 @@ const Grade = styled.div`
 `;
 
 const Numeros = styled.ul`
-  display: flex;
-  flex-direction: column;
+  ${linhasIguais}
 `;
 
 const Linha = styled("li", transientOptions)<{ $dim: boolean }>`
   display: grid;
   grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
   align-items: center;
-  height: ${ALTURA}rem;
+  min-height: 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   opacity: ${({ $dim }) => ($dim ? 0.4 : 1)};
   transition: opacity 200ms;
@@ -57,9 +59,10 @@ const Linha = styled("li", transientOptions)<{ $dim: boolean }>`
   }
 `;
 
-/** O funil: o desenho em SVG por trás (trapézios de cantos arredondados) e, por cima, o ícone e o nome da etapa. */
+/** O funil: o desenho em SVG por trás (uma gaveta por etapa) e, por cima, o ícone e o nome da etapa. */
 const Funil = styled.div`
   position: relative;
+  ${linhasIguais}
 
   > svg {
     position: absolute;
@@ -79,8 +82,9 @@ const Etapa = styled("div", transientOptions)<{ $cor: string; $dim: boolean }>`
   align-items: center;
   justify-content: center;
   gap: 3px;
-  height: ${ALTURA}rem;
-  padding: 0 20%;
+  min-height: 0;
+  /* Um respiro em cima: a aba da gaveta anterior entra aqui */
+  padding: 5px 20% 0;
   color: ${({ $cor }) => $cor};
   font-size: 0.75rem;
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
@@ -120,11 +124,9 @@ const Trigger = styled.button`
 
 /* ---------- Componente ---------- */
 
-const porcento = (parte: number, todo: number) => (todo > 0 ? `${Math.round((parte / todo) * 100)}%` : "–");
-
 /**
- * Funil desenhado: à esquerda os números de cada etapa (leads e valor) e, ao lado, o funil em gavetas: a cor da etapa,
- * o ícone e o nome em branco, e a aba que encaixa na gaveta de baixo.
+ * Funil desenhado: à esquerda os números de cada etapa (leads e valor) e, ao lado, o funil em gavetas: o tom pastel
+ * da etapa, o ícone e o nome no tom escuro dela, e a aba que encaixa no recorte da gaveta de baixo.
  */
 export function FunnelCard({
   funnel,
@@ -143,13 +145,20 @@ export function FunnelCard({
   const count = stages.reduce((sum, stage) => sum + stage.count, 0);
   const etapa = (id: string) => funnel?.stages.find((stage) => stage.id === id);
   const tom = (id: string) => theme.tones[etapa(id)?.tone ?? "neutral"];
-  // Gaveta do funil: a cor da etapa, cheia mas suave (o tom misturado com branco), com o texto por cima em branco.
-  // No tema escuro os tons já são claros: a gaveta usa o tom direto e o texto vai no fundo escuro do mesmo tom.
-  const cheia = (id: string) => (theme.mode === "dark" ? tom(id).fg : `color-mix(in srgb, ${tom(id).fg} 78%, white)`);
-  const sobre = (id: string) => (theme.mode === "dark" ? tom(id).bg : "#fff");
-  // Desenho: 100 de largura; cada etapa ocupa 100 de altura. O funil termina com 60% da largura e cada gaveta
-  // tem uma aba em triângulo que encaixa na de baixo.
-  const n = Math.max(stages.length, 1), recuo = 20 / n, ABA = { meia: 4.5, altura: 13 };
+  // As partes de cada coluna somam exatamente 100%.
+  const partesDosLeads = wholeShares(stages.map((stage) => stage.count)), partesDoValor = wholeShares(stages.map((stage) => stage.value));
+  // Gaveta do funil em tom pastel: o destaque suave da etapa com um sopro do tom escuro, que é a cor do ícone e do
+  // nome (contraste AA). No tema escuro, o destaque e o texto claro do mesmo tom.
+  const cheia = (id: string) => (theme.mode === "dark" ? tom(id).soft : `color-mix(in srgb, ${tom(id).fg} 10%, ${tom(id).soft})`);
+  const sobre = (id: string) => tom(id).fg;
+  // Desenho: 100 de largura; cada etapa ocupa 100 de altura. O funil afunila até 56% da largura. Cada gaveta desce
+  // numa aba em triângulo, e o contorno na cor do cartão abre o recorte onde ela encaixa na gaveta de baixo.
+  const n = Math.max(stages.length, 1), recuo = 22 / n, ABA = { meia: 7, altura: 12 };
+  const gaveta = (indice: number) => {
+    const cima = indice * recuo, baixo = (indice + 1) * recuo, y0 = indice * 100, y1 = (indice + 1) * 100;
+    const aba = indice < n - 1 ? ` L${50 + ABA.meia} ${y1} L50 ${y1 + ABA.altura} L${50 - ABA.meia} ${y1}` : "";
+    return `M${cima} ${y0} L${100 - cima} ${y0} L${100 - baixo} ${y1}${aba} L${baixo} ${y1} Z`;
+  };
 
   return (
     <Card aria-label={`Funil ${funnel?.name ?? ""}`}>
@@ -189,12 +198,12 @@ export function FunnelCard({
                 <div>
                   <small>Leads</small>
                   <strong>{stage.count}</strong>
-                  <em>{porcento(stage.count, count)} do funil</em>
+                  <em>{count > 0 ? `${partesDosLeads[indice]}%` : "–"} do funil</em>
                 </div>
                 <div>
                   <small>Valor</small>
                   <strong>{formatMoney(stage.value)}</strong>
-                  <em>{porcento(stage.value, total)} do valor</em>
+                  <em>{total > 0 ? `${partesDoValor[indice]}%` : "–"} do valor</em>
                 </div>
               </Linha>
             ))}
@@ -202,15 +211,10 @@ export function FunnelCard({
 
           <Funil role="img" aria-label={`Funil ${funnel.name}: ${stages.map((stage) => `${stage.label}, ${stage.count}`).join("; ")}`}>
             <svg viewBox={`0 0 100 ${n * 100}`} preserveAspectRatio="none" aria-hidden>
-              {stages.map((stage, indice) => {
-                const cima = indice * recuo, baixo = (indice + 1) * recuo, y0 = indice * 100, y1 = (indice + 1) * 100;
-                return <path key={stage.id} d={`M${cima} ${y0} L${100 - cima} ${y0} L${100 - baixo} ${y1} L${baixo} ${y1} Z`} fill={cheia(stage.id)} stroke={theme.palette.neutral[0]} strokeWidth="1.5" vectorEffect="non-scaling-stroke" opacity={hover !== null && hover !== stage.id ? 0.5 : 1} />;
-              })}
-              {/* As abas por cima: o triângulo de cada gaveta entra na seguinte */}
-              {stages.slice(0, -1).map((stage, indice) => {
-                const y = (indice + 1) * 100;
-                return <path key={stage.id} d={`M${50 - ABA.meia} ${y - 0.5} L${50 + ABA.meia} ${y - 0.5} L50 ${y + ABA.altura} Z`} fill={cheia(stage.id)} opacity={hover !== null && hover !== stage.id ? 0.5 : 1} />;
-              })}
+              {/* De baixo para cima: a aba de cada gaveta fica por cima da seguinte */}
+              {stages.map((stage, indice) => ({ stage, indice })).reverse().map(({ stage, indice }) => (
+                <path key={stage.id} d={gaveta(indice)} fill={cheia(stage.id)} stroke={theme.palette.neutral[0]} strokeWidth="3" strokeLinejoin="round" vectorEffect="non-scaling-stroke" opacity={hover !== null && hover !== stage.id ? 0.55 : 1} />
+              ))}
             </svg>
             {stages.map((stage) => {
               const Icone = stageIcon(etapa(stage.id) ?? { label: stage.label });

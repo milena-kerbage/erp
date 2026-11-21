@@ -53,7 +53,7 @@ import {
   valueByStage,
 } from "../metrics";
 import { FunnelCard } from "./FunnelCard";
-import { BirthsCard, CampaignsCard, OwnersCard } from "./ExtraCards";
+import { BirthsCard, ChannelsCard, RevenueCard } from "./ExtraCards";
 import { MonthBars, Sparkline } from "./charts";
 import { SourcesCard } from "./SourcesCard";
 import { Card, Delta, Eyebrow, Figure, Help, IconBadge, Note, Segments } from "./ui";
@@ -140,10 +140,9 @@ const Banner = styled(Link)`
  */
 const Layout = styled.div`
   display: grid;
-  flex: 1;
   grid-template-columns: minmax(0, 1fr) clamp(17.5rem, 22vw, 21rem);
   gap: ${({ theme }) => theme.spacing(3)};
-  align-items: start;
+  align-items: stretch;
 
   @media (max-width: 1180px) {
     grid-template-columns: minmax(0, 1fr);
@@ -317,6 +316,7 @@ const MiniRows = styled.div`
 /** Funil (com mais espaço) e origens lado a lado; empilham em tela estreita. */
 const Bottom = styled.div`
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: ${({ theme }) => theme.spacing(3)};
 
@@ -589,11 +589,11 @@ export function Dashboard() {
             </Bottom>
           </Column>
 
-          {/* Coluna lateral, discreta: o prazo dos enxovais, a equipe e o que as campanhas trouxeram */}
+          {/* Coluna lateral, discreta: o prazo dos enxovais, o faturamento mês a mês e quanto cada canal converte */}
           <Column>
             <BirthsCard births={data.births} />
-            <OwnersCard rows={data.owners} />
-            <CampaignsCard rows={data.campaigns} tracked={data.tracked} total={data.fresh} />
+            <RevenueCard rows={data.revenue} />
+            <ChannelsCard rows={data.sources} />
           </Column>
         </Layout>
       )}

@@ -45,6 +45,19 @@ test('dashboard recebe agregados globais e somente cinco fichas de atenção',as
  const summary=await dashboardSummary(now,180);assert.equal(summary.total,125);assert.equal(summary.fresh,8);assert.equal(summary.monthTotal,82);assert.equal(summary.pipeline,1281.25);assert.ok(summary.stale.length<=5);assert.equal(summary.staleCount,118);assert.equal(summary.stages.vendas[0].count,125);
  assert.ok(JSON.stringify(summary).length<15000);
 });
+test('dashboard: faturamento por mês pelo fechamento do histórico e marcadores dos nascimentos',async()=>{
+ const linha=(id,funil,etapa,criado,orcamento,extras={})=>db.prepare('INSERT INTO leads VALUES (?,?,?,?,?,?,?,?,?,NULL)').run(id,funil,etapa,JSON.stringify({id,name:id,phone:'85999990000',budget:orcamento,funnelId:funil,stage:etapa,tags:[],createdAt:new Date(criado).toISOString()}),JSON.stringify({owner:{seed:'owner-1',name:'Gestão'},source:'Instagram',links:[],attachments:[],history:[],...extras}),'open',1,criado,now);
+ // Entrou em setembro e fechou em outubro: conta em outubro. Sem histórico de etapa: conta no mês em que entrou.
+ await linha('venda-outubro','vendas','fechado',Date.parse('2026-09-20T12:00:00-03:00'),1000,{history:[{id:'h1',at:'2026-10-05T15:00:00.000Z',by:'Gestão',type:'stage',stage:'fechado'}]});
+ await linha('venda-novembro','clientes','confirmado',Date.parse('2026-11-03T12:00:00-03:00'),500.5);
+ await linha('bebe-10-dias','vendas','novo',now,0,{babyName:'Helena',eventDate:'2026-11-18'});
+ try{
+  const summary=await dashboardSummary(now,180);
+  assert.deepEqual(summary.revenue.map(item=>item.month),['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11']);
+  assert.deepEqual(summary.revenue.map(item=>[item.value,item.count]),[[0,0],[0,0],[0,0],[0,0],[1000,1],[500.5,1]]);
+  assert.deepEqual(summary.births.marks,[10]);assert.equal(summary.births.d30,1);assert.equal(summary.births.next[0].baby,'Helena');assert.equal(summary.births.next[0].client,false);
+ }finally{await db.prepare("DELETE FROM leads WHERE id IN ('venda-outubro','venda-novembro','bebe-10-dias')").run();}
+});
 test('relatórios limitam detalhes de estoque e contam todo o conjunto em SQL',async()=>{
  await db.transaction(async()=>{for(let index=0;index<70;index++){const data={id:`stock-${index}`,resource:'materiais',name:'Linha',unit:'un',quantity:1,minQuantity:2,unitCost:0.25};await db.prepare('INSERT INTO records VALUES (?,?,?,?,?,?,?,?,NULL)').run(data.id,'materiais',JSON.stringify(data),'','',1,now,now);}});
  const result=await reports();assert.equal(result.inventory.low.length,50);assert.equal(result.inventory.lowTotal,70);assert.equal(result.inventory.stockValue,17.5);assert.equal(result.counts.materiais,70);assert.equal(result.leads.total,125);

@@ -7,7 +7,7 @@ import { logoDaOrigem } from "@/components/brand/LogosOrigem";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { transientOptions } from "@/lib/emotion/transient";
 import { findChoice, leadSources } from "@/features/leads/options";
-import { formatMoney, formatMoneyShort, type SourceRow } from "../metrics";
+import { formatMoney, formatMoneyShort, joinSources, type SourceRow } from "../metrics";
 import { MAX_SLICES, otherColor, sourceColor } from "../palette";
 import { Gauge } from "./charts";
 import { Card, CardHead, EmptyNote } from "./ui";
@@ -90,20 +90,12 @@ const Badge = styled("span", transientOptions)<{ $color: string }>`
 `;
 
 const Name = styled.span`
-  display: inline-flex;
-  align-items: baseline;
-  gap: ${({ theme }) => theme.spacing(1)};
   max-width: 100%;
   overflow: hidden;
   font-size: ${({ theme }) => theme.fontSizes.xs};
   color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
   text-overflow: ellipsis;
-
-  strong {
-    font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    color: ${({ theme }) => theme.colors.text.primary};
-  }
 `;
 
 const Value = styled.strong`
@@ -137,22 +129,15 @@ type Part = { id: string; label: string; count: number; value: number; color: st
 
 /**
  * De onde veio o valor dos orçamentos do mês: medidor em tracinhos com o
- * total no meio e, embaixo, uma coluna por canal com a logo dele, a parte e o valor. Leads e ticket médio aparecem
- * na dica, ao passar o mouse.
+ * total no meio e, embaixo, uma coluna por canal com a logo dele, o nome e o valor. Leads, ticket médio e a parte do
+ * valor aparecem na dica, ao passar o mouse.
  */
 export function SourcesCard({ rows }: { rows: SourceRow[] }) {
   const theme = useTheme();
   const total = rows.reduce((sum, row) => sum + row.value, 0);
 
-  // "Loja online" e "Site" são o mesmo canal para quem lê o Painel: entram juntos como "Site".
-  const juntos = new Map<string, SourceRow>();
-  for (const row of rows) {
-    const nome = row.source === "Loja online" ? "Site" : row.source;
-    const atual = juntos.get(nome);
-    juntos.set(nome, atual ? { ...atual, count: atual.count + row.count, value: atual.value + row.value, converted: atual.converted + row.converted } : { ...row, source: nome });
-  }
   // Até três canais com cor própria (pelo valor); o resto vira "Outros"
-  const ranked = [...juntos.values()].sort((a, b) => b.value - a.value);
+  const ranked = joinSources(rows).sort((a, b) => b.value - a.value);
   const main = ranked.slice(0, MAX_SLICES);
   const rest = ranked.slice(MAX_SLICES);
   const parts: Part[] = [
@@ -234,10 +219,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
                           </Badge>
                         )}
                       </span>
-                      <Name>
-                        {part.label}
-                        <strong>{parte}%</strong>
-                      </Name>
+                      <Name>{part.label}</Name>
                       <Value>{valorCurto(part.value)}</Value>
                     </div>
                   </Tooltip>

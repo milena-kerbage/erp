@@ -202,6 +202,30 @@ export type SourceRow = {
   converted: number;
 };
 
+/** "Loja online" e "Site" são o mesmo canal para quem lê o Painel: entram juntos como "Site". */
+export function joinSources(rows: readonly SourceRow[]): SourceRow[] {
+  const juntos = new Map<string, SourceRow>();
+  for (const row of rows) {
+    const nome = row.source === "Loja online" ? "Site" : row.source;
+    const atual = juntos.get(nome);
+    juntos.set(nome, atual ? { ...atual, count: atual.count + row.count, value: atual.value + row.value, converted: atual.converted + row.converted } : { ...row, source: nome });
+  }
+  return [...juntos.values()];
+}
+
+/**
+ * Partes de um todo em porcentagens inteiras que somam exatamente 100 (maiores restos): sem isso, arredondar cada
+ * parte sozinha pode dar 99 ou 101 no fim.
+ */
+export function wholeShares(values: readonly number[]): number[] {
+  const total = values.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) return values.map(() => 0);
+  const exatas = values.map((value) => (value / total) * 100), partes = exatas.map(Math.floor);
+  const ordem = exatas.map((exata, indice) => ({ indice, resto: exata - Math.floor(exata) })).sort((a, b) => b.resto - a.resto);
+  for (let falta = 100 - partes.reduce((sum, parte) => sum + parte, 0), i = 0; falta > 0; falta -= 1, i += 1) partes[ordem[i % ordem.length].indice] += 1;
+  return partes;
+}
+
 /** Leads do mês por origem, do canal que mais traz para o que menos traz. */
 export function sourcesOfMonth(
   leads: readonly Lead[],
