@@ -3,7 +3,8 @@
 // Chat do Direct do Instagram, no mesmo desenho das conversas do WhatsApp (lista | conversa), com a troca de canal no
 // topo. Mensagens chegam pelo webhook e o histórico vem da sincronização com a Meta (src/lib/instagram/chat.ts).
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ArrowClockwiseIcon, ArrowLeftIcon, ArrowSquareOutIcon, GearSixIcon, ImageIcon, MagnifyingGlassIcon, PaperPlaneRightIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowBendUpLeftIcon, ArrowClockwiseIcon, ArrowLeftIcon, ArrowSquareOutIcon, GearSixIcon, ImageIcon, MagnifyingGlassIcon, PaperPlaneRightIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
+import { Dialog } from "@/components/ui/Dialog";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -158,7 +159,12 @@ function Fio({ conversa, aoVoltar, aoMudar }: { conversa: Conversa; aoVoltar: ()
   const [mensagens, setMensagens] = useState<Mensagem[] | null>(null);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [respondendo, setRespondendo] = useState<Mensagem | null>(null);
+  const [apagando, setApagando] = useState<Mensagem | null>(null);
+  const [curtidas, setCurtidas] = useState<Set<string>>(new Set());
+  const [erroAcao, setErroAcao] = useState("");
   const area = useRef<HTMLDivElement>(null);
+  const campo = useRef<HTMLTextAreaElement>(null);
   const igsid = conversa.igsid;
 
   const carregar = useCallback(async () => {
@@ -183,11 +189,24 @@ function Fio({ conversa, aoVoltar, aoMudar }: { conversa: Conversa; aoVoltar: ()
     const corpo = texto.trim();
     if (!corpo || enviando || janela === "fechada") return;
     const temp: Mensagem = { id: `temp-${Date.now()}`, igsid, direcao: "saida", tipo: "text", texto: corpo, anexos: [], criadoEm: new Date().toISOString(), status: "enviando", autor: null, local: true };
-    setMensagens((atual) => [...(atual ?? []), temp]); setTexto(""); setEnviando(true);
-    try { await pedir(`chat/${igsid}`, { corpo: { texto: corpo } }); await carregar(); setMensagens((atual) => (atual ?? []).filter((m) => m.id !== temp.id)); void carregar(); void aoMudar(); }
+    const citada = respondendo?.id;
+    setMensagens((atual) => [...(atual ?? []), temp]); setTexto(""); setRespondendo(null); setEnviando(true);
+    try { await pedir(`chat/${igsid}`, { corpo: { texto: corpo, respondendo: citada } }); await carregar(); setMensagens((atual) => (atual ?? []).filter((m) => m.id !== temp.id)); void carregar(); void aoMudar(); }
     catch (falha) { setMensagens((atual) => (atual ?? []).map((m) => (m.id === temp.id ? { ...m, status: "falhou", erro: falha instanceof Error ? falha.message : "Não enviada" } : m))); }
     finally { setEnviando(false); }
   }
+
+  async function curtir(m: Mensagem) {
+    setCurtidas((atual) => new Set(atual).add(m.id));
+    try { await pedir(`chat/${igsid}`, { corpo: { acao: "reagir", mid: m.id } }); }
+    catch (falha) { setCurtidas((atual) => { const nova = new Set(atual); nova.delete(m.id); return nova; }); setErroAcao(falha instanceof Error ? falha.message : "Não foi possível curtir."); }
+  }
+  async function apagar(m: Mensagem) {
+    setMensagens((atual) => (atual ?? []).filter((x) => x.id !== m.id));
+    try { await pedir(`chat/${igsid}?id=${encodeURIComponent(m.id)}`, { method: "DELETE" }); void aoMudar(); }
+    catch (falha) { setErroAcao(falha instanceof Error ? falha.message : "Não foi possível apagar."); void carregar(); }
+  }
+  useEffect(() => { if (!erroAcao) return; const t = window.setTimeout(() => setErroAcao(""), 4000); return () => window.clearTimeout(t); }, [erroAcao]);
 
   const dias = useMemo(() => {
     const grupos: Array<{ chave: string; itens: Mensagem[] }> = [];
@@ -237,6 +256,15 @@ function Fio({ conversa, aoVoltar, aoMudar }: { conversa: Conversa; aoVoltar: ()
                         : <a className="mediaLink" href={visual.url} target="_blank" rel="noreferrer"><img className="image" src={visual.url} alt={ROTULO_TIPO[visual.tipo] || "Foto"} loading="lazy" referrerPolicy="no-referrer" /></a>)}
                       {(m.texto || rotulo) && <p className="text">{rotulo ? <span className="imageMissing"><ImageIcon aria-hidden /> {rotulo}</span> : m.texto}<span className="spacer" aria-hidden /></p>}
                       <span className="meta" data-overlay={visual && !m.texto ? "" : undefined}>{horaDaMensagem(m.criadoEm)}</span>
+                      {curtidas.has(m.id) && <span className="pill" aria-label="Curtida">❤️</span>}
+                      {!m.local && (
+                        <span className="hoverBar" role="toolbar" aria-label="Ações da mensagem">
+                          {!saida && <button type="button" className="hbEmoji" data-on={curtidas.has(m.id) || undefined} aria-label="Curtir" onClick={() => void curtir(m)}>❤️</button>}
+                          {!saida && <span className="hbSep" aria-hidden />}
+                          <button type="button" className="hbIcon" title="Responder" aria-label="Responder" onClick={() => { setRespondendo(m); campo.current?.focus(); }}><ArrowBendUpLeftIcon weight="bold" /></button>
+                          <button type="button" className="hbIcon" title="Apagar do ERP" aria-label="Apagar do ERP" onClick={() => setApagando(m)}><TrashIcon weight="bold" /></button>
+                        </span>
+                      )}
                     </div>
                   </div>
                   {m.status === "falhou" && <span className="failedLine" role="status">Não enviada{m.erro ? ` / ${m.erro}` : ""}</span>}
@@ -247,9 +275,19 @@ function Fio({ conversa, aoVoltar, aoMudar }: { conversa: Conversa; aoVoltar: ()
         ))}
       </div>
 
+      {respondendo && (
+        <div className="replyQuote" data-in-field="" style={{ margin: "0 1rem", "--quote": respondendo.direcao === "saida" ? "var(--sys-blue)" : "var(--sys-green)" } as CSSProperties}>
+          <span className="replyQuoteCopy"><strong>{respondendo.direcao === "saida" ? "Você" : conversa.nome}</strong><span className="replyQuoteBody">{respondendo.texto || ROTULO_TIPO[respondendo.tipo] || "Mensagem"}</span></span>
+          <button type="button" className="replyQuoteClose" aria-label="Cancelar a resposta" onClick={() => setRespondendo(null)}><XIcon size={14} /></button>
+        </div>
+      )}
+      {erroAcao && <div role="alert" style={{ margin: "0 1rem", fontSize: "0.8125rem", color: "var(--sys-red)" }}>{erroAcao}</div>}
+      <Dialog open={Boolean(apagando)} onClose={() => setApagando(null)} title="Apagar do ERP?" width="26rem"
+        description="A mensagem some desta conversa no ERP. No Instagram da pessoa ela continua: a API do Instagram não apaga mensagens no aplicativo dela."
+        footer={<><Button variant="ghost" onClick={() => setApagando(null)}>Cancelar</Button><Button variant="danger" onClick={() => { if (apagando) void apagar(apagando); setApagando(null); }}>Apagar do ERP</Button></>} />
       <form className="composerIg" onSubmit={(e) => { e.preventDefault(); void enviar(); }}
         style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", padding: "0.75rem 1rem", borderTop: "var(--line)", background: "var(--color-bg)" }}>
-        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={1} maxLength={1000} disabled={janela === "fechada"}
+        <textarea ref={campo} value={texto} onChange={(e) => setTexto(e.target.value)} rows={1} maxLength={1000} disabled={janela === "fechada"}
           placeholder={janela === "fechada" ? "A Meta só permite responder até 7 dias depois da última mensagem da pessoa." : `Mensagem para ${conversa.nome.split(" ")[0]}`}
           aria-label="Mensagem" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }}
           style={{ flex: 1, resize: "none", minHeight: "2.5rem", maxHeight: "8rem", padding: "0.625rem 0.875rem", border: "var(--line)", borderRadius: "1.25rem", background: "var(--color-elevated)", font: "inherit", fontSize: "0.9375rem", color: "var(--color-ink)", fieldSizing: "content" } as CSSProperties} />

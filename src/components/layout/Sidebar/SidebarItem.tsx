@@ -27,8 +27,15 @@ type SidebarItemProps = {
   indicatorLabel?: string;
   /** Módulo em produção: selo "Produção" (expandida) ou cadeado (recolhida). */
   locked?: boolean;
+  /** Canal de atendimento: o item ativo fica com o fundo claro na cor do aplicativo. */
+  canal?: "whatsapp" | "instagram";
   href?: string;
   onClick?: () => void;
+};
+
+const CORES_CANAL = {
+  whatsapp: { "--canal-bg": "#DDF7E6", "--canal-borda": "#B5E9C6" },
+  instagram: { "--canal-bg": "linear-gradient(135deg, #FFF1E2 0%, #FDE3F0 55%, #EEE4FF 100%)", "--canal-borda": "#F4C6DC" },
 };
 
 /** Círculo com ícone quando a sidebar está recolhida; ícone + texto quando expandida. */
@@ -41,6 +48,7 @@ export function SidebarItem({
   indicator = false,
   indicatorLabel = "há novidades",
   locked = false,
+  canal,
   href,
   onClick,
 }: SidebarItemProps) {
@@ -93,6 +101,8 @@ export function SidebarItem({
       aria-current={active ? "page" : undefined}
       aria-label={accessibleName}
       data-locked={locked || undefined}
+      data-canal={canal}
+      style={canal ? (CORES_CANAL[canal] as React.CSSProperties) : undefined}
     >
       {content}
     </ItemLink>

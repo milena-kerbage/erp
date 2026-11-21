@@ -126,6 +126,12 @@ export const itemStyles = ({
   justify-content: flex-start;
   width: 100%;
   height: ${$expanded ? ITEM_SIZE.expanded : ITEM_SIZE.collapsed};
+  /* Canais (WhatsApp, Instagram): o item ativo ganha o fundo clarinho na cor do aplicativo, em vez do verde escuro. */
+  &[data-canal][aria-current="page"], &[data-canal][aria-current="page"]:hover {
+    background: var(--canal-bg);
+    border-color: var(--canal-borda);
+    color: ${theme.colors.text.primary};
+  }
   border-radius: ${$expanded ? theme.radii.md : theme.radii.full};
   overflow: hidden;
   text-align: left;

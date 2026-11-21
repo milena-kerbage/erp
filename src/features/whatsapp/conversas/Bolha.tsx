@@ -3,9 +3,9 @@
 // Um balão da conversa, no desenho do ERP da Le Ange (message-bubble.tsx). O contato fala à esquerda; a equipe e os modelos
 // saem à direita, cada um no seu tom. A nota interna é amarela, com cadeado, e só a equipe vê. O evento do sistema é uma
 // pílula no meio. A hora e os ticks moram na última linha; a que falhou diz isso em texto, com o "Tentar de novo".
-import { Fragment, memo, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, memo, useRef, type ReactNode } from "react";
 import {
-  ArrowBendUpLeftIcon, CameraIcon, CheckIcon, ChecksIcon, ClockIcon, DotsThreeIcon, FileTextIcon, FolderSimplePlusIcon, ImageIcon, LockSimpleIcon, MicrophoneIcon, SmileyIcon, VideoCameraIcon, WarningCircleIcon, XIcon,
+  ArrowBendUpLeftIcon, CameraIcon, CheckIcon, ChecksIcon, ClockIcon, DotsThreeIcon, FileTextIcon, FolderSimplePlusIcon, ImageIcon, LockSimpleIcon, MicrophoneIcon, VideoCameraIcon, WarningCircleIcon, XIcon,
 } from "@phosphor-icons/react";
 import { AudioPlayer } from "@/components/ui/Chat/AudioPlayer";
 import type { WhatsAppMessage } from "../types";
@@ -65,30 +65,6 @@ export function Citacao({ mensagem, nomeContato, noCampo, aoFechar, aoClicar }: 
   const estilo = { "--quote": saida ? "var(--sys-blue)" : "var(--sys-green)" } as React.CSSProperties;
   if (noCampo) return <div className="replyQuote" data-in-field="" style={estilo}>{miolo}{aoFechar && <button type="button" className="replyQuoteClose" aria-label="Cancelar a resposta" onClick={aoFechar}><XIcon size={14} /></button>}</div>;
   return <button type="button" className="replyQuote" style={estilo} onClick={aoClicar}>{miolo}</button>;
-}
-
-/** O botão de reagir ao lado da bolha, com o leque de emojis. */
-function BotaoReacao({ minha, saida, aoReagir }: { minha?: string; saida: boolean; aoReagir: (emoji: string) => void }) {
-  const [aberto, setAberto] = useState(false);
-  const caixa = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!aberto) return;
-    const fora = (e: Event) => { if (!caixa.current?.contains(e.target as Node)) setAberto(false); };
-    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") { e.preventDefault(); setAberto(false); } };
-    document.addEventListener("pointerdown", fora);
-    document.addEventListener("keydown", tecla);
-    return () => { document.removeEventListener("pointerdown", fora); document.removeEventListener("keydown", tecla); };
-  }, [aberto]);
-  return (
-    <div ref={caixa} className="reactAnchor" data-side={saida ? "out" : "in"} data-open={aberto || undefined}>
-      <button type="button" className="reactTrigger" aria-label="Reagir com emoji" aria-expanded={aberto} onClick={() => setAberto((valor) => !valor)}><SmileyIcon /></button>
-      {aberto && (
-        <div className="reactPicker" role="menu" aria-label="Reagir com emoji">
-          {REACOES_RAPIDAS.map((emoji) => <button key={emoji} type="button" role="menuitemradio" aria-checked={minha === emoji} className="reactEmoji" data-on={minha === emoji || undefined} onClick={() => { setAberto(false); aoReagir(emoji); }}>{emoji}</button>)}
-        </div>
-      )}
-    </div>
-  );
 }
 
 type Props = {
@@ -179,10 +155,18 @@ export const Bolha = memo(function Bolha({ mensagem, album, primeira, nomeContat
             {horaDaMensagem(mensagem.createdAt)}
             {saida && !nota && <Ticks status={mensagem.status} />}
           </span>
-          {!local && <button type="button" className="messageMore" aria-label="Opções da mensagem" onClick={abrirAcoes}><DotsThreeIcon weight="bold" /></button>}
-          {acoes && <button type="button" className="replyButton" aria-label="Responder" onClick={() => aoResponder(mensagem)}><ArrowBendUpLeftIcon /></button>}
-          {acoes && <BotaoReacao minha={minha} saida={saida} aoReagir={(emoji) => aoReagir(mensagem, emoji)} />}
-          {salvavel && <button type="button" className="fileButton" data-shift="" aria-label="Salvar na ficha" onClick={() => aoSalvar(mensagem)}><FolderSimplePlusIcon /></button>}
+          {!local && (
+            // Como no WhatsApp: ao passar o mouse, a barra com as reações rápidas, responder e mais opções sobre a bolha.
+            <span className="hoverBar" role="toolbar" aria-label="Ações da mensagem">
+              {acoes && REACOES_RAPIDAS.map((emoji) => (
+                <button key={emoji} type="button" className="hbEmoji" data-on={minha === emoji || undefined} aria-pressed={minha === emoji} aria-label={minha === emoji ? `Tirar a reação ${emoji}` : `Reagir com ${emoji}`} onClick={() => aoReagir(mensagem, emoji)}>{emoji}</button>
+              ))}
+              {acoes && <span className="hbSep" aria-hidden />}
+              {acoes && <button type="button" className="hbIcon" title="Responder" aria-label="Responder" onClick={() => aoResponder(mensagem)}><ArrowBendUpLeftIcon weight="bold" /></button>}
+              {salvavel && <button type="button" className="hbIcon" title="Salvar na ficha" aria-label="Salvar na ficha" onClick={() => aoSalvar(mensagem)}><FolderSimplePlusIcon weight="bold" /></button>}
+              <button type="button" className="hbIcon" title="Mais opções" aria-label="Mais opções da mensagem" onClick={abrirAcoes}><DotsThreeIcon weight="bold" /></button>
+            </span>
+          )}
           {reacoes.length > 0 && (
             <span className="pill" title={reacoes.map((r) => `${r.emoji} ${r.from === "me" ? "Equipe" : nomeContato}`).join(", ")} aria-label="Reações">
               {[...new Set(reacoes.map((r) => r.emoji))].join("")}{reacoes.length > 1 && <small>{reacoes.length}</small>}

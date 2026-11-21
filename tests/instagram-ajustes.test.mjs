@@ -169,3 +169,15 @@ test('só Instagram (sem página): conecta pela conta do token e o chat recebe, 
   await assert.rejects(chat.enviarTexto(OUTRO, 'Oi', 'Equipe', fetcher, Date.now() + 8 * 86400000), { code: 'WINDOW_CLOSED' });
   assert.equal((await chat.mensagensDe(CLIENTE)).at(-1).texto, 'Mando o orçamento já');
 });
+
+test('chat do Instagram: responder cita a mensagem (reply_to), curtir usa a reação "love" e apagar do ERP tira da conversa', async () => {
+  const chat = await import('../src/lib/instagram/chat.ts');
+  const corpos = [];
+  const fetcher = async (endereco, opcoes = {}) => { if (opcoes.body) corpos.push(JSON.parse(opcoes.body)); return Response.json({ recipient_id: '9988776655', message_id: `mid.r.${corpos.length}` }); };
+  await chat.enviarTexto('9988776655', 'Respondendo você', 'Equipe', fetcher, Date.now(), 'mid.in1');
+  assert.deepEqual(corpos.at(-1).reply_to, { mid: 'mid.in1' });
+  await chat.reagir('9988776655', 'mid.in1', fetcher);
+  assert.equal(corpos.at(-1).sender_action, 'react'); assert.deepEqual(corpos.at(-1).payload, { message_id: 'mid.in1', reaction: 'love' });
+  await chat.apagarDoErp('9988776655', 'mid.in1');
+  assert.ok(!(await chat.mensagensDe('9988776655')).some((m) => m.id === 'mid.in1'));
+});

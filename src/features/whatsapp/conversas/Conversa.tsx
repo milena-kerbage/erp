@@ -7,9 +7,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { useTheme } from "@emotion/react";
 import {
   ArrowBendUpLeftIcon, ArrowDownIcon, ArrowLeftIcon, ArrowSquareOutIcon, CaretDownIcon, ChatsCircleIcon, CheckCircleIcon, CircleDashedIcon, CopyIcon, DotsThreeIcon, DownloadSimpleIcon, ExportIcon, FolderSimplePlusIcon,
-  HandIcon, LockSimpleIcon, LockSimpleOpenIcon, PushPinIcon, PushPinSlashIcon, SidebarSimpleIcon, StarIcon, TrashIcon, UserIcon, XIcon,
+  HandIcon, LockSimpleIcon, LockSimpleOpenIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, SidebarSimpleIcon, StarIcon, TrashIcon, UserIcon, XIcon,
 } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Lightbox } from "@/components/ui/Lightbox";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/Menu";
@@ -42,10 +43,14 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
   lead?: Lead; funil?: Funnel; aoMoverEtapa: (etapa: string) => void;
   painel: boolean; aoAlternarPainel: () => void; listaFechada: boolean; aoAlternarLista: () => void;
 }) {
-  const { setSelecionado, organizar, enviarTexto, enviarNota, enviarArquivo, descartarFalha, reenviarFalha, reagir, carregarAntigas, recarregarFio, salvarNaFicha, setErro } = estado;
+  const { setSelecionado, organizar, enviarTexto, enviarNota, enviarArquivo, descartarFalha, reenviarFalha, apagarMensagem, editarNota, reagir, carregarAntigas, recarregarFio, salvarNaFicha, setErro } = estado;
   const mensagens = useMemo(() => fio?.messages ?? [], [fio?.messages]);
   const [respondendo, setRespondendo] = useState<WhatsAppMessage | null>(null);
   const [acoes, setAcoes] = useState<WhatsAppMessage | null>(null);
+  // Editar nota interna e apagar do ERP (confirmação): a API do WhatsApp não edita nem apaga no aparelho do cliente.
+  const [editando, setEditando] = useState<WhatsAppMessage | null>(null);
+  const [textoEditado, setTextoEditado] = useState("");
+  const [apagando, setApagando] = useState<WhatsAppMessage | null>(null);
   const [aviso, setAviso] = useState("");
   const [foto, setFoto] = useState<number | null>(null);
   const [modelo, setModelo] = useState(false);
@@ -294,10 +299,21 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
             {textoDaMensagem(acoes) && <button type="button" className="acao" onClick={() => { void copiar(acoes); setAcoes(null); }}><CopyIcon size={18} /> Copiar texto</button>}
             {acoesMidia && lead && <button type="button" className="acao" onClick={() => { void salvar(acoes); setAcoes(null); }}><FolderSimplePlusIcon size={18} /> Salvar na ficha</button>}
             {acoesMidia && <a className="acao" href={urlDaMidia(acoes, true)} onClick={() => setAcoes(null)}><DownloadSimpleIcon size={18} /> Baixar arquivo</a>}
-            {acoes.type === "note" && <button type="button" className="acao" data-perigo="" onClick={() => { void descartarFalha(phone, acoes.id); setAcoes(null); }}><TrashIcon size={18} /> Apagar nota</button>}
+            {acoes.type === "note" && <button type="button" className="acao" onClick={() => { setTextoEditado(acoes.text); setEditando(acoes); setAcoes(null); }}><PencilSimpleIcon size={18} /> Editar nota</button>}
+            {acoes.type === "note"
+              ? <button type="button" className="acao" data-perigo="" onClick={() => { void descartarFalha(phone, acoes.id); setAcoes(null); }}><TrashIcon size={18} /> Apagar nota</button>
+              : <button type="button" className="acao" data-perigo="" onClick={() => { setApagando(acoes); setAcoes(null); }}><TrashIcon size={18} /> Apagar do ERP</button>}
           </AcoesMensagem>
         )}
       </Dialog>
+      <Dialog open={Boolean(editando)} onClose={() => setEditando(null)} title="Editar nota interna" width="28rem"
+        footer={<><Button variant="ghost" onClick={() => setEditando(null)}>Cancelar</Button><Button disabled={!textoEditado.trim() || textoEditado.trim() === editando?.text} onClick={() => { if (editando) void editarNota(phone, editando.id, textoEditado.trim()); setEditando(null); }}>Salvar</Button></>}>
+        <textarea value={textoEditado} onChange={(e) => setTextoEditado(e.target.value)} rows={5} maxLength={4096} autoFocus aria-label="Texto da nota"
+          style={{ width: "100%", resize: "vertical", padding: "0.75rem", border: "1px solid var(--color-border, #ddd)", borderRadius: "0.5rem", font: "inherit", fontSize: "0.9375rem", background: "transparent", color: "inherit" }} />
+      </Dialog>
+      <Dialog open={Boolean(apagando)} onClose={() => setApagando(null)} title="Apagar do ERP?" width="26rem"
+        description="A mensagem some desta conversa no ERP para toda a equipe. No WhatsApp do cliente ela continua: a API oficial do WhatsApp não apaga mensagens no aparelho dele."
+        footer={<><Button variant="ghost" onClick={() => setApagando(null)}>Cancelar</Button><Button variant="danger" onClick={() => { if (apagando) void apagarMensagem(phone, apagando.id); setApagando(null); }}>Apagar do ERP</Button></>} />
       <Lightbox images={fotos.map((m) => ({ url: m.local?.previewUrl ?? urlDaMidia(m), name: textoDaMensagem(m) || "Foto" }))} index={foto} onClose={() => setFoto(null)} />
       <ModeloDialog phone={phone} aberto={modelo} aoFechar={() => setModelo(false)} aoEnviado={() => void recarregarFio(phone, true)} />
     </ColunaConversa>

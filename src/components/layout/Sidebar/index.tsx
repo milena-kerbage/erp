@@ -44,6 +44,7 @@ export function Sidebar() {
                   icon={item.icon}
                   expanded={expanded}
                   active={isPathActive(pathname, item.href)}
+                  canal={item.href === "/conversas" ? "whatsapp" : item.href === "/instagram" ? "instagram" : undefined}
                   indicator={naoLidas > 0}
                   indicatorLabel={`${naoLidas} ${naoLidas === 1 ? "conversa não lida" : "conversas não lidas"}`}
                 />

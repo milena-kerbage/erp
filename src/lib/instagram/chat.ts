@@ -159,7 +159,7 @@ export async function naoLidas() {
 }
 
 /** Resposta em texto. Dentro de 24 h: resposta comum; até 7 dias: etiqueta HUMAN_AGENT; depois, a Meta não permite. */
-export async function enviarTexto(igsid: string, corpo: string, autor: string, fetcher: typeof fetch = fetch, agora = Date.now()) {
+export async function enviarTexto(igsid: string, corpo: string, autor: string, fetcher: typeof fetch = fetch, agora = Date.now(), respondendo?: string) {
   if (!ehId(igsid)) throw new InstagramError(400, 'Conversa inválida.', 'INVALID_THREAD');
   const mensagem = corpo.trim();
   if (!mensagem || mensagem.length > 1000) throw new InstagramError(400, 'A mensagem do Instagram deve ter de 1 a 1000 caracteres.', 'INVALID_TEXT');
@@ -168,11 +168,31 @@ export async function enviarTexto(igsid: string, corpo: string, autor: string, f
   if (!ultima || agora - ultima > 7 * DIA) throw new InstagramError(409, 'A Meta só permite responder no Direct até 7 dias depois da última mensagem da pessoa. Peça para ela escrever de novo.', 'WINDOW_CLOSED');
   const { conexao, token } = await acesso();
   const config = instagramConfig();
-  const payload: Json = { recipient: { id: igsid }, message: { text: mensagem }, ...(agora - ultima > DIA ? { messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT' } : {}) };
+  const citada = typeof respondendo === 'string' && /^[A-Za-z0-9._=:+/-]{4,300}$/.test(respondendo) && !respondendo.startsWith('local.') ? respondendo : '';
+  const payload: Json = { recipient: { id: igsid }, message: { text: mensagem }, ...(citada ? { reply_to: { mid: citada } } : {}), ...(agora - ultima > DIA ? { messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT' } : {}) };
   const resposta = config.modo === 'facebook'
     ? await metaRequest(comToken(new URL(`${base()}/${dono(conexao.account_id)}/messages`), token), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, fetcher)
     : await metaRequest(`${base()}/me/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) }, fetcher);
   const id = texto(resposta.message_id, 300) || `local.${agora}.${Math.random().toString(36).slice(2, 8)}`;
   await gravarMensagem({ id, igsid, account: conexao.account_id, direcao: 'saida', texto: mensagem, anexos: [], criado: agora, lida: true, status: 'enviada', autor });
   return { id };
+}
+
+/** Curtir (❤️) uma mensagem do Direct: a API do Instagram aceita só a reação "love". */
+export async function reagir(igsid: string, mid: string, fetcher: typeof fetch = fetch) {
+  if (!ehId(igsid) || !/^[A-Za-z0-9._=:+/-]{4,300}$/.test(mid) || mid.startsWith('local.')) throw new InstagramError(400, 'Mensagem inválida.', 'INVALID_MESSAGE');
+  const { conexao, token } = await acesso();
+  const config = instagramConfig();
+  const payload = JSON.stringify({ recipient: { id: igsid }, sender_action: 'react', payload: { message_id: mid, reaction: 'love' } });
+  if (config.modo === 'facebook') await metaRequest(comToken(new URL(`${base()}/${dono(conexao.account_id)}/messages`), token), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload }, fetcher);
+  else await metaRequest(`${base()}/me/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: payload }, fetcher);
+  return { ok: true };
+}
+
+/** Apagar do ERP: some da conversa aqui; no Instagram da pessoa a mensagem continua. */
+export async function apagarDoErp(igsid: string, id: string) {
+  if (!ehId(igsid) || !id || id.length > 300) throw new InstagramError(400, 'Mensagem inválida.', 'INVALID_MESSAGE');
+  const r = await instagramDb().prepare('DELETE FROM instagram_chat_mensagens WHERE id = ? AND igsid = ?').run(id, igsid);
+  if (!r.changes) throw new InstagramError(404, 'Mensagem não encontrada.', 'NOT_FOUND');
+  return { deleted: true };
 }

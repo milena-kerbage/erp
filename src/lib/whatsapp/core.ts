@@ -753,6 +753,30 @@ export async function discardFailedMessage(phoneInput: unknown, id: unknown) {
   await bumpRevision();
   return {discarded: true};
 }
+/** Apagar do ERP: some da conversa aqui. A API do WhatsApp não apaga a mensagem no aparelho do cliente. */
+export async function apagarDoErp(phoneInput: unknown, id: unknown) {
+  const phone = phoneNumber(phoneInput);
+  if (typeof id !== 'string' || !id || id.length > 300) throw new WhatsAppError(400, 'Mensagem inválida.', 'INVALID_MESSAGE_ID');
+  const database = db();
+  const removidas = await database.transaction(async () => {
+    const apagadas = (await database.prepare("DELETE FROM messages WHERE id = ? AND phone = ? AND type <> 'system'").run(id, phone)).changes;
+    if (apagadas) await database.prepare('DELETE FROM send_requests WHERE message_id = ?').run(id);
+    return Number(apagadas);
+  });
+  if (!removidas) throw new WhatsAppError(404, 'Mensagem não encontrada.', 'NOT_FOUND');
+  await bumpRevision();
+  return {deleted: true};
+}
+/** Editar: só nota interna (a API do WhatsApp não permite editar mensagem já enviada ao cliente). */
+export async function editarNota(phoneInput: unknown, id: unknown, texto: unknown, userId: string) {
+  const phone = phoneNumber(phoneInput), corpo = typeof texto === 'string' ? texto.trim() : '';
+  if (typeof id !== 'string' || !id.startsWith('note.')) throw new WhatsAppError(400, 'Só notas internas podem ser editadas: o WhatsApp não permite editar mensagem já enviada.', 'NOT_EDITABLE');
+  if (!corpo || corpo.length > 4096) throw new WhatsAppError(400, 'A nota deve ter de 1 a 4096 caracteres.', 'INVALID_TEXT');
+  const alteradas = (await db().prepare("UPDATE messages SET text = ?, author = ? WHERE id = ? AND phone = ? AND type = 'note'").run(corpo, userId, id, phone)).changes;
+  if (!alteradas) throw new WhatsAppError(404, 'Nota não encontrada.', 'NOT_FOUND');
+  await bumpRevision();
+  return {edited: true};
+}
 export async function messageById(id: string) {
   const row = await db().prepare(`${messageSelect} WHERE m.id = ?`).get(id) as MessageRow | undefined;
   return row ? {row, message: messageFromRow(row)} : null;

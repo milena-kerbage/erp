@@ -1,4 +1,4 @@
-import { addNote, discardFailedMessage, messagesFor, sendMessage } from '@/lib/whatsapp/core';
+import { addNote, apagarDoErp, discardFailedMessage, editarNota, messagesFor, sendMessage } from '@/lib/whatsapp/core';
 import { api, jsonBody, boundedQuery } from '@/lib/whatsapp/server';
 import { queueApplicationEvent } from '@/lib/erp/dispatch';
 export const runtime = 'nodejs';
@@ -14,4 +14,7 @@ export async function POST(request: Request) {
     return result;
   }, true, 60);
 }
-export async function DELETE(request: Request) { return api(request, () => { const url = new URL(request.url); return discardFailedMessage(url.searchParams.get('phone'), url.searchParams.get('id')); }, true, 60); }
+// Sem escopo: descarta falha ou nota. escopo=erp: apaga qualquer mensagem da conversa no ERP (no WhatsApp do cliente ela continua).
+export async function DELETE(request: Request) { return api(request, () => { const url = new URL(request.url); return url.searchParams.get('escopo') === 'erp' ? apagarDoErp(url.searchParams.get('phone'), url.searchParams.get('id')) : discardFailedMessage(url.searchParams.get('phone'), url.searchParams.get('id')); }, true, 60); }
+// Editar nota interna.
+export async function PATCH(request: Request) { return api(request, async (user) => { const corpo = await jsonBody(request); return editarNota(corpo.phone, corpo.id, corpo.text, user.id); }, true, 60); }

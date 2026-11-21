@@ -12,7 +12,6 @@ const rise = keyframes`from { opacity: 0; transform: translateY(0.375rem); }`;
 const pendingShine = keyframes`from { background-position: 125% 0; } to { background-position: -125% 0; }`;
 const recorderIn = keyframes`from { opacity: 0; transform: translateY(0.25rem); }`;
 const recPulse = keyframes`50% { opacity: 0.25; }`;
-const pickerIn = keyframes`from { opacity: 0; transform: translate(-50%, 0.25rem) scale(0.96); }`;
 const sheetIn = keyframes`from { opacity: 0; transform: translateY(0.5rem); }`;
 
 /** A tela: as variáveis da Le Ange nas cores do ERP, e as três colunas. */
@@ -340,32 +339,32 @@ const balloes = css`
   .bubble:not(:has(.text)):not([data-media]) .meta { position: static; justify-self: end; }
   .failed { color: var(--sys-red); }
 
-  /* Responder, reagir e salvar na ficha: as bolinhas que aparecem ao lado da bolha ao passar o mouse. */
-  .replyButton, .fileButton, .reactTrigger {
-    position: absolute; top: 50%; display: grid; place-items: center; width: 1.75rem; height: 1.75rem; color: var(--color-label-secondary); background-color: var(--color-bg);
-    border: var(--line); border-radius: 50%; box-shadow: var(--shadow-sm); opacity: 0; transform: translateY(-50%); transition: opacity var(--duration-fast) var(--ease-standard);
+  /* Ações da mensagem como no WhatsApp: ao passar o mouse, uma barra flutuante sobre o canto da bolha com as reações
+     rápidas, responder, salvar na ficha e "mais opções". No toque, o toque longo abre a janela de ações. */
+  .hoverBar {
+    position: absolute; bottom: calc(100% - 0.5rem); z-index: 3; display: inline-flex; align-items: center; gap: 0.0625rem; padding: 0.1875rem;
+    background-color: var(--color-elevated); border: var(--line); border-radius: var(--radius-full); box-shadow: var(--shadow-md);
+    opacity: 0; pointer-events: none; transform: translateY(0.25rem) scale(0.96); transform-origin: bottom center;
+    transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-base) var(--ease-settle);
   }
-  .replyButton svg, .fileButton svg, .reactTrigger svg { width: 0.875rem; height: 0.875rem; }
-  .row:not([data-out]) .replyButton { inset-inline-start: calc(100% + var(--space-2)); }
-  .row[data-out] .replyButton { inset-inline-end: calc(100% + var(--space-2)); }
-  .row:not([data-out]) .fileButton { inset-inline-start: calc(100% + var(--space-2) + 2rem); }
-  .row:not([data-out]) .fileButton[data-shift] { inset-inline-start: calc(100% + var(--space-2) + 4rem); }
-  .row[data-out] .fileButton { inset-inline-end: calc(100% + var(--space-2) + 2rem); }
-  .row[data-out] .fileButton[data-shift] { inset-inline-end: calc(100% + var(--space-2) + 4rem); }
-  .reactAnchor { position: absolute; top: 50%; z-index: 2; width: 1.75rem; height: 1.75rem; transform: translateY(-50%); }
-  .reactAnchor[data-side="out"] { inset-inline-end: calc(100% + var(--space-2) + 2rem); }
-  .reactAnchor[data-side="in"] { inset-inline-start: calc(100% + var(--space-2) + 2rem); }
-  .reactAnchor .reactTrigger { position: static; transform: none; }
-  .bubble:hover .replyButton, .bubble:hover .fileButton, .bubble:hover .reactTrigger, .reactAnchor[data-open] .reactTrigger,
-  .replyButton:focus-visible, .fileButton:focus-visible, .reactTrigger:focus-visible { opacity: 1; }
-  @media (hover: none) { .replyButton, .fileButton, .reactAnchor { display: none; } }
-  .reactPicker {
-    position: absolute; bottom: calc(100% + var(--space-1)); inset-inline-start: 50%; display: flex; gap: 0.125rem; padding: var(--space-1); background-color: var(--color-elevated);
-    border: var(--line); border-radius: var(--radius-full); box-shadow: var(--shadow-md); transform: translateX(-50%); animation: ${pickerIn} var(--duration-base) var(--ease-settle);
+  .row:not([data-out]) .hoverBar { inset-inline-start: 0.375rem; transform-origin: bottom left; }
+  .row[data-out] .hoverBar { inset-inline-end: 0.375rem; transform-origin: bottom right; }
+  /* Uma faixa invisível embaixo da barra mantém o mouse "dentro" ao subir da bolha para a barra. */
+  .hoverBar::after { content: ""; position: absolute; inset-inline: 0; top: 100%; height: 0.75rem; }
+  .bubble:hover .hoverBar, .hoverBar:focus-within { opacity: 1; pointer-events: auto; transform: none; transition-delay: 60ms; }
+  @media (hover: none) { .hoverBar { display: none; } }
+  .hbEmoji {
+    display: grid; place-items: center; width: 1.875rem; height: 1.875rem; font-size: 1.125rem; line-height: 1; border-radius: 50%;
+    transition: transform var(--duration-fast) var(--ease-standard), background-color var(--duration-fast);
   }
-  .reactEmoji { display: grid; place-items: center; width: 2rem; height: 2rem; font-size: 1.25rem; line-height: 1; border-radius: 50%; transition: transform var(--duration-fast) var(--ease-standard); }
-  .reactEmoji:hover { transform: scale(1.18); }
-  .reactEmoji[data-on] { background-color: var(--color-fill-tertiary); }
+  .hbEmoji:hover { transform: scale(1.22); background-color: var(--color-fill-quaternary); }
+  .hbEmoji[data-on] { background-color: var(--color-fill-tertiary); }
+  .hbSep { width: 1px; height: 1.125rem; margin-inline: 0.1875rem; background-color: var(--color-border); }
+  .hbIcon { display: grid; place-items: center; width: 1.875rem; height: 1.875rem; color: var(--color-label-secondary); border-radius: 50%; transition: color var(--duration-fast), background-color var(--duration-fast); }
+  .hbIcon:hover { color: var(--color-ink); background-color: var(--color-fill-quaternary); }
+  .hbIcon svg { width: 1rem; height: 1rem; }
+  .hbEmoji:focus-visible, .hbIcon:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+  @media (prefers-reduced-motion: reduce) { .hoverBar, .hbEmoji { transition: none; } }
   .pill {
     position: absolute; inset-inline-end: 0.5rem; bottom: -1.125rem; z-index: 1; display: inline-flex; gap: 0.125rem; align-items: center; padding: 0.0625rem 0.375rem;
     font-size: 0.8125rem; line-height: 1.3; background-color: var(--color-elevated); border: var(--line); border-radius: var(--radius-full); box-shadow: var(--shadow-sm);

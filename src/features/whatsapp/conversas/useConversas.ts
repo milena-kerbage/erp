@@ -347,6 +347,18 @@ export function useConversas(inicial?: string) {
     try { await whatsappRequest(`messages?phone=${encodeURIComponent(phone)}&id=${encodeURIComponent(id)}`, { method: "DELETE" }); }
     catch (falha) { setErro(errorMessage(falha)); void carregarFio(phone, true); }
   }, [trocarLocal, carregarFio]);
+  /** Apagar do ERP (some daqui na hora; no WhatsApp do cliente a mensagem continua). */
+  const apagarMensagem = useCallback(async (phone: string, id: string) => {
+    trocarLocal(phone, id, () => null);
+    try { await whatsappRequest(`messages?phone=${encodeURIComponent(phone)}&id=${encodeURIComponent(id)}&escopo=erp`, { method: "DELETE" }); void recarregarLista(); }
+    catch (falha) { setErro(errorMessage(falha)); void carregarFio(phone, true); }
+  }, [trocarLocal, carregarFio, recarregarLista]);
+  /** Editar nota interna (texto novo na hora; o servidor confirma). */
+  const editarNota = useCallback(async (phone: string, id: string, texto: string) => {
+    trocarLocal(phone, id, (m) => ({ ...m, text: texto }));
+    try { await whatsappRequest("messages", { method: "PATCH", body: { phone, id, text: texto } }); }
+    catch (falha) { setErro(errorMessage(falha)); void carregarFio(phone, true); }
+  }, [trocarLocal, carregarFio]);
   /** "Tentar de novo" numa falha gravada no servidor (texto): apaga a falha e manda de novo. */
   const reenviarFalha = useCallback(async (phone: string, mensagem: WhatsAppMessage) => {
     await descartarFalha(phone, mensagem.id);
@@ -380,7 +392,7 @@ export function useConversas(inicial?: string) {
     aba, setAba, busca, setBusca, buscaAtiva, filtros, setFiltros, contagens, etiquetas, naoLidas,
     lista: lista?.conversations ?? [], temMais: Boolean(lista?.nextOffset), carregarMaisLista, carregandoLista, maisLista, erro, setErro,
     selecionado, setSelecionado, conversaSelecionada, fio: selecionado ? fios[selecionado] : undefined,
-    carregarAntigas, organizar, resolverEmMassa, enviarTexto, enviarNota, enviarArquivo, descartarFalha, reenviarFalha, reagir, preCarregar, cancelarPreCarga, recarregarLista, removerDaLista,
+    carregarAntigas, organizar, resolverEmMassa, enviarTexto, enviarNota, enviarArquivo, descartarFalha, reenviarFalha, apagarMensagem, editarNota, reagir, preCarregar, cancelarPreCarga, recarregarLista, removerDaLista,
     recarregarFio: carregarFio, leadId: selecionado ? leads[selecionado] : undefined, buscarLead, definirLead, salvarNaFicha,
   };
 }

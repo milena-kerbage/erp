@@ -191,3 +191,16 @@ test('histórico do celular: contatos ganham nome e conversas antigas entram lid
   const datas = lista.map((conversa) => Date.parse(conversa.lastMessageAt));
   assert.deepEqual(datas, [...datas].sort((a, b) => b - a));
 });
+
+test('mensagens: nota interna editável; apagar do ERP tira a mensagem da conversa (no aparelho do cliente ela continua)', async () => {
+  const agora = Date.now(), cliente = '5585911112222';
+  await core.receiveWebhook({ object: 'whatsapp_business_account', entry: [{ id: WABA, changes: [{ field: 'messages', value: { metadata: { phone_number_id: FONE }, messages: [{ id: 'wamid.apagar1', from: cliente, timestamp: String(Math.floor(agora / 1000)), type: 'text', text: { body: 'Oi' } }] } }] }] }, agora);
+  const nota = await core.addNote({ phone: cliente, text: 'Cliente quer floral', clientRequestId: 'nota-teste-0001' }, 'gestor');
+  const idNota = nota.message?.id ?? nota.id;
+  await core.editarNota(cliente, idNota, 'Cliente quer floral rosê', 'gestor');
+  assert.equal((await core.db().prepare('SELECT text FROM messages WHERE id = ?').get(idNota)).text, 'Cliente quer floral rosê');
+  await assert.rejects(core.editarNota(cliente, 'wamid.apagar1', 'mudar', 'gestor'), { code: 'NOT_EDITABLE' });
+  await core.apagarDoErp(cliente, 'wamid.apagar1');
+  assert.equal(await core.db().prepare("SELECT id FROM messages WHERE id = 'wamid.apagar1'").get(), undefined);
+  await assert.rejects(core.apagarDoErp(cliente, 'wamid.apagar1'), { code: 'NOT_FOUND' });
+});

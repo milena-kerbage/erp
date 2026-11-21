@@ -18,7 +18,7 @@ export class WhatsAppRequestError extends Error {
 }
 
 /** Auth uses the same-origin HttpOnly session; Meta credentials stay on the server. */
-export async function whatsappRequest<T>(path: string, options: { body?: unknown; signal?: AbortSignal; method?: "GET" | "POST" | "PUT" | "DELETE" } = {}): Promise<T> {
+export async function whatsappRequest<T>(path: string, options: { body?: unknown; signal?: AbortSignal; method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" } = {}): Promise<T> {
   const response = await requestOnce(`/api/whatsapp/${path}`, {
     method: options.method ?? (options.body === undefined ? "GET" : "POST"),
     credentials: "same-origin",
