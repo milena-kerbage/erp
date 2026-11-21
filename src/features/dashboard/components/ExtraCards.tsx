@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import type { Theme } from "@emotion/react";
 import styled from "@emotion/styled";
-import { DotsThreeCircleIcon, SealCheckIcon } from "@phosphor-icons/react";
+import { ClockIcon, DotsThreeCircleIcon, SealCheckIcon } from "@phosphor-icons/react";
 import { logoDaOrigem } from "@/components/brand/LogosOrigem";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { quandoNasce } from "@/features/leads/bebe";
@@ -24,49 +25,57 @@ const plural = (quantidade: number, um: string, varios: string) => `${quantidade
 /** As três janelas do prazo, da mais urgente para a mais tranquila: a cor acompanha a urgência. */
 const JANELAS: readonly { de: number; ate: 30 | 60 | 90; rotulo: string; tom: Tone }[] = [
   { de: 0, ate: 30, rotulo: "até 30 dias", tom: "rose" },
-  { de: 30, ate: 60, rotulo: "31 a 60", tom: "peach" },
-  { de: 60, ate: 90, rotulo: "61 a 90", tom: "green" },
+  { de: 30, ate: 60, rotulo: "31 a 60 dias", tom: "peach" },
+  { de: 60, ate: 90, rotulo: "61 a 90 dias", tom: "green" },
 ];
 
 const janelaDe = (dias: number) => JANELAS.find((janela) => dias <= janela.ate) ?? JANELAS[JANELAS.length - 1];
 
-/** Barra de 90 dias em três trechos: em cima a contagem de cada janela, no trilho um risco por bebê, embaixo a escala. */
+/** A cor cheia de cada janela na barra: o tom pastel com mais presença (o destaque puro some numa barra fina). */
+const corDaJanela = (theme: Theme, tom: Tone) => (theme.mode === "dark" ? theme.tones[tom].fg : `color-mix(in srgb, ${theme.tones[tom].fg} 42%, ${theme.tones[tom].soft})`);
+
+/**
+ * Uma barra só para os 90 dias, repartida pelas três janelas: cada trecho tem a sua cor e a largura proporcional a
+ * quantos bebês nascem nele. Embaixo, a legenda com a cor, a contagem e o prazo de cada janela.
+ */
 const Prazo = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: ${({ theme }) => theme.spacing(1.5, 1)};
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing(2.5)};
 
-  .conta { display: flex; align-items: baseline; gap: ${({ theme }) => theme.spacing(1.5)}; min-width: 0; margin: -3px -4px; padding: 3px 4px; border-radius: ${({ theme }) => theme.radii.sm}; color: inherit; line-height: 1.1; text-decoration: none; transition: background-color 160ms; }
-  .conta:hover, .conta:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; }
-  .conta strong { font-size: 1.25rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; letter-spacing: -0.02em; color: ${({ theme }) => theme.colors.text.primary}; }
-  .conta small { overflow: hidden; font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; white-space: nowrap; text-overflow: ellipsis; }
-
-  .escala { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 0.625rem; color: ${({ theme }) => theme.colors.text.muted}; }
+  .barra { display: flex; gap: 2px; height: 0.625rem; border-radius: 999px; background: ${({ theme }) => theme.palette.neutral[100]}; overflow: hidden; }
+  .legenda { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: ${({ theme }) => theme.spacing(1)}; }
 `;
 
-const Trecho = styled("span", transientOptions)<{ $tom: Tone }>`
-  position: relative;
-  height: 0.875rem;
-  border-radius: 3px;
-  background: ${({ theme, $tom }) => theme.tones[$tom].soft};
-  overflow: hidden;
+const Trecho = styled("i", transientOptions)<{ $tom: Tone; $parte: number }>`
+  flex: ${({ $parte }) => $parte} 1 0;
+  min-width: 0.375rem;
+  background: ${({ theme, $tom }) => corDaJanela(theme, $tom)};
+  transform-origin: left;
+  animation: trecho-entra 600ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 
-  &[data-ponta="inicio"] { border-radius: 999px 3px 3px 999px; }
-  &[data-ponta="fim"] { border-radius: 3px 999px 999px 3px; }
+  @keyframes trecho-entra { from { transform: scaleX(0); } }
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+`;
 
-  i {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    margin-left: -1.5px;
-    border-radius: 2px;
-    background: ${({ theme, $tom }) => theme.tones[$tom].fg};
-    opacity: 0.7;
-    animation: risco-entra 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  }
-  @keyframes risco-entra { from { transform: scaleY(0); opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { i { animation: none; } }
+/** Uma janela na legenda: o ponto na cor do trecho, a contagem e o prazo. Leva aos leads daquele prazo. */
+const Janela = styled(Link, transientOptions)<{ $tom: Tone }>`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 ${({ theme }) => theme.spacing(1.5)};
+  margin: -3px -4px;
+  padding: 3px 4px;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  color: inherit;
+  line-height: 1.15;
+  text-decoration: none;
+  transition: background-color 160ms;
+
+  &:hover, &:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; }
+  &::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 3px; background: ${({ theme, $tom }) => corDaJanela(theme, $tom)}; }
+  strong { font-size: 1.125rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; letter-spacing: -0.02em; color: ${({ theme }) => theme.colors.text.primary}; }
+  small { grid-column: 1 / -1; overflow: hidden; font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; white-space: nowrap; text-overflow: ellipsis; }
 `;
 
 const Bebes = styled.ul`
@@ -101,25 +110,23 @@ const Folhinha = styled("span", transientOptions)<{ $tom: Tone }>`
   i { margin-top: 2px; font-size: 0.5625rem; font-style: normal; font-weight: ${({ theme }) => theme.fontWeights.medium}; letter-spacing: 0.06em; text-transform: uppercase; }
 `;
 
-/** Quanto falta: selo com um ponto na cor da janela. */
+/** Quanto falta: selo com o relógio, na cor da janela. */
 const Falta = styled("span", transientOptions)<{ $tom: Tone }>`
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   height: 1.375rem;
-  padding: 0 9px 0 7px;
+  padding: 0 9px 0 6px;
   border-radius: 999px;
   background: ${({ theme, $tom }) => theme.tones[$tom].soft};
   color: ${({ theme, $tom }) => theme.tones[$tom].fg};
   font-size: 0.6875rem;
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   white-space: nowrap;
-
-  &::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 `;
 
-export type Births = { d30: number; d60: number; d90: number; next: { id: string; name: string; baby: string; date: string; client: boolean }[]; marks?: number[] };
+export type Births = { d30: number; d60: number; d90: number; next: { id: string; name: string; baby: string; date: string; client: boolean }[] };
 
 const mesCurto = new Intl.DateTimeFormat("pt-BR", { month: "short" });
 const DIA = 86_400_000;
@@ -129,31 +136,20 @@ export function BirthsCard({ births }: { births: Births }) {
   const hoje = new Date();
   const base = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime();
   const contas = [births.d30, births.d60 - births.d30, births.d90 - births.d60];
-  const marcas = births.marks ?? [];
   return (
     <Card aria-label="Bebês chegando">
       <CardHead title="Bebês chegando" subtitle={births.d90 ? `${plural(births.d90, "nascimento", "nascimentos")} em 90 dias` : "O prazo de cada enxoval"} />
       <Prazo>
-        {JANELAS.map((janela, indice) => (
-          <Link className="conta" key={janela.ate} href={leadsHref({ nascimento: janela.ate })} aria-label={`${contas[indice]} ${contas[indice] === 1 ? "nascimento" : "nascimentos"} ${janela.rotulo}${indice ? " dias" : ""}: abrir quem nasce em até ${janela.ate} dias`}>
-            <strong>{contas[indice]}</strong>
-            <small>{janela.rotulo}</small>
-          </Link>
-        ))}
-        {JANELAS.map((janela, indice) => (
-          <Trecho key={janela.ate} $tom={janela.tom} data-ponta={indice === 0 ? "inicio" : indice === JANELAS.length - 1 ? "fim" : undefined} aria-hidden>
-            {marcas
-              .filter((dias) => (indice === 0 ? dias <= janela.ate : dias > janela.de && dias <= janela.ate))
-              .map((dias, posicao) => (
-                <i key={`${dias}-${posicao}`} style={{ left: `${Math.min(96, Math.max(4, ((dias - janela.de) / 30) * 100))}%`, animationDelay: `${dias * 6}ms` }} />
-              ))}
-          </Trecho>
-        ))}
-        <span className="escala" aria-hidden>
-          <span>hoje</span>
-          <span>30</span>
-          <span>60</span>
-          <span>90 dias</span>
+        <span className="barra" role="img" aria-label={`Nascimentos previstos: ${JANELAS.map((janela, indice) => `${contas[indice]} ${janela.rotulo}`).join(", ")}`}>
+          {JANELAS.map((janela, indice) => contas[indice] > 0 && <Trecho key={janela.ate} $tom={janela.tom} $parte={contas[indice]} style={{ animationDelay: `${indice * 90}ms` }} />)}
+        </span>
+        <span className="legenda">
+          {JANELAS.map((janela, indice) => (
+            <Janela key={janela.ate} $tom={janela.tom} href={leadsHref({ nascimento: janela.ate })} aria-label={`${contas[indice]} ${contas[indice] === 1 ? "nascimento" : "nascimentos"} ${janela.rotulo}: abrir quem nasce em até ${janela.ate} dias`}>
+              <strong>{contas[indice]}</strong>
+              <small>{janela.rotulo}</small>
+            </Janela>
+          ))}
         </span>
       </Prazo>
       {births.next.length === 0 ? (
@@ -178,7 +174,10 @@ export function BirthsCard({ births }: { births: Births }) {
                       {item.client && <SealCheckIcon size={12} weight="fill" aria-label="já é cliente" />}
                     </small>
                   </span>
-                  <Falta $tom={tom}>{dias <= 0 ? "hoje" : quandoNasce(item.date, hoje).replace("nasce em ", "")}</Falta>
+                  <Falta $tom={tom}>
+                    <ClockIcon size={12} weight="bold" aria-hidden />
+                    {dias <= 0 ? "hoje" : quandoNasce(item.date, hoje).replace("nasce em ", "")}
+                  </Falta>
                 </Link>
               </li>
             );
