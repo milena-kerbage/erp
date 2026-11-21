@@ -18,10 +18,16 @@ export function formatBudget(value: number) {
 }
 
 /** "11987654321" → "(11) 98765-4321". */
+/**
+ * Telefone como a equipe lê: "(85) 98582-2208". Os números chegam do WhatsApp e da loja com o código do
+ * Brasil na frente (5585985822208): ele some na exibição. Número de outro país fica "+44 7710 173736".
+ */
 export function formatPhone(digits: string) {
-  const d = digits.replace(/\D/g, "");
+  let d = digits.replace(/\D/g, "");
+  if ((d.length === 12 || d.length === 13) && d.startsWith("55")) d = d.slice(2);
   if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  if (d.length > 11) return `+${d.slice(0, d.length - 10)} ${d.slice(-10, -6)} ${d.slice(-6)}`;
   return digits;
 }
 

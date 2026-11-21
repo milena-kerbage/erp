@@ -55,6 +55,10 @@ const Card = styled.section`
   form { display: flex; flex-direction: column; gap: 1.125rem; }
   form > button[type=submit] { width: 100%; min-height: 2.875rem; margin-top: .375rem; font-size: .9375rem; }
   input { font-size: max(1rem,16px); }
+  /* Campos um pouco mais altos e o olhinho da senha dentro do campo, sem moldura própria */
+  form div:has(> input) { min-height: 2.75rem; border-radius: ${({theme})=>theme.radii.lg}; }
+  [data-olho] { flex-shrink: 0; margin-right: -.375rem; border: 0; border-radius: ${({theme})=>theme.radii.md}; background: transparent; color: ${({theme})=>theme.colors.text.muted}; }
+  [data-olho]:hover { background: ${({theme})=>theme.colors.interactive.hover}; color: ${({theme})=>theme.colors.text.primary}; }
   a { align-self: flex-start; font-size: .8125rem; color: ${({theme})=>theme.colors.text.secondary}; text-decoration: none; transition: color .15s ease; }
   a:hover, a:focus-visible { color: ${({theme})=>theme.colors.text.primary}; text-decoration: underline; text-underline-offset: 3px; }
   a[data-esqueci] { align-self: flex-end; margin-top: -.5rem; }
@@ -138,7 +142,7 @@ export function AuthForm({mode = 'login'}: {mode?: 'login' | 'forgot' | 'reset' 
         <Card aria-label={title}>
           <form onSubmit={submit} autoComplete="off">
             {!criandoSenha && <><TextField label="E-mail" icon={EnvelopeSimpleIcon} type="email" name="email" autoComplete="off" autoCapitalize="none" spellCheck={false} inputMode="email" required maxLength={254} list="email-domains" placeholder="seunome@exemplo.com" autoFocus value={email} onChange={event=>setEmail(event.target.value)} /><datalist id="email-domains">{suggestions.map(value=><option key={value} value={value}/>)}</datalist></>}
-            {mode !== 'forgot' && <TextField label={criandoSenha ? 'Nova senha' : 'Senha'} icon={LockSimpleIcon} type={show ? 'text' : 'password'} name="password" autoComplete="off" required minLength={8} maxLength={128} value={password} onChange={event=>setPassword(event.target.value)} hint={criandoSenha ? 'Pelo menos 8 caracteres, com letras, números e símbolos.' : undefined} trailing={<IconButton type="button" icon={show ? EyeSlashIcon : EyeIcon} label={show ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={show} tooltip={false} onClick={()=>setShow(!show)} />} />}
+            {mode !== 'forgot' && <TextField label={criandoSenha ? 'Nova senha' : 'Senha'} icon={LockSimpleIcon} type={show ? 'text' : 'password'} name="password" autoComplete="off" required minLength={8} maxLength={128} value={password} onChange={event=>setPassword(event.target.value)} hint={criandoSenha ? 'Pelo menos 8 caracteres, com letras, números e símbolos.' : undefined} trailing={<IconButton type="button" variant="ghost" size="sm" data-olho="" icon={show ? EyeSlashIcon : EyeIcon} label={show ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={show} tooltip={false} onClick={()=>setShow(!show)} />} />}
             {criandoSenha && <TextField label="Confirmar nova senha" type={show ? 'text' : 'password'} autoComplete="off" required minLength={8} maxLength={128} value={confirm} onChange={event=>setConfirm(event.target.value)} />}
             {mode === 'login' && <Link href="/recuperar-senha" data-esqueci="">Esqueci minha senha</Link>}
             {error && <Message role="alert">{error}</Message>}

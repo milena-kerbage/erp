@@ -21,8 +21,8 @@ const CANAL: Record<string, Canal> = { "/conversas": "whatsapp", "/instagram": "
  * clara fixa) para ficar suave tanto no tema claro quanto no escuro.
  */
 const CORES_CANAL: Record<Canal, CSSProperties> = {
-  whatsapp: { "--canal-bg": "rgb(37 211 102 / 0.13)", "--canal-borda": "rgb(37 211 102 / 0.22)" } as CSSProperties,
-  instagram: { "--canal-bg": "linear-gradient(135deg, rgb(255 168 61 / 0.15) 0%, rgb(225 48 108 / 0.13) 55%, rgb(131 58 180 / 0.15) 100%)", "--canal-borda": "rgb(225 48 108 / 0.2)" } as CSSProperties,
+  whatsapp: { "--canal-bg": "rgb(37 211 102 / 0.1)" } as CSSProperties,
+  instagram: { "--canal-bg": "linear-gradient(135deg, rgb(255 168 61 / 0.11) 0%, rgb(225 48 108 / 0.1) 55%, rgb(131 58 180 / 0.11) 100%)" } as CSSProperties,
 };
 
 const INICIO = new Set(["/", "/leads"]);
@@ -129,8 +129,8 @@ const estiloItem = ({ theme }: { theme: import("@emotion/react").Theme }) => `
   min-width: 2.25rem;
   padding: 0;
   justify-content: center;
-  border: 1px solid transparent;
-  border-radius: ${theme.radii.md};
+  border: 0;
+  border-radius: ${theme.radii.lg};
   background: transparent;
   color: ${theme.colors.text.secondary};
   font: inherit;
@@ -139,7 +139,7 @@ const estiloItem = ({ theme }: { theme: import("@emotion/react").Theme }) => `
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.25s ease, color 0.2s ease, border-color 0.25s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background-color 0.3s ease, color 0.25s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 
   .icone { position: relative; display: inline-flex; }
   .rotulo { animation: rotulo-entra 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
@@ -151,8 +151,8 @@ const estiloItem = ({ theme }: { theme: import("@emotion/react").Theme }) => `
 
   /* Página atual: um véu suave (sem sombra) com o nome ao lado do ícone. */
   &[data-ativo] {
-    padding: 0 12px 0 9px;
-    background: ${theme.colors.interactive.pressed};
+    padding: 0 12px 0 10px;
+    background: ${theme.colors.interactive.hover};
     color: ${theme.colors.text.primary};
   }
   &[data-ativo]:not([data-canal]) .icone { color: ${theme.colors.primary.main}; }
@@ -161,7 +161,7 @@ const estiloItem = ({ theme }: { theme: import("@emotion/react").Theme }) => `
   &[data-canal] { color: ${theme.colors.text.secondary}; }
   &[data-canal]:not([data-ativo]) .icone > svg { opacity: 0.85; filter: saturate(0.85); transition: opacity 0.15s ease, filter 0.15s ease; }
   &[data-canal]:not([data-ativo]):hover .icone > svg { opacity: 1; filter: none; }
-  &[data-canal][data-ativo] { background: var(--canal-bg); border-color: var(--canal-borda); }
+  &[data-canal][data-ativo] { background: var(--canal-bg); }
 
   @media (prefers-reduced-motion: reduce) { transition: none; .rotulo { animation: none; } }
 `;

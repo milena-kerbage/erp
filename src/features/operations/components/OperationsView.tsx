@@ -1,4 +1,5 @@
 "use client";
+import { formatPhone } from "@/features/leads/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArchiveIcon, ArrowClockwiseIcon, ArrowCounterClockwiseIcon, CalendarBlankIcon, CheckIcon, ClipboardTextIcon, PencilSimpleIcon, PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
@@ -49,7 +50,7 @@ export function OperationsView({ resource, section }: { resource: Resource; sect
     const results = await Promise.allSettled(keys.map(async (key) => {
       if (key === "leads") {
         const result = await erpRequest<{ leads: { id: string; name: string; phone?: string }[] }>("leads?options=1", { signal });
-        return [key, result.leads.map((lead) => ({ id: lead.id, label: `${lead.name}${lead.phone ? ` · ${lead.phone}` : ""}` }))] as const;
+        return [key, result.leads.map((lead) => ({ id: lead.id, label: `${lead.name}${lead.phone ? ` · ${formatPhone(lead.phone)}` : ""}` }))] as const;
       }
       const result = await erpRequest<{ records: OperationRecord[] }>(`records/${key}`, { signal });
       return [key, result.records.map((record) => ({ id: record.id, label: recordName(record), record }))] as const;
