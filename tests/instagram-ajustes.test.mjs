@@ -55,13 +55,17 @@ test('login pelo Facebook (config_id): URL igual à da Meta, troca com o segredo
   for (const [chave, valor] of Object.entries({ client_id: '1178499741393086', config_id: '1438707898432586', display: 'popup', override_default_response_type: 'true', redirect_uri: 'https://app.ateliemilenakerbage.com.br/api/instagram/oauth/callback', response_type: 'code', state: 'c'.repeat(64), prompt: 'login' })) assert.equal(url.searchParams.get(chave), valor, chave);
 
   const chamadas = [];
+  // Usuário do sistema (configuração de empresa): /me/accounts vem vazio; as páginas saem das permissões granulares.
   const fetcher = async (endereco, opcoes = {}) => {
     const u = new URL(String(endereco)), caminho = u.pathname.replace(/^\/v\d+\.0\//, '');
     chamadas.push(`${opcoes.method || 'GET'} ${caminho}`);
-    if (caminho === 'oauth/access_token' && u.searchParams.get('code')) return u.searchParams.get('client_secret') === 'b'.repeat(32) ? Response.json({ access_token: 'EAAcurto' + 'x'.repeat(40) }) : Response.json({ error: { code: 1 } }, { status: 400 });
-    if (caminho === 'oauth/access_token') return Response.json({ access_token: 'EAAlongo' + 'x'.repeat(40) });
-    if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic', 'instagram_manage_messages', 'instagram_manage_comments', 'pages_show_list'], expires_at: 0 } });
-    if (caminho === 'me/accounts') return Response.json({ data: [{ id: '111', name: 'Outra', access_token: 'EAAoutra' + 'x'.repeat(40), instagram_business_account: { id: '900', username: 'outraconta' } }, { id: '222', name: 'Ateliê', access_token: 'EAApagina' + 'x'.repeat(40), instagram_business_account: { id: '17841400000000', username: 'milenakerbageatelie' } }] });
+    if (caminho === 'oauth/access_token' && u.searchParams.get('code')) return u.searchParams.get('client_secret') === 'b'.repeat(32) ? Response.json({ access_token: 'EAAsistema' + 'x'.repeat(40) }) : Response.json({ error: { code: 1, message: 'Error validating client secret.' } }, { status: 400 });
+    if (caminho === 'oauth/access_token') throw new Error('token de usuário do sistema não se estende');
+    if (caminho === 'debug_token' && u.searchParams.get('input_token').startsWith('EAAsistema')) return Response.json({ data: { is_valid: true, type: 'SYSTEM_USER', app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic', 'instagram_manage_messages', 'instagram_manage_comments', 'pages_show_list'], granular_scopes: [{ scope: 'pages_show_list', target_ids: ['111', '222'] }, { scope: 'instagram_basic', target_ids: ['17841400000000'] }], expires_at: 0 } });
+    if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, expires_at: 0 } });
+    if (caminho === 'me/accounts') return Response.json({ data: [] });
+    if (caminho === '111') return Response.json({ id: '111', name: 'Outra', access_token: 'EAAoutra' + 'x'.repeat(40), instagram_business_account: { id: '900', username: 'outraconta' } });
+    if (caminho === '222') return Response.json({ id: '222', name: 'Ateliê', access_token: 'EAApagina' + 'x'.repeat(40), instagram_business_account: { id: '17841400000000', username: 'milenakerbageatelie' } });
     if (caminho === '222/subscribed_apps') return Response.json({ success: true });
     return Response.json({ error: { code: 100 } }, { status: 400 });
   };
@@ -76,4 +80,17 @@ test('login pelo Facebook (config_id): URL igual à da Meta, troca com o segredo
   assert.ok(inscricao.fields.includes('messages') && inscricao.fields.includes('comments'));
   assert.ok(chamadas.includes('POST 222/subscribed_apps'));
   assert.equal((await api.refreshToken(fetcher)).naoVence, true, 'acesso pelo Facebook não usa a renovação do Instagram');
+});
+
+test('login pelo Facebook: falha mostra o motivo real da Meta (código e mensagem), sem segredo', async () => {
+  const api = await import('../src/lib/instagram/api.ts');
+  const recusa = async () => Response.json({ error: { code: 191, message: "Can't load URL: The domain of this URL isn't included in the app's domains." } }, { status: 400 });
+  await assert.rejects(api.exchangeCode('codigo', recusa), (erro) => erro.code === 'EXCHANGE_FAILED' && /código 191/.test(erro.message) && /domain/.test(erro.message));
+  const semPagina = async (endereco) => {
+    const caminho = new URL(String(endereco)).pathname.replace(/^\/v\d+\.0\//, '');
+    if (caminho === 'oauth/access_token') return Response.json({ access_token: 'EAAsistema' + 'x'.repeat(40) });
+    if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, type: 'SYSTEM_USER', app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic'], granular_scopes: [] } });
+    return Response.json({ data: [] });
+  };
+  await assert.rejects(api.exchangeCode('codigo', semPagina), (erro) => erro.code === 'WRONG_ACCOUNT' && /milenakerbageatelie/.test(erro.message));
 });

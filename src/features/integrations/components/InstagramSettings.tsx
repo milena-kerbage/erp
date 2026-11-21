@@ -36,9 +36,13 @@ export function InstagramSettings() {
   const carregar = useCallback(async () => { try { setStatus(await api<Status>('status')); } catch (falha) { setAviso({ texto: erroDe(falha).texto, erro: true }); } }, []);
   useEffect(() => {
     void carregar();
-    const resultado = new URLSearchParams(window.location.search).get('instagram');
+    const parametros = new URLSearchParams(window.location.search), resultado = parametros.get('instagram');
     if (resultado) {
-      setAviso(resultado === 'connected' ? { texto: 'Instagram conectado. Agora clique em “Habilitar notificações” para receber mensagens e comentários.' } : resultado === 'denied' ? { texto: 'A autorização foi cancelada no Instagram.', erro: true } : { texto: 'O login no Instagram não foi concluído. Confira se a URL de redirecionamento na Meta é exatamente a mostrada abaixo e tente de novo.', erro: true });
+      const motivo = parametros.get('motivo') || '', detalhe = parametros.get('detalhe') || '';
+      const falha = motivo === 'STATE' ? 'A sessão de conexão expirou ou foi aberta em outro navegador. Clique em “Conectar Instagram” de novo, no mesmo navegador em que está logado no ERP.'
+        : detalhe ? `O login não foi concluído: ${detalhe}`
+        : 'O login no Instagram não foi concluído. Confira se a URL de redirecionamento na Meta é exatamente a mostrada abaixo e tente de novo.';
+      setAviso(resultado === 'connected' ? { texto: 'Instagram conectado. Agora clique em “Habilitar notificações” para receber mensagens e comentários.' } : resultado === 'denied' ? { texto: 'A autorização foi cancelada na janela da Meta.', erro: true } : { texto: `${falha}${motivo && motivo !== 'STATE' ? ` (código ${motivo})` : ''}`, erro: true });
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, [carregar]);
