@@ -46,3 +46,14 @@ export function LogoInstagram(props: Props) {
 /** Para o menu lateral, que espera um ícone do Phosphor. */
 export const IconeWhatsApp = LogoWhatsApp as unknown as Icon;
 export const IconeInstagram = LogoInstagram as unknown as Icon;
+
+/**
+ * Símbolo do ateliê (o monograma, sem fundo) como ícone: pinta com a cor do texto de quem usa (`currentColor`), então
+ * acompanha o tema, o hover e o item ativo do menu. É o ícone do Painel.
+ */
+export function SimboloAtelie({ size = 20 }: Props) {
+  const altura = typeof size === "number" ? size + 2 : size;
+  const mascara = "url(/simbolo-black.svg) center / contain no-repeat";
+  return <span aria-hidden style={{ display: "inline-block", flexShrink: 0, width: typeof altura === "number" ? Math.round(altura * (656 / 737)) : altura, height: altura, backgroundColor: "currentColor", WebkitMask: mascara, mask: mascara }} />;
+}
+export const IconeAtelie = SimboloAtelie as unknown as Icon;

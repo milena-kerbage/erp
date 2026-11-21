@@ -48,8 +48,9 @@ export function NavPrincipal() {
   const grupos: ReactNode[][] = [
     liberados.filter((modulo) => INICIO.has(modulo.href)).map(item),
     liberados.filter((modulo) => CANAL[modulo.href]).map(item),
+    // Módulos e, junto deles, as Configurações; o menu completo fica por último.
+    [...liberados.filter((modulo) => !INICIO.has(modulo.href) && !CANAL[modulo.href]).map(item), ...navigation.secondary.map(item)],
     [
-      ...liberados.filter((modulo) => !INICIO.has(modulo.href) && !CANAL[modulo.href]).map(item),
       <ItemMenu
         key="menu-completo"
         modulo={{ label: "Menu completo", href: "", icon: ListIcon }}
@@ -58,7 +59,6 @@ export function NavPrincipal() {
         onClick={() => setMenuAberto(true)}
       />,
     ],
-    navigation.secondary.map(item),
   ].filter((grupo) => grupo.some(Boolean));
 
   return (

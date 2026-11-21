@@ -14,7 +14,7 @@ import {
   PercentIcon,
   PlusIcon,
   ReceiptIcon,
-  TimerIcon,
+  BabyIcon,
   UserPlusIcon,
   WarningCircleIcon,
   type Icon,
@@ -52,9 +52,9 @@ import {
   staleLeads,
   valueByStage,
 } from "../metrics";
-import { ActivityFeed } from "./ActivityFeed";
 import { FunnelCard } from "./FunnelCard";
-import { AttentionCard } from "./SideCards";
+import { BirthsCard, CampaignsCard, OwnersCard } from "./ExtraCards";
+import { MonthBars, Sparkline } from "./charts";
 import { SourcesCard } from "./SourcesCard";
 import { Card, Delta, Eyebrow, Figure, Help, IconBadge, Note, Segments } from "./ui";
 
@@ -141,9 +141,9 @@ const Banner = styled(Link)`
 const Layout = styled.div`
   display: grid;
   flex: 1;
-  grid-template-columns: minmax(0, 1fr) clamp(19rem, 25vw, 24rem);
+  grid-template-columns: minmax(0, 1fr) clamp(17.5rem, 22vw, 21rem);
   gap: ${({ theme }) => theme.spacing(3)};
-  align-items: stretch;
+  align-items: start;
 
   @media (max-width: 1180px) {
     grid-template-columns: minmax(0, 1fr);
@@ -151,7 +151,7 @@ const Layout = styled.div`
 `;
 
 const Column = styled.div`
-  ${staggerChildren(6, 60)};
+  ${staggerChildren(8, 60)};
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing(3)};
@@ -319,15 +319,56 @@ const MiniRows = styled.div`
   }
 `;
 
-/** Funil e origem lado a lado; esticam até o fim da coluna. */
+/** Funil (com mais espaço) e origens lado a lado; empilham em tela estreita. */
 const Bottom = styled.div`
   display: grid;
-  flex: 1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: ${({ theme }) => theme.spacing(3)};
 
   @media (max-width: 1000px) {
     grid-template-columns: minmax(0, 1fr);
+  }
+`;
+
+/** Gráfico do mês dentro do cartão principal: uma barra por dia. */
+const HeroChart = styled.div`
+  padding: ${({ theme }) => theme.spacing(0, 6, 4)};
+
+  > small {
+    display: flex;
+    justify-content: space-between;
+    margin-top: ${({ theme }) => theme.spacing(1.5)};
+    font-size: 0.6875rem;
+    color: ${({ theme }) => theme.colors.text.muted};
+  }
+`;
+
+const FigureRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing(1, 2)};
+`;
+
+/** Número principal dos indicadores: grande, com a unidade ao lado. */
+const BigFigure = styled.strong`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: ${({ theme }) => theme.spacing(0, 2)};
+  min-width: 0;
+  font-size: clamp(1.375rem, 11cqi, 1.75rem);
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: ${({ theme }) => theme.colors.text.primary};
+
+  small {
+    font-size: 0.8125rem;
+    font-weight: ${({ theme }) => theme.fontWeights.regular};
+    letter-spacing: 0;
+    color: ${({ theme }) => theme.colors.text.muted};
   }
 `;
 
@@ -344,6 +385,10 @@ function MetricCard({
   ratio,
   ratioLabel,
   footer,
+  delta,
+  deltaVersus,
+  upIsGood,
+  series,
   children,
 }: {
   title: string;
@@ -356,6 +401,12 @@ function MetricCard({
   ratio?: number;
   ratioLabel?: string;
   footer?: ReactNode;
+  /** Variação contra o mesmo trecho do mês passado (undefined = este indicador não compara). */
+  delta?: number | null;
+  deltaVersus?: string;
+  upIsGood?: boolean;
+  /** Um ponto por dia do mês: vira a linha de tendência no lugar da barra. */
+  series?: (number | null)[];
   /** Conteúdo no lugar da barra (ex.: linhas por origem). */
   children?: ReactNode;
 }) {
@@ -369,15 +420,23 @@ function MetricCard({
         </span>
         <IconBadge icon={icon} tone={tone} />
       </MetricHead>
-      <Figure>
-        {value}
-        {unit && <small>{unit}</small>}
-      </Figure>
+      <FigureRow>
+        <BigFigure>
+          {value}
+          {unit && <small>{unit}</small>}
+        </BigFigure>
+        {/* Crescimento ao lado do número (o período comparado fica na dica) */}
+        {delta !== undefined && delta !== null && <span title={deltaVersus}><Delta value={delta} upIsGood={upIsGood} /></span>}
+      </FigureRow>
       <MetricBottom>
         <Note>{note}</Note>
         {children ??
-          (ratio !== undefined && (
-            <Segments ratio={ratio} color={theme.tones[tone].fg} label={ratioLabel ?? `${Math.round(ratio * 100)}%`} />
+          (series ? (
+            <Sparkline values={series} color={theme.tones[tone].fg} label={`${title} por dia no mês`} />
+          ) : (
+            ratio !== undefined && (
+              <Segments ratio={ratio} color={theme.tones[tone].fg} label={ratioLabel ?? `${Math.round(ratio * 100)}%`} />
+            )
           ))}
         {footer && <Note>{footer}</Note>}
       </MetricBottom>
@@ -399,11 +458,11 @@ function DashboardSkeleton() {
   return (
     <Layout aria-busy="true" aria-label="Carregando o painel">
       <Column>
-        {card("8rem", "hero")}
+        {card("9rem", "hero")}
         <Metrics>{Array.from({ length: 8 }, (_, index) => card("5.5rem", `m${index}`))}</Metrics>
       </Column>
       <Column>
-        {card("14rem", "a")}
+        {card("12rem", "a")}
         {card("12rem", "b")}
       </Column>
     </Layout>
@@ -416,7 +475,7 @@ function DashboardSkeleton() {
 export function Dashboard() {
   const theme = useTheme();
   const user = useCurrentUser();
-  const [report,setReport]=useState<Awaited<ReturnType<typeof dashboardSummary>>|null>(null);
+  const [report,setReport]=useState<(Awaited<ReturnType<typeof dashboardSummary>>&{atendimento?:{aguardando:number;naoLidas:number}})|null>(null);
   const [loading,setLoading]=useState(true),[error,setError]=useState("");
   const refresh=async()=>{setLoading(true);setError("");try{setReport(await erpRequest(`/dashboard?offset=${new Date().getTimezoneOffset()}`));}catch(cause){setError(errorMessage(cause));}finally{setLoading(false);}};
   useEffect(()=>{void refresh();},[]);
@@ -446,6 +505,8 @@ export function Dashboard() {
   };
 
   const firstName = user?.name.split(" ")[0];
+  // Todos os crescimentos comparam com o mesmo trecho do mês passado (do dia 1 até o dia de hoje).
+  const versus = data ? `vs 1 a ${formatMonthDay(data.previous.until)}` : undefined;
 
   return (
     <Root>
@@ -471,16 +532,6 @@ export function Dashboard() {
         <MobileHeaderSlot />
       </Greeting>
 
-      {data && data.waiting.length > 0 && (
-        <Banner href="/conversas">
-          <WarningCircleIcon size={17} weight="fill" aria-hidden />
-          <span>
-            <strong>{plural(data.waiting.length, "cliente espera", "clientes esperam")}</strong> resposta. A mais antiga
-            está esperando desde {formatLongDay(new Date(data.waiting[0].waitingSince!))}.
-          </span>
-          <ArrowRightIcon size={14} aria-hidden />
-        </Banner>
-      )}
 
       {!loading && !error && data?.total === 0 && <p role="status">O ateliê ainda não tem oportunidades cadastradas. Use Novo lead para começar; os indicadores serão calculados com os registros salvos.</p>}
 
@@ -501,6 +552,14 @@ export function Dashboard() {
                   empty={`sem base em ${formatMonthName(data.previous.until)}`}
                 />
               </HeroTop>
+              <HeroChart>
+                <MonthBars days={data.month} color={theme.colors.primary.main} format={formatMoney} label={`Valor que entrou por dia em ${formatMonthName(now)}`} />
+                <small>
+                  <span>dia 1</span>
+                  <span>{plural(data.fresh, "lead", "leads")} no mês · melhor dia {formatMoney(Math.max(...data.month.map((day) => day.value)))}</span>
+                  <span>dia {data.month.length}</span>
+                </small>
+              </HeroChart>
               <Strip>
                 <div>
                   <dt>Ritmo atual</dt>
@@ -538,9 +597,10 @@ export function Dashboard() {
                 icon={UserPlusIcon}
                 tone="green"
                 value={data.fresh}
+                delta={change(data.fresh, data.previous.count || null)}
+                deltaVersus={versus}
                 note={`${(data.fresh / data.days).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} por dia`}
-                ratio={data.fresh ? data.attended / data.fresh : 0}
-                ratioLabel={`${data.attended} de ${data.fresh} já em atendimento`}
+                series={data.month.map((day) => (day.future ? null : day.count))}
                 footer={data.fresh ? `${data.attended} de ${data.fresh} já em atendimento` : "nenhum lead novo ainda"}
               />
               <MetricCard
@@ -549,6 +609,8 @@ export function Dashboard() {
                 icon={ReceiptIcon}
                 tone="blue"
                 value={formatMoney(Math.round(data.ticket))}
+                delta={change(data.ticket, data.previous.count ? data.previous.value / data.previous.count : null)}
+                deltaVersus={versus}
                 note="orçamento médio por lead"
               >
                 <MiniRows>
@@ -578,38 +640,34 @@ export function Dashboard() {
                 icon={PercentIcon}
                 tone="rose"
                 value={percent(data.fresh ? (data.won / data.fresh) * 100 : 0)}
+                delta={change(data.fresh ? data.won / data.fresh : 0, data.previous.count ? data.previousWon / data.previous.count : null)}
+                deltaVersus={versus}
                 note="leads que viraram cliente"
                 ratio={data.fresh ? data.won / data.fresh : 0}
                 footer={data.fresh ? `${data.won} de ${data.fresh} leads` : "sem leads no mês"}
               />
               <MetricCard
-                title="Resposta"
-                help="Tempo até a primeira resposta nas mensagens vinculadas ao histórico do CRM. Notas internas não contam. O atendimento real do WhatsApp fica em Conversas."
-                icon={TimerIcon}
-                tone="lavender"
-                value={data.response === null ? "Sem respostas" : formatDuration(data.response)}
-                note="média até a primeira resposta"
-                ratio={data.answers ? data.fast / data.answers : 0}
-                footer={
-                  data.answers
-                    ? `${Math.round((data.fast / data.answers) * 100)}% respondidas em até 1h`
-                    : "nenhuma conversa no mês"
-                }
+                title="Bebês chegando"
+                help="Fichas com nascimento previsto para os próximos 30 dias: é o prazo de verdade de cada enxoval."
+                icon={BabyIcon}
+                tone="rose"
+                value={data.births.d30}
+                unit="nos próximos 30 dias"
+                note={`${data.births.d60} em 60 dias · ${data.births.d90} em 90 dias`}
+                ratio={data.births.d90 ? data.births.d30 / data.births.d90 : 0}
+                ratioLabel={`${data.births.d30} de ${data.births.d90} nascem em até 30 dias`}
+                footer={data.births.d30 ? "confira se o enxoval está em produção" : "nenhum prazo apertado agora"}
               />
               <MetricCard
-                title="Conversas"
-                help="Históricos com mensagens externas vinculadas ao CRM que ainda não foram resolvidos. Notas internas não entram nesta contagem. Consulte o atendimento real em Conversas."
+                title="Atendimento"
+                help="Conversas do WhatsApp esperando resposta da equipe agora (a última mensagem é da cliente) e as que têm mensagem não lida."
                 icon={ChatsCircleIcon}
                 tone="teal"
-                value={data.open}
-                unit={`de ${data.conversations}`}
-                note={
-                  data.waiting.length
-                    ? plural(data.waiting.length, "espera resposta", "esperam resposta")
-                    : "ninguém esperando"
-                }
-                ratio={data.conversations ? data.resolved / data.conversations : 0}
-                footer={`${data.resolved} de ${data.conversations} resolvidas`}
+                value={data.atendimento?.aguardando ?? 0}
+                unit="esperando resposta"
+                note={plural(data.atendimento?.naoLidas ?? 0, "conversa com mensagem não lida", "conversas com mensagem não lida")}
+                ratio={data.atendimento && data.atendimento.aguardando + data.atendimento.naoLidas > 0 ? data.atendimento.aguardando / Math.max(data.atendimento.aguardando, data.atendimento.naoLidas) : 0}
+                footer={<Link href="/conversas">Abrir o WhatsApp</Link>}
               />
               <MetricCard
                 title="Orçamentos"
@@ -628,6 +686,8 @@ export function Dashboard() {
                 icon={HandCoinsIcon}
                 tone="yellow"
                 value={formatMoney(data.wonValue)}
+                delta={change(data.wonValue, data.previousWonValue || null)}
+                deltaVersus={versus}
                 note={
                   data.won ? plural(data.won, "lead virou cliente", "leads viraram cliente") : "nenhum fechado ainda"
                 }
@@ -653,9 +713,11 @@ export function Dashboard() {
             </Bottom>
           </Column>
 
+          {/* Coluna lateral, discreta: o prazo dos enxovais, a equipe e o que as campanhas trouxeram */}
           <Column>
-            <AttentionCard waiting={data.waiting} stale={data.stale} now={now} />
-            <ActivityFeed now={now} />
+            <BirthsCard births={data.births} />
+            <OwnersCard rows={data.owners} />
+            <CampaignsCard rows={data.campaigns} tracked={data.tracked} total={data.fresh} />
           </Column>
         </Layout>
       )}

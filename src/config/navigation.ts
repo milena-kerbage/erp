@@ -11,14 +11,13 @@ import {
   SealCheckIcon,
   SparkleIcon,
   HandbagIcon,
-  HouseIcon,
   ToggleLeftIcon,
   UsersThreeIcon,
   UsersIcon,
   WalletIcon,
 } from "@phosphor-icons/react/ssr";
 import type { Icon } from "@phosphor-icons/react";
-import { IconeInstagram, IconeWhatsApp } from "@/components/brand/LogosCanais";
+import { IconeAtelie, IconeInstagram, IconeWhatsApp } from "@/components/brand/LogosCanais";
 
 export type NavTab = {
   label: string;
@@ -60,7 +59,8 @@ export const navigation = {
     {
       label: "Painel",
       href: "/",
-      icon: HouseIcon,
+      // O símbolo do ateliê, sem fundo, na cor do menu.
+      icon: IconeAtelie,
     },
     // Leads e clientes na mesma tabela (a categoria vem do funil); /clientes redireciona para cá.
     { label: "Leads e clientes", href: "/leads", icon: UsersThreeIcon },

@@ -4,23 +4,51 @@ import styled from "@emotion/styled";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { CaretDownIcon, LockSimpleIcon } from "@phosphor-icons/react";
+import {
+  CaretDownIcon, ChatCircleTextIcon, ClipboardTextIcon, CodeIcon, FolderSimpleIcon, FunnelIcon, ImagesIcon, ListIcon, LockSimpleIcon, PackageIcon, PersonArmsSpreadIcon, PlugsIcon,
+  ShoppingCartIcon, SlidersHorizontalIcon, SquaresFourIcon, StackIcon, StarIcon, TicketIcon, ToggleLeftIcon, UserCircleIcon, UsersIcon, UsersThreeIcon, type Icon,
+} from "@phosphor-icons/react";
 import { Dialog } from "@/components/ui/Dialog";
 import { navigation, type NavModule } from "@/config/navigation";
 import { isPathActive } from "@/lib/navigation";
 
 type Opcao = { href: string; rotulo: string; icone?: ReactNode; ativo: boolean; pendentes?: number; bloqueado?: boolean };
+
+// Ícone de cada seção dos módulos (E-commerce e Configurações): toda opção do menu tem o seu.
+const ICONE_DA_SECAO: Record<string, Icon> = {
+  "/ecommerce": SquaresFourIcon,
+  "/ecommerce/pedidos": ClipboardTextIcon,
+  "/ecommerce/produtos": PackageIcon,
+  "/ecommerce/categorias": FolderSimpleIcon,
+  "/ecommerce/opcoes": SlidersHorizontalIcon,
+  "/ecommerce/colecoes": StackIcon,
+  "/ecommerce/menu": ListIcon,
+  "/ecommerce/cupons": TicketIcon,
+  "/ecommerce/clientes": UsersIcon,
+  "/ecommerce/carrinhos": ShoppingCartIcon,
+  "/ecommerce/avaliacoes": StarIcon,
+  "/configuracoes/usuarios": UsersThreeIcon,
+  "/configuracoes/funis": FunnelIcon,
+  "/configuracoes/preferencias": ToggleLeftIcon,
+  "/configuracoes/perfil": UserCircleIcon,
+  "/configuracoes/acessibilidade": PersonArmsSpreadIcon,
+  "/configuracoes/integracoes": PlugsIcon,
+  "/configuracoes/midia": ImagesIcon,
+  "/configuracoes/api": CodeIcon,
+};
 type Grupo = { id: string; titulo: string; opcoes: Opcao[]; pendentes?: number };
 
 /**
  * Menu completo num painel que entra pela direita, no padrão da gaveta de filtros da loja: título grande, o fechar
- * redondo e os grupos em sanfona (fechados de início; abrem ao clicar), separados por uma linha. Os grupos: Principal,
+ * redondo e os grupos em sanfona (fechados de início; abrir um fecha o outro), separados por uma linha. Toda opção
+ * tem o seu ícone. Os grupos: Principal,
  * Atendimento (com as conversas não lidas), cada módulo que tem seções (E-commerce, Configurações) e os módulos em
  * produção. Clicar numa opção leva à tela e fecha o painel.
  */
 export function MenuLateral({ aberto, onClose, naoLidas }: { aberto: boolean; onClose: () => void; naoLidas: Record<string, number> }) {
   const pathname = usePathname();
-  const [abertos, setAbertos] = useState<Record<string, boolean>>({});
+  // Um grupo aberto por vez: abrir um fecha o outro.
+  const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
 
   const liberados: readonly NavModule[] = navigation.main.filter((item) => !("soon" in item));
   const emProducao: readonly NavModule[] = navigation.main.filter((item) => "soon" in item);
@@ -29,13 +57,17 @@ export function MenuLateral({ aberto, onClose, naoLidas }: { aberto: boolean; on
     const ativo = isPathActive(pathname, modulo.href);
     return { href: modulo.href, rotulo: modulo.label, icone: icone(modulo, ativo), ativo, pendentes: naoLidas[modulo.href], ...extra };
   };
+  const daSecao = (href: string, rotulo: string, ativo: boolean): Opcao => {
+    const Icone = ICONE_DA_SECAO[href] ?? ChatCircleTextIcon;
+    return { href, rotulo, ativo, icone: <Icone size={18} weight={ativo ? "fill" : "regular"} aria-hidden /> };
+  };
   // Módulo com seções vira um grupo próprio: a "Visão geral" (quando existe) e as seções dele.
   const comSecoes = (modulo: NavModule): Grupo => ({
     id: modulo.href,
     titulo: modulo.label,
     opcoes: [
-      ...(modulo.overview === false ? [] : [{ href: modulo.href, rotulo: "Visão geral", ativo: pathname === modulo.href }]),
-      ...(modulo.tabs ?? []).map((secao) => ({ href: secao.href, rotulo: secao.label, ativo: isPathActive(pathname, secao.href) })),
+      ...(modulo.overview === false ? [] : [daSecao(modulo.href, "Visão geral", pathname === modulo.href)]),
+      ...(modulo.tabs ?? []).map((secao) => daSecao(secao.href, secao.label, isPathActive(pathname, secao.href))),
     ],
   });
 
@@ -52,11 +84,11 @@ export function MenuLateral({ aberto, onClose, naoLidas }: { aberto: boolean; on
     <Dialog open={aberto} onClose={onClose} side="right" title="Menu" width="22.5rem">
       <Lista aria-label="Menu completo">
         {grupos.map((grupo) => {
-          const expandido = Boolean(abertos[grupo.id]);
+          const expandido = grupoAberto === grupo.id;
           const aqui = grupo.opcoes.some((opcao) => opcao.ativo);
           return (
             <section key={grupo.id} data-aqui={aqui || undefined}>
-              <button type="button" className="titulo" aria-expanded={expandido} aria-controls={`menu-${grupo.id}`} onClick={() => setAbertos((atual) => ({ ...atual, [grupo.id]: !atual[grupo.id] }))}>
+              <button type="button" className="titulo" aria-expanded={expandido} aria-controls={`menu-${grupo.id}`} onClick={() => setGrupoAberto(expandido ? null : grupo.id)}>
                 <span>
                   {grupo.titulo}
                   {aqui && <i aria-label="você está aqui" />}
