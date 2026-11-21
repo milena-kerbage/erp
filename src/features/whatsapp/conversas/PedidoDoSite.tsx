@@ -43,6 +43,8 @@ export function PedidoDoSite({ numero, original }: { numero: string; original: R
   const [dados, setDados] = useState<Dados | null>(null);
   const [falhou, setFalhou] = useState(false);
   const [verOriginal, setVerOriginal] = useState(false);
+  const [recadoAberto, setRecadoAberto] = useState(false);
+  const [semFoto, setSemFoto] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     let ativo = true;
@@ -77,9 +79,9 @@ export function PedidoDoSite({ numero, original }: { numero: string; original: R
       <Itens>
         {pedido.itens.map((item, indice) => (
           <li key={`${item.slug ?? item.nome}-${indice}`}>
-            {item.foto ? (
+            {item.foto && !semFoto[indice] ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.foto.src} alt="" loading="lazy" decoding="async" />
+              <img src={item.foto.src} alt={item.foto.alt || ""} loading="lazy" decoding="async" onError={() => setSemFoto((atual) => ({ ...atual, [indice]: true }))} />
             ) : <span className="semFoto" aria-hidden><ShoppingBagOpenIcon /></span>}
             <span className="texto">
               <strong>{item.nome}</strong>
@@ -99,14 +101,23 @@ export function PedidoDoSite({ numero, original }: { numero: string; original: R
         <div className="total"><span>Total a partir de</span><strong>{dinheiro(pedido.totalCentavos)}</strong></div>
       </Total>
 
-      <Dados>
+      {/* O essencial num relance: bebê, entrega e cidade em etiquetas (o detalhe fica na dica); o recado da cliente em destaque. */}
+      <Resumo>
         {bebe && (
-          <li><BabyIcon aria-hidden /><span><b>{bebe.nome || "Bebê"}</b>{bebe.data ? (jaNasceu(bebe.data) ? ` · nasceu em ${dataCurta(bebe.data)}` : ` · previsão ${dataCurta(bebe.data)} (${quandoNasce(bebe.data)})`) : ""}</span></li>
+          <span title={bebe.data ? `${jaNasceu(bebe.data) ? "Nasceu em" : "Previsão de nascimento:"} ${dataCurta(bebe.data)}` : undefined}>
+            <BabyIcon aria-hidden /><b>{bebe.nome || "Bebê"}</b>{bebe.data ? ` · ${quandoNasce(bebe.data)}` : ""}
+          </span>
         )}
-        <li><TruckIcon aria-hidden /><span>{entrega}</span></li>
-        {!pedido.local && cliente?.cidade && <li><MapPinIcon aria-hidden /><span>{cliente.cidade}</span></li>}
-        {pedido.observacoes && <li><NoteIcon aria-hidden /><span className="nota">{pedido.observacoes}</span></li>}
-      </Dados>
+        <span title={pedido.retirar ? "Prefere retirar no ateliê, em Fortaleza" : "Quer receber em casa: frete e prazo a combinar"}>
+          <TruckIcon aria-hidden />{pedido.retirar ? "Retira no ateliê" : "Receber em casa"}
+        </span>
+        {(pedido.local || cliente?.cidade) && <span><MapPinIcon aria-hidden />{pedido.local || cliente?.cidade}</span>}
+      </Resumo>
+      {pedido.observacoes && (
+        <Recado type="button" data-aberto={recadoAberto || undefined} aria-expanded={recadoAberto} title={recadoAberto ? undefined : "Ver o recado inteiro"} onClick={() => setRecadoAberto((atual) => !atual)}>
+          <NoteIcon aria-hidden /><span>{pedido.observacoes}</span>
+        </Recado>
+      )}
 
       <Rodape>
         <Link href={`/ecommerce/pedidos?pedido=${encodeURIComponent(pedido.numero)}`}>Abrir pedido<ArrowUpRightIcon weight="bold" aria-hidden /></Link>
@@ -194,22 +205,52 @@ const Total = styled.div`
   .total strong { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 `;
 
-const Dados = styled.ul`
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: ${suave(5)};
+const Resumo = styled.div`
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
-  font-size: 0.75rem;
-  color: ${suave(70)};
-  li { display: flex; gap: 8px; align-items: flex-start; }
-  li > span { min-width: 0; overflow-wrap: anywhere; }
-  svg { flex-shrink: 0; width: 14px; height: 14px; margin-top: 2px; opacity: 0.7; }
+  margin-top: 10px;
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 4px 10px 4px 8px;
+    border-radius: 999px;
+    background: ${suave(6)};
+    font-size: 0.75rem;
+    color: ${suave(78)};
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  svg { flex-shrink: 0; width: 14px; height: 14px; opacity: 0.75; }
   b { font-weight: 600; }
-  .nota { white-space: pre-wrap; }
+`;
+
+/** Recado da cliente: duas linhas; um toque mostra inteiro. */
+const Recado = styled.button`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 2px solid ${({ theme }) => theme.tones.peach.fg};
+  border-radius: 4px 10px 10px 4px;
+  background: ${suave(4)};
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  &:hover { background: ${suave(7)}; }
+  svg { flex-shrink: 0; width: 14px; height: 14px; margin-top: 2px; opacity: 0.7; }
+  span { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; }
+  &[data-aberto] span { display: block; }
 `;
 
 const Rodape = styled.div`
