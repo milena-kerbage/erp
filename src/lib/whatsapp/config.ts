@@ -6,7 +6,7 @@ export class IntegrationConfigurationError extends Error {
   constructor(status: number, message: string, code = 'INTEGRATION_CONFIG_ERROR', field?: string) { super(message); this.status = status; this.code = code; this.field = field; }
 }
 /** Versão da Graph API usada quando a instalação não define outra (a mesma do ERP da Le Ange em produção). */
-export const GRAPH_VERSION_PADRAO = 'v26.0';
+export const GRAPH_VERSION_PADRAO = 'v27.0';
 const NOMES_SEGREDOS: Record<string, string> = {accessToken: 'Token de acesso da Meta', appSecret: 'App Secret (Chave secreta do aplicativo)', verifyToken: 'Token de verificação do webhook', suppressionSecret: 'Chave de proteção da supressão'};
 const MINIMOS_SEGREDOS: Record<string, number> = {accessToken: 20, appSecret: 16, verifyToken: 16, suppressionSecret: 32};
 /** Limpa o que costuma vir junto ao colar (espaços, quebras, "Bearer "); credenciais da Meta não têm espaços. */

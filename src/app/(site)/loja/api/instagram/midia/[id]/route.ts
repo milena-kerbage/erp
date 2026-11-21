@@ -31,10 +31,10 @@ async function baixar(url: string): Promise<Response | null> {
 }
 
 async function urlAtual(id: string): Promise<string | null> {
-  const { token, versao } = await configuracaoInstagram();
+  const { token, versao, conta } = await configuracaoInstagram();
   if (!token) return null;
   try {
-    const resposta = await fetch(urlDaMidia(versao, id, token), { cache: "no-store", signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
+    const resposta = await fetch(urlDaMidia(versao, id, token, Boolean(conta)), { cache: "no-store", signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
     if (!resposta.ok) return null;
     return normalizarMidiaParcial(await resposta.json());
   } catch {

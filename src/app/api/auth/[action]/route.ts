@@ -1,7 +1,7 @@
 import { after, NextResponse, type NextRequest } from 'next/server';
 import nodemailer from 'nodemailer';
 import { COOKIE_NAME, cookieOptions } from '@/lib/auth/cookies';
-import { createVerifiedSession, changeUserPassword, db, digest, findUser, issueReset, limited, normalizeEmail, resetPassword, revokeSession, sessionUser, validEmail, validPassword, verifyPassword } from '@/lib/auth/core';
+import { SESSION_TTL, createVerifiedSession, changeUserPassword, db, digest, findUser, issueReset, limited, normalizeEmail, resetPassword, revokeSession, sessionUser, validEmail, validPassword, verifyPassword } from '@/lib/auth/core';
 import { HttpError, readBody, trustedOrigin } from '@/lib/auth/http';
 import { acceptInvitation, currentMember, recordMemberLogin, ApiError } from '@/lib/erp/access';
 import { DatabaseConfigurationError } from '@/lib/database';
@@ -48,7 +48,8 @@ export async function POST(request: NextRequest, context: RouteContext<'/api/aut
       await recordMemberLogin(user.id);
       await revokeSession(token);
       const response = json({ok: true});
-      response.cookies.set(COOKIE_NAME, session, cookieOptions);
+      // Cookie persistente: continua logado ao fechar e abrir o navegador, até a sessão vencer no servidor.
+      response.cookies.set(COOKIE_NAME, session, {...cookieOptions, maxAge: Math.floor(SESSION_TTL / 1000)});
       return response;
     }
     if (action === 'accept-invitation') {

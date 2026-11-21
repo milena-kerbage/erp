@@ -152,16 +152,17 @@ export function normalizarResposta(json: unknown, limite = LIMITE_POSTS): PostIn
   return posts;
 }
 
-export function urlDoFeed(versao: string, token: string, limite = LIMITE_POSTS): string {
-  const url = new URL(`https://graph.instagram.com/${versao}/me/media`);
+// `conta`: acesso pela página do Facebook (login pelo Facebook): os posts vêm do Graph do Facebook pelo ID do Instagram.
+export function urlDoFeed(versao: string, token: string, limite = LIMITE_POSTS, conta?: string): string {
+  const url = new URL(conta ? `https://graph.facebook.com/${versao}/${conta}/media` : `https://graph.instagram.com/${versao}/me/media`);
   url.searchParams.set("fields", CAMPOS);
   url.searchParams.set("limit", String(limite));
   url.searchParams.set("access_token", token);
   return url.toString();
 }
 
-export function urlDaMidia(versao: string, id: string, token: string): string {
-  const url = new URL(`https://graph.instagram.com/${versao}/${id}`);
+export function urlDaMidia(versao: string, id: string, token: string, facebook = false): string {
+  const url = new URL(`https://${facebook ? "graph.facebook.com" : "graph.instagram.com"}/${versao}/${id}`);
   url.searchParams.set("fields", "id,media_type,media_url,thumbnail_url");
   url.searchParams.set("access_token", token);
   return url.toString();
@@ -188,7 +189,9 @@ export async function buscarFeed({
   buscar = fetch,
   tempoLimiteMs = TEMPO_LIMITE_MS,
   limite = LIMITE_POSTS,
+  conta,
 }: {
+  conta?: string;
   token: string | undefined;
   versao?: string;
   buscar?: Busca;
@@ -200,7 +203,7 @@ export async function buscarFeed({
   if (!versaoValida(versao)) return { ok: false, motivo: "versao-invalida", detalhe: versao };
   let resposta: Response;
   try {
-    resposta = await buscar(urlDoFeed(versao, chave, limite), {
+    resposta = await buscar(urlDoFeed(versao, chave, limite, conta), {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(tempoLimiteMs),
       next: { revalidate: REVALIDAR_S, tags: [TAG_INSTAGRAM] },

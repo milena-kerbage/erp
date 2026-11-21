@@ -1,6 +1,7 @@
 import "server-only";
 import { buscarFeed, type ResultadoFeed, VERSAO_PADRAO } from "./feed";
 import { connectionToken, currentConnection } from "@/lib/instagram/store";
+import { instagramConfig } from "@/lib/instagram/config";
 
 // Feed com token OAuth criptografado no banco; sem INSTAGRAM_APP_ID mantém o token manual legado.
 // Credenciais ficam só no servidor. Busca com cache de 1 h (tag "instagram") sem derrubar a home.
@@ -8,7 +9,15 @@ import { connectionToken, currentConnection } from "@/lib/instagram/store";
 
 const avisados = new Set<string>();
 
-export async function configuracaoInstagram(): Promise<{ token: string | undefined; versao: string }> {
+export async function configuracaoInstagram(): Promise<{ token: string | undefined; versao: string; conta?: string }> {
+  // Conexão feita na tela (banco): fonte de acesso. Pelo login do Facebook, os posts vêm pelo ID da conta do Instagram.
+  try {
+    const connection = await currentConnection();
+    if (connection) {
+      const config = instagramConfig();
+      return { token: await connectionToken(connection), versao: config.version, ...(config.modo === "facebook" ? { conta: connection.account_id } : {}) };
+    }
+  } catch { /* segue para o ambiente */ }
   // Ao adotar OAuth, o banco passa a ser a fonte de acesso. Nunca restaura o token legado após revogação.
   if (process.env.INSTAGRAM_APP_ID?.trim()) {
     try {

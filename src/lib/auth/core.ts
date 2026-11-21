@@ -3,8 +3,9 @@ import { randomBytes, createHash, scrypt, timingSafeEqual } from 'node:crypto';
 import { databaseFor } from '../database.ts';
 import { databaseLimited } from '../rate-limit.ts';
 
-export const SESSION_TTL = 8 * 60 * 60 * 1000;
-export const IDLE_TTL = 30 * 60 * 1000;
+// Sessão de até 30 dias, encerrada após 7 dias sem uso (a equipe reclamava de ser deslogada a cada 30 min).
+export const SESSION_TTL = 30 * 24 * 60 * 60 * 1000;
+export const IDLE_TTL = 7 * 24 * 60 * 60 * 1000;
 export const RESET_TTL = 20 * 60 * 1000;
 export type AuthUser = { id: string; email: string; name: string; password_hash: string };
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();

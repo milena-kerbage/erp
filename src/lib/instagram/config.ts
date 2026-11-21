@@ -9,9 +9,9 @@ export class InstagramError extends Error {
 }
 
 /** Versão da Graph API do Instagram quando a instalação não define outra. */
-export const VERSAO_INSTAGRAM_PADRAO = 'v26.0';
+export const VERSAO_INSTAGRAM_PADRAO = 'v27.0';
 // Ajustes cadastrados pelo gestor na tela (cifrados no banco; src/lib/instagram/ajustes.ts). Prevalecem sobre o ambiente.
-type AjustesSalvos = { appId?: string; appSecret?: string; webhookSecret?: string; version?: string; scopes?: string; metaAppSecret?: string; verifyToken?: string };
+type AjustesSalvos = { appId?: string; appSecret?: string; webhookSecret?: string; version?: string; scopes?: string; metaAppSecret?: string; verifyToken?: string; configId?: string; pageId?: string };
 let salvos: AjustesSalvos = {};
 export function definirAjustesSalvos(valores: AjustesSalvos) { salvos = valores; }
 
@@ -29,6 +29,11 @@ export function instagramConfig() {
     // O do ambiente (já cadastrado na Meta) nunca é trocado; o salvo só existe quando o ambiente não tem.
     verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN?.trim() || salvos.verifyToken || '',
     version: salvos.version || process.env.INSTAGRAM_GRAPH_VERSION?.trim() || VERSAO_INSTAGRAM_PADRAO,
+    // Com o ID da configuração do Login do Facebook para Empresas, o login é pelo diálogo do Facebook (conta do Instagram
+    // ligada à página); sem ele, pelo Login do Instagram.
+    configId: salvos.configId || process.env.INSTAGRAM_FB_CONFIG_ID?.trim() || '',
+    modo: (salvos.configId || process.env.INSTAGRAM_FB_CONFIG_ID?.trim() ? 'facebook' : 'instagram') as 'facebook' | 'instagram',
+    pageId: salvos.pageId || '',
     expectedUsername: (process.env.INSTAGRAM_EXPECTED_USERNAME || 'milenakerbageatelie').replace(/^@/, '').toLowerCase(),
     scopes: [...new Set(scopes)],
   };

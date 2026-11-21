@@ -2,7 +2,7 @@ import { readBytes } from '../whatsapp/core.ts';
 import { InstagramError, instagramConfig, instagramUrls, requireOAuthConfig } from './config.ts';
 import { seal } from './crypto.ts';
 import { connectionToken, currentConnection, instagramDb, saveConnection } from './store.ts';
-import { carregarAjustesInstagram } from './ajustes.ts';
+import { carregarAjustesInstagram, gravarPaginaInstagram } from './ajustes.ts';
 
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): ObjectValue => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : {};
@@ -33,6 +33,12 @@ function identifier(value: unknown) {
 export function authorizationUrl(state: string) {
   const config = requireOAuthConfig();
   if (!/^[a-f0-9]{64}$/.test(state)) throw new InstagramError(400, 'Estado de autorização inválido.');
+  if (config.modo === 'facebook') {
+    // Login do Facebook para Empresas (configuração com as permissões de Instagram), no formato passado pela Meta.
+    const url = new URL('https://www.facebook.com/dialog/oauth');
+    url.search = new URLSearchParams({ client_id: config.appId, config_id: config.configId, display: 'popup', override_default_response_type: 'true', redirect_uri: instagramUrls().redirect, response_type: 'code', state, prompt: 'login' }).toString();
+    return url.toString();
+  }
   const url = new URL('https://www.instagram.com/oauth/authorize');
   url.search = new URLSearchParams({ client_id: config.appId, redirect_uri: instagramUrls().redirect, response_type: 'code', scope: config.scopes.join(','), state, enable_fb_login: 'false' }).toString();
   return url.toString();
@@ -41,6 +47,7 @@ export async function exchangeCode(code: string, fetcher: typeof fetch = fetch, 
   await carregarAjustesInstagram();
   const config = requireOAuthConfig();
   if (!code || code.length > 4096 || /\s/.test(code)) throw new InstagramError(400, 'Código de autorização inválido.');
+  if (config.modo === 'facebook') return exchangeFacebook(code, fetcher, authorizedAt);
   const form = new FormData();
   for (const [key, value] of Object.entries({ client_id: config.appId, client_secret: config.appSecret, grant_type: 'authorization_code', redirect_uri: instagramUrls().redirect, code })) form.set(key, value);
   const short = first(await metaRequest('https://api.instagram.com/oauth/access_token', { method: 'POST', body: form }, fetcher));
@@ -70,6 +77,18 @@ export async function subscribeAccount(fetcher: typeof fetch = fetch) {
   if (!c) throw new InstagramError(409, 'Conecte o Instagram primeiro.', 'NOT_CONNECTED');
   const fields = subscribedFields(JSON.parse(c.scopes_json));
   if (!fields.length) throw new InstagramError(409, 'Autorize mensagens ou comentários para habilitar notificações.', 'PERMISSION_REQUIRED');
+  if (config.modo === 'facebook') {
+    // Mensagens do Instagram pela página ligada: o app é inscrito na página (os campos do objeto "instagram" ficam no painel).
+    if (!/^\d{1,32}$/.test(config.pageId)) throw new InstagramError(409, 'Conecte o Instagram de novo para identificar a página do Facebook.', 'PAGE_UNKNOWN');
+    const inscrever = async (campos: string) => metaRequest(`https://graph.facebook.com/${config.version}/${config.pageId}/subscribed_apps`, { method: 'POST', body: new URLSearchParams({ subscribed_fields: campos, access_token: await connectionToken(c) }) }, fetcher);
+    let resposta: ObjectValue;
+    try { resposta = await inscrever('messages,messaging_postbacks,message_reactions,message_reads'); }
+    catch { resposta = await inscrever('messages'); }
+    if (resposta.success !== true) throw new InstagramError(502, 'A Meta não confirmou a inscrição da página.', 'SUBSCRIPTION_FAILED');
+    const atualizado = await instagramDb().prepare('UPDATE instagram_connections SET fields_json = ? WHERE subject_hash = ? AND token_cipher = ?').run(JSON.stringify(fields), c.subject_hash, c.token_cipher);
+    if (!atualizado.changes) throw new InstagramError(409, 'A conexão mudou. Atualize a configuração.');
+    return { subscribed: true, fields };
+  }
   const body = await metaRequest(`https://graph.instagram.com/${config.version}/${c.account_id}/subscribed_apps`, {
     method: 'POST', headers: { Authorization: `Bearer ${await connectionToken(c)}` }, body: new URLSearchParams({ subscribed_fields: fields.join(',') }),
   }, fetcher);
@@ -82,6 +101,7 @@ export async function refreshToken(fetcher: typeof fetch = fetch, now = Date.now
   await carregarAjustesInstagram();
   const c = await currentConnection();
   if (!c) throw new InstagramError(409, 'Conecte o Instagram primeiro.', 'NOT_CONNECTED');
+  if (instagramConfig().modo === 'facebook') return { refreshed: false, naoVence: true, expiresAt: new Date(c.expires_at).toISOString() };
   if (now - c.refreshed_at < 86400_000) throw new InstagramError(409, 'Aguarde 24 horas após a emissão ou renovação do token.', 'TOKEN_TOO_RECENT');
   const url = new URL('https://graph.instagram.com/refresh_access_token');
   url.search = new URLSearchParams({ grant_type: 'ig_refresh_token', access_token: await connectionToken(c) }).toString();
@@ -89,4 +109,49 @@ export async function refreshToken(fetcher: typeof fetch = fetch, now = Date.now
   const result = await instagramDb().prepare('UPDATE instagram_connections SET token_cipher = ?,expires_at = ?,refreshed_at = ? WHERE subject_hash = ? AND token_cipher = ?').run(cipher, expires, now, c.subject_hash, c.token_cipher);
   if (!result.changes) throw new InstagramError(409, 'A conexão mudou durante a renovação. Atualize a configuração.');
   return { refreshed: true, expiresAt: new Date(expires).toISOString() };
+}
+
+/* ------------------------------------------------------------------ login pelo Facebook (config_id) */
+// Troca o code no Graph do Facebook (tenta o App Secret do Instagram e o do app), estende o acesso para longa duração,
+// acha a página ligada ao perfil esperado e guarda o acesso da página (não vence quando vem do acesso longo).
+const ESCOPOS_FACEBOOK: Record<string, string> = { instagram_basic: 'instagram_business_basic', instagram_manage_messages: 'instagram_business_manage_messages', instagram_manage_comments: 'instagram_business_manage_comments', instagram_business_basic: 'instagram_business_basic', instagram_business_manage_messages: 'instagram_business_manage_messages', instagram_business_manage_comments: 'instagram_business_manage_comments' };
+async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedAt: number) {
+  const config = requireOAuthConfig(), base = `https://graph.facebook.com/${config.version}`;
+  const segredos = [...new Set([config.appSecret, config.webhookSecret].filter((valor) => valor.length >= 16))];
+  let userToken = '', segredo = '';
+  for (const candidato of segredos) {
+    try {
+      const url = new URL(`${base}/oauth/access_token`);
+      url.search = new URLSearchParams({ client_id: config.appId, client_secret: candidato, redirect_uri: instagramUrls().redirect, code }).toString();
+      userToken = token((await metaRequest(url, {}, fetcher)).access_token); segredo = candidato; break;
+    } catch (erro) { if (candidato === segredos.at(-1)) throw erro; }
+  }
+  try {
+    const url = new URL(`${base}/oauth/access_token`);
+    url.search = new URLSearchParams({ grant_type: 'fb_exchange_token', client_id: config.appId, client_secret: segredo, fb_exchange_token: userToken }).toString();
+    userToken = token((await metaRequest(url, {}, fetcher)).access_token);
+  } catch { /* Token de usuário do sistema já é longo. */ }
+  const inspecionar = async (alvo: string) => {
+    const url = new URL(`${base}/debug_token`);
+    url.search = new URLSearchParams({ input_token: alvo, access_token: `${config.appId}|${segredo}` }).toString();
+    return object((await metaRequest(url, {}, fetcher)).data);
+  };
+  const info = await inspecionar(userToken);
+  if (info.is_valid !== true || String(info.app_id) !== config.appId) throw new InstagramError(403, 'A Meta não validou o acesso deste aplicativo.', 'TOKEN_INVALID');
+  const escopos = (Array.isArray(info.scopes) ? info.scopes : []).filter((v): v is string => typeof v === 'string');
+  const paginasUrl = new URL(`${base}/me/accounts`);
+  paginasUrl.search = new URLSearchParams({ fields: 'id,name,access_token,instagram_business_account{id,username}', limit: '100', access_token: userToken }).toString();
+  const respostaPaginas = await metaRequest(paginasUrl, {}, fetcher);
+  const paginas = (Array.isArray(respostaPaginas.data) ? respostaPaginas.data : []).map(object);
+  const comInstagram = paginas.filter((pagina) => object(pagina.instagram_business_account).id);
+  const escolhida = comInstagram.find((pagina) => String(object(pagina.instagram_business_account).username || '').toLowerCase() === config.expectedUsername) ?? (config.expectedUsername ? undefined : comInstagram[0]);
+  if (!escolhida) throw new InstagramError(403, comInstagram.length ? `Na janela da Meta, selecione a página ligada ao @${config.expectedUsername}.` : 'Nenhuma página com Instagram profissional foi autorizada. Na janela da Meta, selecione a página e o Instagram do Ateliê.', 'WRONG_ACCOUNT');
+  const conta = object(escolhida.instagram_business_account), pageId = identifier(escolhida.id), pageToken = token(escolhida.access_token);
+  if (typeof conta.username !== 'string' || !/^[a-zA-Z0-9._]{1,30}$/.test(conta.username)) throw new InstagramError(502, 'Perfil inválido recebido da Meta.');
+  const infoPagina = await inspecionar(pageToken);
+  const vence = Number(infoPagina.expires_at), expiresIn = Number.isSafeInteger(vence) && vence > 0 ? Math.max(3600, Math.min(31536000, vence - Math.floor(Date.now() / 1000))) : 31536000;
+  await gravarPaginaInstagram(pageId, 'instagram-login');
+  const granted = ['instagram_business_basic', ...escopos.map((escopo) => ESCOPOS_FACEBOOK[escopo]).filter(Boolean)];
+  await saveConnection({ subjectId: identifier(info.user_id), accountId: identifier(conta.id), username: String(conta.username), token: pageToken, scopes: [...new Set(granted)], expiresIn, authorizedAt });
+  return { connected: true };
 }

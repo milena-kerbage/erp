@@ -97,7 +97,8 @@ export function Lista({ estado, equipe, eu, aoNovaConversa, trilho = false, aoEx
   const { aguardando, fixadas, recentes } = useMemo(() => {
     const espera = (c: WhatsAppConversation) => Boolean(c.waitingSince) && !c.assignee;
     return {
-      aguardando: lista.filter(espera).sort((a, b) => (a.waitingSince ?? "").localeCompare(b.waitingSince ?? "")),
+      // Como no WhatsApp: a conversa mais recente sempre no topo, também no grupo de quem aguarda a equipe.
+      aguardando: lista.filter(espera).sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? "")),
       fixadas: lista.filter((c) => c.pinned && !espera(c)),
       recentes: lista.filter((c) => !c.pinned && !espera(c)),
     };

@@ -44,3 +44,36 @@ test('salvo pela tela vale sem variáveis de ambiente, cifrado; webhook usa o Ap
   await ajustes.salvarAjustesInstagram({ appId: '123456789', webhookSecret: 'h'.repeat(32) }, 'gestor');
   assert.equal(config.instagramConfig().appSecret, 'i'.repeat(32)); assert.equal(config.instagramConfig().webhookSecret, 'h'.repeat(32));
 });
+
+test('login pelo Facebook (config_id): URL igual à da Meta, troca com o segredo certo, acha a página do perfil e inscreve a página', async () => {
+  const api = await import('../src/lib/instagram/api.ts');
+  const store = await import('../src/lib/instagram/store.ts');
+  await ajustes.salvarAjustesInstagram({ appId: '1178499741393086', configId: '1438707898432586', appSecret: 'a'.repeat(32), webhookSecret: 'b'.repeat(32) }, 'gestor');
+  assert.equal(config.instagramConfig().modo, 'facebook');
+  const url = new URL(api.authorizationUrl('c'.repeat(64)));
+  assert.equal(url.origin + url.pathname, 'https://www.facebook.com/dialog/oauth');
+  for (const [chave, valor] of Object.entries({ client_id: '1178499741393086', config_id: '1438707898432586', display: 'popup', override_default_response_type: 'true', redirect_uri: 'https://app.ateliemilenakerbage.com.br/api/instagram/oauth/callback', response_type: 'code', state: 'c'.repeat(64), prompt: 'login' })) assert.equal(url.searchParams.get(chave), valor, chave);
+
+  const chamadas = [];
+  const fetcher = async (endereco, opcoes = {}) => {
+    const u = new URL(String(endereco)), caminho = u.pathname.replace(/^\/v\d+\.0\//, '');
+    chamadas.push(`${opcoes.method || 'GET'} ${caminho}`);
+    if (caminho === 'oauth/access_token' && u.searchParams.get('code')) return u.searchParams.get('client_secret') === 'b'.repeat(32) ? Response.json({ access_token: 'EAAcurto' + 'x'.repeat(40) }) : Response.json({ error: { code: 1 } }, { status: 400 });
+    if (caminho === 'oauth/access_token') return Response.json({ access_token: 'EAAlongo' + 'x'.repeat(40) });
+    if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic', 'instagram_manage_messages', 'instagram_manage_comments', 'pages_show_list'], expires_at: 0 } });
+    if (caminho === 'me/accounts') return Response.json({ data: [{ id: '111', name: 'Outra', access_token: 'EAAoutra' + 'x'.repeat(40), instagram_business_account: { id: '900', username: 'outraconta' } }, { id: '222', name: 'Ateliê', access_token: 'EAApagina' + 'x'.repeat(40), instagram_business_account: { id: '17841400000000', username: 'milenakerbageatelie' } }] });
+    if (caminho === '222/subscribed_apps') return Response.json({ success: true });
+    return Response.json({ error: { code: 100 } }, { status: 400 });
+  };
+  await api.exchangeCode('codigo-da-meta', fetcher);
+  const conexao = await store.currentConnection();
+  assert.equal(conexao.username, 'milenakerbageatelie'); assert.equal(conexao.account_id, '17841400000000');
+  assert.equal(await store.connectionToken(conexao), 'EAApagina' + 'x'.repeat(40), 'guarda o acesso da página');
+  assert.deepEqual(JSON.parse(conexao.scopes_json), ['instagram_business_basic', 'instagram_business_manage_messages', 'instagram_business_manage_comments']);
+  assert.equal(config.instagramConfig().pageId, '222');
+  assert.ok(conexao.expires_at > Date.now() + 300 * 86400_000, 'acesso da página não vence');
+  const inscricao = await api.subscribeAccount(fetcher);
+  assert.ok(inscricao.fields.includes('messages') && inscricao.fields.includes('comments'));
+  assert.ok(chamadas.includes('POST 222/subscribed_apps'));
+  assert.equal((await api.refreshToken(fetcher)).naoVence, true, 'acesso pelo Facebook não usa a renovação do Instagram');
+});

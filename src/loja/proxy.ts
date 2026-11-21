@@ -73,6 +73,10 @@ export function proxyLoja(request: NextRequest): NextResponse {
   // Arquivos públicos da loja e robots.txt (gerado por host em src/app/robots.ts) passam direto.
   if (caminho.startsWith(`${PASTA_PUBLICA_LOJA}/`) || caminho === "/robots.txt") return comCabecalhos(NextResponse.next());
 
+  // Páginas legais do ERP (privacidade, termos e instruções de exclusão de dados) também no domínio da loja, aberto a
+  // robôs: alternativa para os campos do painel da Meta, que valida esses links com o robô dela.
+  if (["/privacidade", "/termos", "/exclusao-de-dados", "/politica-de-comunicacao"].includes(caminho) || caminho.startsWith("/exclusao-de-dados/")) return comCabecalhos(NextResponse.next());
+
   // Prefixo interno digitado na barra: arquivos gerados passam; páginas vão para a URL pública.
   if (caminho === PREFIXO_LOJA || caminho.startsWith(`${PREFIXO_LOJA}/`)) {
     if (ARQUIVO_GERADO.test(caminho) || caminho.endsWith("/sitemap.xml")) return comCabecalhos(NextResponse.next());

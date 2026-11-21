@@ -13,7 +13,7 @@ import { Actions, Note, Notice, Stack } from '@/features/whatsapp/components/sha
 
 type Status = {
   urls: Record<string, string>; checks: { name: string; configured: boolean }[]; scopes: string[]; retentionDays: number;
-  app: { appId: string; appSecretSalvo: boolean; webhookSecretPronto: boolean; versao: string };
+  app: { appId: string; appSecretSalvo: boolean; webhookSecretPronto: boolean; versao: string; configId: string; modo: 'facebook' | 'instagram' };
   connection: { username: string; expiresAt: string; expired: boolean; scopes: string[]; subscribedFields: string[] } | null;
   events: { total: number; lastReceivedAt: string | null };
 };
@@ -75,7 +75,7 @@ function CartaoConta({ status, aoMudar, aoAvisar }: { status: Status; aoMudar: (
       <Note>Última notificação recebida: {data(status.events.lastReceivedAt)} · {status.events.total} evento(s) guardado(s) por {status.retentionDays} dias.</Note>
       <Actions>
         <Button size="sm" loading={ocupado === 'subscribe'} disabled={conta.expired} onClick={() => void agir('subscribe', 'Notificações habilitadas: mensagens e comentários passam a chegar ao ERP.')}>Habilitar notificações</Button>
-        <Button size="sm" variant="secondary" loading={ocupado === 'token/refresh'} disabled={conta.expired} onClick={() => void agir('token/refresh', 'Acesso renovado por mais 60 dias.')}>Renovar acesso</Button>
+        {status.app.modo === 'instagram' && <Button size="sm" variant="secondary" loading={ocupado === 'token/refresh'} disabled={conta.expired} onClick={() => void agir('token/refresh', 'Acesso renovado por mais 60 dias.')}>Renovar acesso</Button>}
         <Button size="sm" variant="ghost" loading={ocupado === 'oauth/start'} onClick={() => void agir('oauth/start', '')}>Conectar de novo</Button>
         {sair ? <><Button size="sm" variant="danger" icon={LinkBreakIcon} loading={ocupado === 'disconnect'} onClick={() => void agir('disconnect', 'Instagram desconectado.')}>Confirmar desconexão</Button><Button size="sm" variant="ghost" onClick={() => setSair(false)}>Cancelar</Button></>
           : <Button size="sm" variant="ghost" icon={LinkBreakIcon} onClick={() => setSair(true)}>Desconectar</Button>}
@@ -83,7 +83,7 @@ function CartaoConta({ status, aoMudar, aoAvisar }: { status: Status; aoMudar: (
     </Stack> : <Stack>
       <Passos>
         <li>Cadastre o app do Instagram logo abaixo (uma vez só) e confira os endereços na Meta.</li>
-        <li>Clique em <strong>Conectar Instagram</strong> e entre com o perfil <strong>@milenakerbageatelie</strong>.</li>
+        <li>{status.app.modo === 'facebook' ? <>Clique em <strong>Conectar Instagram</strong>, entre com o Facebook de quem administra a página e selecione a página e o Instagram <strong>@milenakerbageatelie</strong>.</> : <>Clique em <strong>Conectar Instagram</strong> e entre com o perfil <strong>@milenakerbageatelie</strong>.</>}</li>
         <li>De volta aqui, clique em <strong>Habilitar notificações</strong>.</li>
       </Passos>
       <Actions><Button icon={InstagramLogoIcon} loading={ocupado === 'oauth/start'} disabled={!podeConectar} onClick={() => void agir('oauth/start', '')}>Conectar Instagram</Button>{!podeConectar && <Note>Falta cadastrar o App ID e o App Secret do Instagram.</Note>}</Actions>
@@ -99,31 +99,32 @@ const RECURSOS = [
 function CartaoApp({ status, aoSalvar }: { status: Status; aoSalvar: () => Promise<void> }) {
   const pronto = Boolean(status.app.appId) && status.app.appSecretSalvo;
   const [aberto, setAberto] = useState(!pronto);
-  const [campos, setCampos] = useState({ appId: status.app.appId, appSecret: '', webhookSecret: '' });
+  const [campos, setCampos] = useState({ appId: status.app.appId, appSecret: '', webhookSecret: '', configId: status.app.configId });
   const [recursos, setRecursos] = useState(RECURSOS.map((r) => r.id).filter((id) => status.scopes.includes(id)));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<Erro | null>(null);
   const alterar = (campo: keyof typeof campos) => (evento: React.ChangeEvent<HTMLInputElement>) => setCampos((atual) => ({ ...atual, [campo]: evento.target.value }));
   const salvar = async () => {
     setSalvando(true); setErro(null);
-    try { await api('ajustes', { ...campos, appId: campos.appId.trim(), recursos }); setCampos((atual) => ({ ...atual, appSecret: '', webhookSecret: '' })); await aoSalvar(); setAberto(false); }
+    try { await api('ajustes', { ...campos, appId: campos.appId.trim(), configId: campos.configId.trim(), recursos }); setCampos((atual) => ({ ...atual, appSecret: '', webhookSecret: '' })); await aoSalvar(); setAberto(false); }
     catch (falha) { setErro(erroDe(falha)); }
     finally { setSalvando(false); }
   };
   const erroCampo = (campo: string) => (erro?.campo === campo ? erro.texto : undefined);
   return <Painel>
     <Cabeca><Titulo>App do Instagram <small>(uma vez só)</small></Titulo><Pill $tone={pronto ? 'green' : 'peach'}>{pronto ? 'Pronto' : 'Falta cadastrar'}</Pill></Cabeca>
-    {!aberto ? <Actions><Note>App {status.app.appId} · Graph {status.app.versao} · {status.scopes.length > 1 ? 'mensagens e comentários' : 'só o perfil'}</Note><Button size="sm" variant="ghost" onClick={() => setAberto(true)}>Ver ou alterar</Button></Actions>
+    {!aberto ? <Actions><Note>App {status.app.appId} · Graph {status.app.versao} · {status.app.modo === 'facebook' ? `login do Facebook (configuração ${status.app.configId})` : 'login do Instagram'} · {status.scopes.length > 1 ? 'mensagens e comentários' : 'só o perfil'}</Note><Button size="sm" variant="ghost" onClick={() => setAberto(true)}>Ver ou alterar</Button></Actions>
       : <form onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} autoComplete="off"><Stack>
         <Note>Em <a href="https://developers.facebook.com/apps" target="_blank" rel="noreferrer">Meta for Developers</a>, abra o app e vá em <strong>Instagram &gt; Configuração da API com login do Instagram</strong>. O <strong>App ID e o App Secret do Instagram</strong> ficam em “Configurações do login da empresa” (são diferentes do App ID do app). O <strong>App Secret do app</strong> fica em Configurações do app &gt; Básico; se for o mesmo app do WhatsApp, deixe vazio.</Note>
         <FieldGrid>
-          <TextField label="App ID do Instagram" name="ig-app-id" inputMode="numeric" value={campos.appId} onChange={alterar('appId')} error={erroCampo('appId')} {...semPreenchimento} />
+          <TextField label="App ID" name="ig-app-id" inputMode="numeric" value={campos.appId} onChange={alterar('appId')} error={erroCampo('appId')} hint="Com o login do Facebook, é o App ID do app (Configurações do app > Básico)." {...semPreenchimento} />
+          <TextField label="ID da configuração (Login do Facebook para Empresas)" name="ig-config-id" inputMode="numeric" value={campos.configId} onChange={alterar('configId')} error={erroCampo('configId')} hint="Preenchido: o botão Conectar usa o login do Facebook." {...semPreenchimento} />
           <TextField label="App Secret do Instagram" name="ig-app-chave" value={campos.appSecret} onChange={alterar('appSecret')} placeholder={status.app.appSecretSalvo ? 'Guardado. Deixe vazio para manter' : '32 letras e números'} error={erroCampo('appSecret')} style={mascarado} {...semPreenchimento} />
           <TextField label="App Secret do app (webhooks)" name="ig-app-webhook" value={campos.webhookSecret} onChange={alterar('webhookSecret')} placeholder={status.app.webhookSecretPronto ? 'Pronto. Deixe vazio para manter' : 'Vazio = o do WhatsApp'} hint="Opcional se o app for o mesmo do WhatsApp." error={erroCampo('webhookSecret')} style={mascarado} {...semPreenchimento} />
         </FieldGrid>
         <Recursos>{RECURSOS.map((r) => <label key={r.id}><input type="checkbox" checked={recursos.includes(r.id)} onChange={(e) => setRecursos((atual) => e.target.checked ? [...atual, r.id] : atual.filter((id) => id !== r.id))} /><span><strong>{r.rotulo}</strong><small>{r.texto} A permissão precisa estar adicionada no app da Meta.</small></span></label>)}</Recursos>
         <Actions><Button type="submit" loading={salvando}>Salvar</Button>{pronto && <Button size="sm" variant="ghost" onClick={() => setAberto(false)}>Fechar</Button>}</Actions>
-        {erro && !['appId', 'appSecret', 'webhookSecret'].includes(erro.campo ?? '') && <Notice $error role="alert">{erro.texto}</Notice>}
+        {erro && !['appId', 'appSecret', 'webhookSecret', 'configId'].includes(erro.campo ?? '') && <Notice $error role="alert">{erro.texto}</Notice>}
       </Stack></form>}
   </Painel>;
 }
