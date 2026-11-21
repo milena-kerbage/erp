@@ -1,3 +1,4 @@
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { css, cx } from "styled-system/css";
@@ -128,7 +129,7 @@ export function BlocoContato({ titulo = "Ainda precisa de ajuda?", texto }: { ti
         {texto ?? "Fale com uma vendedora do ateliê pelo WhatsApp. Respondemos em horário comercial."}
       </p>
       <div className={css({ display: "flex", flexWrap: "wrap", gap: "3", mt: "6" })}>
-        <a href={`https://wa.me/${EMPRESA.whatsapp.numero}`} target="_blank" rel="noopener noreferrer" className={botaoEscuro}>
+        <a href={linkWhatsAppAtelie()} target="_blank" rel="noopener noreferrer nofollow" className={botaoEscuro}>
           <WhatsappLogo size={18} aria-hidden /> WhatsApp {EMPRESA.whatsapp.exibicao}
           <span className={css({ srOnly: true })}> (abre em nova aba)</span>
         </a>

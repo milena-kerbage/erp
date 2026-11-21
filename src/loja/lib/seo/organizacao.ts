@@ -27,6 +27,19 @@ export function schemaDoSite(): Graph {
         areaServed: { "@type": "Country", name: "Brasil" },
         contactPoint: { "@type": "ContactPoint", contactType: "sales", telephone: `+${EMPRESA.whatsapp.numero}`, availableLanguage: "Portuguese", areaServed: "BR" },
         sameAs: [REDES_SOCIAIS.instagram, REDES_SOCIAIS.linktree],
+        // Política de devolução da loja toda, como está em /politicas/trocas: arrependimento em 7 dias corridos do
+        // recebimento (art. 49 do CDC), com devolução pelo correio ou no ateliê. Sem returnFees: a página garante a
+        // devolução dos valores pagos (inclusive o frete de envio), mas não diz quem paga o frete da volta.
+        // Peças com bordado personalizado seguem a regra própria da página (defeito ou diferença do combinado).
+        hasMerchantReturnPolicy: {
+          "@type": "MerchantReturnPolicy",
+          applicableCountry: "BR",
+          returnPolicyCountry: "BR",
+          returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+          merchantReturnDays: 7,
+          returnMethod: ["https://schema.org/ReturnByMail", "https://schema.org/ReturnInStore"],
+          merchantReturnLink: `${ORIGEM}/politicas/trocas`,
+        },
       },
       {
         "@type": "WebSite",

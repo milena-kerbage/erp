@@ -15,9 +15,10 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const host = (await headers()).get("host");
   if (!ehHostDaLoja(host)) return { rules: { userAgent: "*", allow: PAGINAS_PUBLICAS_ERP, disallow: "/" } };
   return {
-    // As fotos dos produtos saem de /api/catalogo/imagem/ e as imagens de compartilhamento de /og/: liberadas
+    // As fotos dos produtos saem de /api/catalogo/imagem/ e as imagens de compartilhamento de /og/: liberadas, assim
+    // como o feed do Merchant Center (/feeds/) e o resumo para assistentes de IA (/llms.txt)
     // (a regra mais específica vence o bloqueio de /api/), senão o Google não indexa as fotos nem as redes buscam a prévia.
-    rules: [{ userAgent: "*", allow: ["/", "/api/catalogo/imagem/", "/og/"], disallow: [...regrasRobots(REGRAS_SEO), "/api/", "/dev/", "/loja/"] }],
+    rules: [{ userAgent: "*", allow: ["/", "/api/catalogo/imagem/", "/og/", "/feeds/", "/llms.txt"], disallow: [...regrasRobots(REGRAS_SEO), "/api/", "/dev/", "/ir/", "/loja/"] }],
     sitemap: `${ORIGEM}/sitemap.xml`,
     host: ORIGEM,
   };

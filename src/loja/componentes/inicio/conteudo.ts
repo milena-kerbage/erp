@@ -4,6 +4,7 @@
 // catálogo ativo em lib/catalogo/apresentacao.ts, usando a mesma curadoria do menu e da busca.
 // Sem uma foto compatível, Midia.tsx mantém a composição nos tons da marca.
 
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import { LINKS_UTILITARIOS } from "@/loja/componentes/layout/cabecalho/navegacao";
 import { EDICAO_ATUAL, ROTA_EDICAO } from "@/loja/lib/catalogo/edicoes";
 import { montarUrl } from "@/loja/lib/catalogo/urlsListagem";
@@ -14,7 +15,7 @@ import type { NomeIcone, TomMidia } from "./Midia";
 export type Acao = { rotulo: string; href: string; externo?: boolean };
 export type MidiaConteudo = { src?: string; alt?: string; tom: TomMidia; icone: NomeIcone };
 
-const WHATSAPP = `https://wa.me/${EMPRESA.whatsapp.numero}`;
+const WHATSAPP = linkWhatsAppAtelie();
 
 function categoria(chave: string, filtros: Record<string, string[]> = {}, ordem?: string): string {
   return montarUrl({ tipo: "categoria", categoria: chave }, filtros, ordem);

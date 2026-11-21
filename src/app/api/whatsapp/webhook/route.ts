@@ -2,6 +2,8 @@ import { verifyEffectiveChallenge, effectiveSignatureValid, receiveWebhook, read
 import { errorResponse, noStore } from '@/lib/whatsapp/server';
 import { queueApplicationEvent } from '@/lib/erp/dispatch';
 import { after } from 'next/server';
+import { aplicarOrigensNoCRM } from '@/lib/whatsapp/origemCrm';
+import type { OrigemDetectada } from '@/lib/whatsapp/origem';
 import { sincronizarHistorico } from '@/lib/whatsapp/conexao';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -18,7 +20,10 @@ export async function POST(request: Request) {
     if (await limited('verified-webhook', 1000)) throw new WhatsAppError(429, 'Limite temporário de eventos atingido.', 'RATE_LIMITED');
     let payload: unknown; try { payload = JSON.parse(bytes.toString('utf8')); } catch { throw new WhatsAppError(400, 'JSON inválido.', 'INVALID_JSON'); }
     const messageIds:string[]=[];
-    await receiveWebhook(payload,Date.now(),messageIds);
+    // Conversas que chegaram por anúncio (Click to WhatsApp) ou pelo botão do site: a origem segue para o lead no CRM.
+    const origens:OrigemDetectada[]=[];
+    await receiveWebhook(payload,Date.now(),messageIds,origens);
+    if (origens.length) after(() => aplicarOrigensNoCRM(origens).catch(() => null));
     for (const id of messageIds) await queueApplicationEvent('message.received',id);
     // Coexistência: no horário, pede à Meta os contatos e o histórico do celular (pedido único; sem rotina agendada na hospedagem).
     after(() => sincronizarHistorico('webhook', true).catch(() => null));

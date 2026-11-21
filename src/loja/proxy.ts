@@ -116,6 +116,7 @@ export function proxyLoja(request: NextRequest): NextResponse {
     interna.pathname = caminho === "/" ? PREFIXO_LOJA : `${PREFIXO_LOJA}${caminho}`;
     resposta = NextResponse.rewrite(interna);
   }
-  if (navegacao) aplicarRastreamento(request, resposta);
+  // Também logo depois da escolha no aviso de cookies: os cookies de origem são regravados já com a decisão.
+  if (navegacao || caminho === "/api/consentimento") aplicarRastreamento(request, resposta);
   return comCabecalhos(resposta);
 }

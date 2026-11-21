@@ -15,7 +15,8 @@ import { type LinhaPedido, montarMensagemPedido } from '../../loja/lib/checkout/
 import { gerarNumeroPedido } from '../../loja/lib/pedidos/historico.ts';
 import { campanhasParaPedido, conferirLimitesCupom, registrarUsoCupom } from './gestao/cupons.ts';
 import { marcarCarrinhoConvertido } from './gestao/carrinhos.ts';
-import { leadsDasClientes, registrarPedidoNoLead, sincronizarContaNoLead, vincularLeadDaCliente } from './gestao/leads.ts';
+import { leadsDasClientes, registrarOrigemNoLead, registrarPedidoNoLead, sincronizarContaNoLead, vincularLeadDaCliente } from './gestao/leads.ts';
+import type { OrigemLead } from '../../loja/lib/rastreamento/origem.ts';
 import type { LeadVinculado } from './gestao/tipos.ts';
 
 // Contas de CLIENTE da loja (www.), separadas das contas da EQUIPE do ERP (erp_auth.users):
@@ -146,7 +147,7 @@ export async function encerrarSessao(token: string | undefined, agora = Date.now
  * Cadastro rápido (nome, WhatsApp, e-mail, senha e aceite dos termos). Cria a conta, a sessão e o
  * cupom de 5% OFF na primeira compra (BEMVINDA-XXXX, uso único, ligado à conta).
  */
-export async function cadastrarCliente(campos: Record<string, unknown>, agora = Date.now()): Promise<RespostaConta & { token: string }> {
+export async function cadastrarCliente(campos: Record<string, unknown>, agora = Date.now(), origem?: OrigemLead | null): Promise<RespostaConta & { token: string }> {
   const validacao = validarCadastro(campos);
   if (!validacao.ok) throw new ErroConta(400, 'Confira os campos destacados.', 'INVALID_INPUT', validacao.erros);
   const dados = validacao.dados;
@@ -169,7 +170,8 @@ export async function cadastrarCliente(campos: Record<string, unknown>, agora = 
   });
   // CRM: liga a conta a um lead (existente pelo e-mail/WhatsApp ou novo, origem "Loja online"). Em segundo
   // plano para a cliente: se falhar, a conta já existe e o vínculo é refeito no primeiro pedido.
-  await emSegundoPlano('lead do cadastro', () => vincularLeadDaCliente({ id, nome: dados.nome, email: dados.email, whatsapp: dados.whatsapp }, agora));
+  // A origem do visitante (campanha, anúncio, busca, indicação) entra na aba Campanha da ficha.
+  await emSegundoPlano('lead do cadastro', async () => { const leadId = await vincularLeadDaCliente({ id, nome: dados.nome, email: dados.email, whatsapp: dados.whatsapp }, agora); await registrarOrigemNoLead(leadId, origem); });
   return { ...(await dadosDaConta(id)), token };
 }
 
@@ -323,7 +325,7 @@ function pedidoDe(linha: Linha): PedidoLoja {
 }
 
 export type EntradaPedido = { itens?: unknown; cupom?: unknown; local?: unknown; retirar?: unknown; observacoes?: unknown };
-export type OpcoesPedido = { catalogo: Map<string, ProdutoCarrinho>; agora?: number };
+export type OpcoesPedido = { catalogo: Map<string, ProdutoCarrinho>; agora?: number; /** De onde a cliente veio (cookie de atribuição da loja). */ origem?: OrigemLead | null };
 const reaisCurto = (centavos: number) => `R$ ${(centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
@@ -432,7 +434,7 @@ export async function criarPedido(clienteId: string, entrada: EntradaPedido, opc
   // Depois do pedido gravado: o carrinho sincronizado vira "convertido" e o lead do CRM ganha a nota.
   const { pedido, conta } = resultado;
   await emSegundoPlano('carrinho convertido', () => marcarCarrinhoConvertido(clienteId, pedido.numero, agora));
-  await emSegundoPlano('nota no lead', () => registrarPedidoNoLead({ id: clienteId, nome: conta.nome, email: conta.email, whatsapp: conta.whatsapp }, pedido, { bebeNome: conta.perfil.bebeNome, bebeData: conta.perfil.bebeData, cidade: conta.perfil.cidade, uf: conta.perfil.uf }));
+  await emSegundoPlano('nota no lead', () => registrarPedidoNoLead({ id: clienteId, nome: conta.nome, email: conta.email, whatsapp: conta.whatsapp }, pedido, { bebeNome: conta.perfil.bebeNome, bebeData: conta.perfil.bebeData, cidade: conta.perfil.cidade, uf: conta.perfil.uf }, opcoes.origem));
   return { pedido };
 }
 

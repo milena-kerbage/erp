@@ -1,5 +1,6 @@
 "use client";
 
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import Link from "next/link";
 import { createContext, type ReactNode, type RefObject, useContext, useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
@@ -73,7 +74,7 @@ function useEscolha(): Escolha {
 }
 
 const ROTULO_PIX = `${DESCONTO_PIX_PERCENTUAL}% OFF no Pix`;
-const linkWhatsapp = (texto: string) => `https://wa.me/${EMPRESA.whatsapp.numero}?text=${encodeURIComponent(texto)}`;
+const linkWhatsapp = linkWhatsAppAtelie;
 
 // Estado da escolha compartilhado pelo painel e pela pílula fixa (como o CompraProvider da página de
 // produto): pacote (também na URL, ?pacote=), opcionais e a confirmação "Adicionado ao seu enxoval".

@@ -797,6 +797,11 @@ export function CampaignTab({
   return (
     <>
       <DataGroup title="Origem">
+        {campaign.channel && (
+          <DataItem label="Veio por" icon={CursorClickIcon} copy={campaign.channel}>
+            <strong>{campaign.channel}</strong>
+          </DataItem>
+        )}
         <DataItem label="Canal" icon={SignpostIcon}>
           <ChoiceField
             label="Canal"
@@ -864,6 +869,28 @@ export function CampaignTab({
           />
         </DataItem>
       </DataGroup>
+
+      {/* Preenchido sozinho pelo rastreamento da loja e do WhatsApp: a visita mais recente que virou cadastro, pedido ou conversa. */}
+      {(campaign.lastChannel || campaign.lastAt || campaign.touches) && (
+        <DataGroup title="Último toque antes de converter">
+          {campaign.lastChannel && <DataItem label="Veio por" icon={CursorClickIcon} copy={campaign.lastChannel}>{campaign.lastChannel}</DataItem>}
+          {campaign.lastCampaign && <DataItem label="Campanha" icon={MegaphoneSimpleIcon} copy={campaign.lastCampaign}><Mono>{campaign.lastCampaign}</Mono></DataItem>}
+          {(campaign.lastSource || campaign.lastMedium) && <DataItem label="Origem / meio" icon={HashIcon}><Mono>{[campaign.lastSource, campaign.lastMedium].filter(Boolean).join(" / ")}</Mono></DataItem>}
+          {campaign.lastLandingPage && <DataItem label="Entrou por" icon={BrowserIcon} copy={campaign.lastLandingPage}>{campaign.lastLandingPage.replace(/^https?:\/\//, "")}</DataItem>}
+          {campaign.lastAt && <DataItem label="Quando" icon={CursorClickIcon}>{formatDateTime(campaign.lastAt)}</DataItem>}
+          {campaign.touches && <DataItem label="Visitas com origem identificada" icon={HashIcon}>{campaign.touches}</DataItem>}
+        </DataGroup>
+      )}
+
+      {/* IDs de clique: servem para enviar a venda de volta ao Google Ads e à Meta (conversão offline). */}
+      {(campaign.gclid || campaign.fbclid || campaign.clickId || campaign.adId) && (
+        <DataGroup title="Identificadores do anúncio">
+          {campaign.gclid && <DataItem label="Google (gclid)" icon={HashIcon} copy={campaign.gclid}><Mono>{campaign.gclid.length > 28 ? `${campaign.gclid.slice(0, 28)}…` : campaign.gclid}</Mono></DataItem>}
+          {campaign.fbclid && <DataItem label="Meta (fbclid)" icon={HashIcon} copy={campaign.fbclid}><Mono>{campaign.fbclid.length > 28 ? `${campaign.fbclid.slice(0, 28)}…` : campaign.fbclid}</Mono></DataItem>}
+          {campaign.adId && <DataItem label="ID do anúncio" icon={HashIcon} copy={campaign.adId}><Mono>{campaign.adId}</Mono></DataItem>}
+          {campaign.clickId && <DataItem label="Outros" icon={HashIcon} copy={campaign.clickId}><Mono>{campaign.clickId.length > 40 ? `${campaign.clickId.slice(0, 40)}…` : campaign.clickId}</Mono></DataItem>}
+        </DataGroup>
+      )}
     </>
   );
 }

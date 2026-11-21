@@ -1,6 +1,7 @@
 import { addNote, createLead, getLead, updateLead } from '../../erp/core.ts';
 import type { Actor } from '../../erp/access.ts';
 import type { LeadVinculado } from './tipos.ts';
+import { resumoDaOrigem, type OrigemLead } from '../../../loja/lib/rastreamento/origem.ts';
 import { escaparLike, gestaoDb, json, type Linha, texto } from './esquema.ts';
 
 // Cliente da loja → lead do CRM (erp_core.leads). No cadastro da conta: liga a um lead que já existe com o
@@ -63,6 +64,31 @@ export async function completarLeadComConta(leadId: string, dados: DadosDaConta)
   return true;
 }
 
+// Campos do PRIMEIRO toque (o que trouxe o lead): gravados uma vez e nunca trocados, nem o que a equipe digitou.
+const PRIMEIRO_TOQUE = ['channel', 'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm', 'utmId', 'landingPage', 'referrer', 'ad', 'adId', 'device', 'firstVisitAt'] as const;
+// Campos do ÚLTIMO toque e os IDs de clique: acompanham a visita mais recente que converteu.
+const ULTIMO_TOQUE = ['lastChannel', 'lastSource', 'lastMedium', 'lastCampaign', 'lastLandingPage', 'lastAt', 'touches', 'gclid', 'fbclid', 'clickId'] as const;
+
+/**
+ * Rastreamento na ficha do lead (aba Campanha): de onde a pessoa veio. O primeiro toque entra só se a ficha ainda
+ * não tem origem; o último toque e os IDs de clique são atualizados a cada conversão (cadastro, pedido, conversa).
+ * Devolve true quando gravou algo.
+ */
+export async function registrarOrigemNoLead(leadId: string, origem: OrigemLead | null | undefined): Promise<boolean> {
+  if (!origem || !Object.keys(origem).length) return false;
+  const { lead, details } = await getLead(leadId);
+  const atual = (details.campaign ?? {}) as Record<string, string | undefined>;
+  const nova: Record<string, string | undefined> = { ...atual };
+  const semPrimeiro = !PRIMEIRO_TOQUE.some((campo) => atual[campo]);
+  if (semPrimeiro) for (const campo of PRIMEIRO_TOQUE) if (origem[campo]) nova[campo] = origem[campo];
+  // Mesma visita do primeiro toque: não há "último" diferente; a origem atual vira o último só quando já havia outra.
+  const ultimo: OrigemLead = semPrimeiro ? origem : { ...origem, lastChannel: origem.lastChannel ?? origem.channel, lastSource: origem.lastSource ?? origem.utmSource, lastMedium: origem.lastMedium ?? origem.utmMedium, lastCampaign: origem.lastCampaign ?? origem.utmCampaign, lastLandingPage: origem.lastLandingPage ?? origem.landingPage, lastAt: origem.lastAt ?? new Date().toISOString() };
+  for (const campo of ULTIMO_TOQUE) if (ultimo[campo]) nova[campo] = ultimo[campo];
+  if (JSON.stringify(nova) === JSON.stringify(atual)) return false;
+  await updateLead(leadId, { revision: lead.revision, details: { campaign: nova } }, ATOR_LOJA);
+  return true;
+}
+
 /** Conta da loja atualizada (Minha conta): leva o bebê e a cidade para o lead ligado. */
 export async function sincronizarContaNoLead(cliente: ClienteLead, dados: DadosDaConta) {
   const leadId = await vincularLeadDaCliente(cliente);
@@ -71,11 +97,12 @@ export async function sincronizarContaNoLead(cliente: ClienteLead, dados: DadosD
 }
 
 /** Nota no lead com o pedido feito na loja (o "atividade" do CRM). */
-export async function registrarPedidoNoLead(cliente: ClienteLead, pedido: { numero: string; quantidade: number; totalCentavos: number; itens: Array<{ nome: string; quantidade: number }>; cupom: { codigo: string } | null }, dados: DadosDaConta = {}) {
+export async function registrarPedidoNoLead(cliente: ClienteLead, pedido: { numero: string; quantidade: number; totalCentavos: number; itens: Array<{ nome: string; quantidade: number }>; cupom: { codigo: string } | null }, dados: DadosDaConta = {}, origem?: OrigemLead | null) {
   const leadId = await vincularLeadDaCliente(cliente);
   await completarLeadComConta(leadId, dados).catch((erro) => console.error('Lead da loja: não foi possível completar a ficha.', erro));
+  await registrarOrigemNoLead(leadId, origem).catch((erro) => console.error('Lead da loja: não foi possível gravar a origem.', erro));
   const pecas = pedido.itens.map((item) => `${item.quantidade}× ${item.nome}`).join('; ');
-  const texto = `Pedido ${pedido.numero} feito na loja online e enviado pelo WhatsApp: ${pedido.quantidade} ${pedido.quantidade === 1 ? 'peça' : 'peças'}, a partir de ${reais(pedido.totalCentavos)}${pedido.cupom ? ` (cupom ${pedido.cupom.codigo})` : ''}. ${pecas}`.slice(0, 10_000);
+  const texto = `Pedido ${pedido.numero} feito na loja online e enviado pelo WhatsApp: ${pedido.quantidade} ${pedido.quantidade === 1 ? 'peça' : 'peças'}, a partir de ${reais(pedido.totalCentavos)}${pedido.cupom ? ` (cupom ${pedido.cupom.codigo})` : ''}. ${pecas}${origem ? `\nOrigem: ${resumoDaOrigem(origem)}.` : ''}`.slice(0, 10_000);
   await addNote(leadId, { text: texto }, ATOR_LOJA);
   return leadId;
 }

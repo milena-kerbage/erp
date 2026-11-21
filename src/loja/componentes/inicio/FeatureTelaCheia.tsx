@@ -27,16 +27,22 @@ export function FeatureTelaCheia({ feature }: { feature: Feature }) {
           {feature.titulo}
         </h2>
         <div className={cx(css({ display: "flex", flexWrap: "wrap", gap: "4" }), feature.centro && css({ justifyContent: "center" }))}>
-          {feature.acoes.map((acao) => (
+          {feature.acoes.map((acao) =>
+            // WhatsApp e links de fora: <a> comum (o <Link> faria prefetch de /ir/whatsapp, que gera o código de origem).
+            acao.externo ? (
+              <a key={acao.href} href={acao.href} className={botaoTerciario} target="_blank" rel="noopener nofollow">
+                {acao.rotulo}
+              </a>
+            ) : (
             <Link
               key={acao.href}
               href={acao.href}
               className={botaoTerciario}
-              {...(acao.externo ? { target: "_blank", rel: "noopener" } : {})}
             >
               {acao.rotulo}
             </Link>
-          ))}
+            ),
+          )}
         </div>
       </div>
       <div className={controles}>

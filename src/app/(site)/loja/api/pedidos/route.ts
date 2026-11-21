@@ -3,6 +3,8 @@ import { catalogoDaSacola } from "@/lib/loja/catalogo";
 import { linkWhatsApp } from "@/loja/lib/checkout/pedido";
 import { chaveIp, conferirOrigem, erroDaApi, exigirCliente, exigirGravacao, lerJson, limitar, SEM_CACHE } from "@/loja/lib/contas/servidor";
 import { EMPRESA } from "@/loja/lib/empresa";
+import { ORIGEM_LOJA } from "@/lib/hosts";
+import { origemDaRequisicao } from "@/loja/lib/rastreamento/origem";
 
 // POST /api/pedidos {itens, cupom?, local?, retirar?, observacoes?}: cria o pedido da cliente logada.
 // Os itens chegam como na sacola (produto, opção e quantidade, sem preço); os valores "a partir de" são
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
     const corpo = await lerJson(request, 64 * 1024);
     // Preços, opções e acréscimos do catálogo do servidor (cadastro do ERP ou o de exemplo).
     const catalogo = new Map((await catalogoDaSacola()).map((produto) => [produto.slug, produto]));
-    const { pedido } = await criarPedido(cliente.id, corpo, { catalogo });
+    const { pedido } = await criarPedido(cliente.id, corpo, { catalogo, origem: origemDaRequisicao(request.headers, ORIGEM_LOJA) });
     return Response.json({ ok: true, pedido, link: linkWhatsApp(EMPRESA.whatsapp.numero, pedido.mensagem) }, { status: 201, headers: SEM_CACHE });
   } catch (erro) {
     return erroDaApi(erro);

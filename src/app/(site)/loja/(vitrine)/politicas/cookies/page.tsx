@@ -27,8 +27,8 @@ type Linha = { nome: string; finalidade: string; duracao: string };
 // cookies do proxy em lib/rastreamento/nucleo.ts, mk_local em lib/localizacao/cep.ts e as chaves de
 // localStorage/sessionStorage dos componentes (carrinho/estado.ts, casas/AreaProjetos.tsx,
 // listagem/AreaListagem.tsx, localizacao/estado.ts, pedidos/historico.ts).
-// Chave nova no navegador? Acrescente aqui. [CONFIRMAR] o prazo do mk_consentimento quando o aviso de
-// cookies (banner) for implementado: hoje ele ainda não existe, então os opcionais não são gravados.
+// Chave nova no navegador? Acrescente aqui. A escolha dos opcionais é feita no aviso de cookies
+// (src/loja/componentes/cookies/AvisoCookies.tsx) e vale 180 dias.
 const NECESSARIOS: Linha[] = [
   {
     nome: COOKIE.atribuicao,
@@ -36,7 +36,7 @@ const NECESSARIOS: Linha[] = [
       "Origem da visita: parâmetros de campanha (utm), site de origem e página de entrada. Identificadores de clique de anúncios são descartados se você recusar os cookies de marketing.",
     duracao: `Até fechar o navegador; ${dias(VALIDADE.atribuicao)} se você autorizar cookies opcionais`,
   },
-  { nome: COOKIE.consentimento, finalidade: "Guarda a sua escolha sobre os cookies opcionais.", duracao: "Até você mudar a escolha" },
+  { nome: COOKIE.consentimento, finalidade: "Guarda a sua escolha sobre os cookies opcionais.", duracao: "180 dias, ou até você mudar a escolha" },
   { nome: "mk_local", finalidade: "Cidade/UF e CEP que você informou, para falar de frete e retirada.", duracao: dias(VALIDADE_LOCAL_S) },
   {
     nome: "__Host-mk_cliente",

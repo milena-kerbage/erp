@@ -81,11 +81,18 @@ export function Hero({ slides }: { slides: Slide[] }) {
                 <p className={cx(subtitulo, entradaSubtitulo, css({ mt: "3", maxW: "[600px]", color: "superficie" }))}>{slide.subtitulo}</p>
                 <div className={recorteAcoes}>
                   <div className={acoes}>
-                    {slide.acoes.map((acao) => (
-                      <Link key={acao.href} href={acao.href} className={botaoTerciario}>
-                        {acao.rotulo}
-                      </Link>
-                    ))}
+                    {slide.acoes.map((acao) =>
+                      // WhatsApp e links de fora: <a> comum (o <Link> faria prefetch de /ir/whatsapp, que gera o código de origem).
+                      "externo" in acao && acao.externo ? (
+                        <a key={acao.href} href={acao.href} className={botaoTerciario} target="_blank" rel="noopener nofollow">
+                          {acao.rotulo}
+                        </a>
+                      ) : (
+                        <Link key={acao.href} href={acao.href} className={botaoTerciario}>
+                          {acao.rotulo}
+                        </Link>
+                      ),
+                    )}
                   </div>
                 </div>
               </div>

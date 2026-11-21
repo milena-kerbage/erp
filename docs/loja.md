@@ -355,3 +355,30 @@ Os testes ficam em `tests/loja/` e cobrem o motor de URLs, o carrinho (com os qu
 - **Atendimento:** confirmar o horário da vendedora (`EMPRESA.horarioAtendimento`, `[CONFIRMAR]`).
 - **Políticas e ajuda:** as páginas da loja ficam em `/politicas/*` e `/ajuda/*` (conteúdo da ajuda e busca em `src/loja/lib/ajuda/conteudo.ts`). Os pontos a validar com o ateliê e o jurídico estão marcados com `[CONFIRMAR]` nos comentários dessas páginas.
 - **Referências antigas:** os comentários que citam guias como `seo.md §3.5` ou `referencia.md` se referem à documentação da loja original. Eles ficam como contexto e não existem neste repositório.
+
+## Google Merchant Center
+
+**Feed de produtos:** `https://www.ateliemilenakerbage.com.br/feeds/google-merchant.xml` (RSS 2.0 com o namespace `g:`; código em `src/loja/lib/seo/merchant.ts`, rota em `src/app/(site)/loja/feeds/google-merchant.xml/route.ts`, testes em `tests/loja/merchant.test.mjs`). Sai um item por produto ativo do catálogo real, com foto e preço; produto sem foto ou "Sob consulta" (R$ 0,00) fica de fora, e com o catálogo de exemplo o feed sai vazio. A CDN guarda por 1 h.
+
+- Campos: `id` e `mpn` (código do ateliê), `title`, `description`, `link`, `image_link` + até 10 `additional_image_link`, `availability` (`in_stock` para pronta entrega; `backorder` com `availability_date` = hoje + o prazo máximo de produção para sob encomenda), `price` em BRL (com preço "de": `price` cheio e `sale_price` atual), `brand`, `condition` new, `identifier_exists` no (não há GTIN), `product_type`, `gender`, `age_group` newborn, `color`, `material` e `item_group_id` (a mesma peça em outras cores).
+- Fora do feed, de propósito: `google_product_category` (o ID da taxonomia do Google ainda não foi escolhido; sem ele o Google classifica sozinho) e `shipping` (o frete é configurado na conta do Merchant Center).
+- A página de produto publica os mesmos dados em JSON-LD (`src/loja/lib/seo/produto.ts`): preço, disponibilidade, cor, material e grupo vêm da mesma fonte do feed, porque o Google reprova divergência entre feed, página e dados estruturados. A política de devolução (7 dias, art. 49 do CDC) está no `Organization` (`src/loja/lib/seo/organizacao.ts`).
+
+**Como cadastrar (sem programar):** no Merchant Center, verificar e reivindicar o site `www.ateliemilenakerbage.com.br`; em Produtos › Fontes de dados › Adicionar fonte de produtos, escolher "Adicionar produtos de um arquivo" com busca programada, colar a URL do feed, país Brasil, idioma português e frequência diária. Configurar o frete e a política de devolução na conta.
+
+**Merchant API (opcional):** enviar os produtos por API em vez do arquivo exigiria conta no Merchant Center, um projeto no Google Cloud com a Merchant API ativada, o registro de desenvolvedor que liga os dois, e autenticação OAuth 2.0 ou conta de serviço; os produtos entram pelo recurso `accounts.productInputs` (sub-API `products`). O arquivo por URL agendada continua suportado e é o caminho usado aqui: nenhuma credencial fica no sistema.
+
+**AVISO de política do Google:** o Merchant Center exige que o produto possa ser comprado online pelo preço enviado no feed (carrinho e finalização no site). A loja mostra valores "a partir de" e fecha o pedido pelo WhatsApp, sem checkout. Enquanto for assim há risco de reprovação dos itens (ou de suspensão da conta) nas listagens gratuitas e no Shopping. O feed e os dados estruturados já estão no formato certo; a aprovação depende dessa decisão comercial.
+
+**Assistentes de IA:** `/llms.txt` resume a loja (quem é, como comprar, categorias, ajuda e políticas) para os assistentes que procuram esse arquivo. O Google não o usa: as respostas de IA dele leem as páginas indexadas e os dados estruturados.
+
+## Rastreamento de origem (campanhas → lead no ERP)
+
+De onde cada pessoa veio fica na aba **Campanha** da oportunidade, preenchida sozinha:
+
+1. **Visita ao site.** O proxy da loja (`src/loja/proxy.ts` + `src/loja/lib/rastreamento/nucleo.ts`) grava o cookie `mk_atrib` com o primeiro e o último toque: `utm_*`, IDs de clique (`gclid`, `fbclid`, `msclkid`, `ttclid`…), site que indicou e página de entrada. Sem escolha no aviso de cookies, vale só na visita; com **Aceitar**, 90 dias; com **Só os necessários**, os IDs de clique são descartados (`src/loja/componentes/cookies/AvisoCookies.tsx`).
+2. **Cadastro e pedido.** `POST /api/conta/cadastrar` e `POST /api/pedidos` leem o cookie (`origemDaRequisicao`, em `src/loja/lib/rastreamento/origem.ts`) e gravam no lead (`registrarOrigemNoLead`): o primeiro toque entra uma vez e nunca é trocado; o último toque e os IDs de clique acompanham cada conversão. A nota do pedido no lead leva a linha "Origem: …".
+3. **Botão de WhatsApp do site (sem pedido).** Todo link usa `linkWhatsAppAtelie()` → `/ir/whatsapp`, que guarda a origem e acrescenta `(ref. CÓDIGO)` à mensagem. Quando ela chega (`receiveWebhook`), o código devolve a origem: vira a pílula "Veio do site: …" na conversa e vai para o lead (cria um em Vendas › Novo lead se não houver).
+4. **Anúncio Click to WhatsApp (Meta).** A primeira mensagem traz `referral` (título, link e ID do anúncio, `ctwa_clid`): mesma pílula e mesma ficha, com o canal "Meta Ads (Click to WhatsApp)".
+
+Para campanhas, use sempre `utm_source`, `utm_medium` e `utm_campaign` nos links (ex.: `?utm_source=instagram&utm_medium=paid_social&utm_campaign=natal-2026`). Não há Google Analytics, Pixel da Meta nem API de Conversões instalados: precisam dos IDs das contas; os `gclid`/`fbclid` guardados na ficha já servem para enviar conversões offline depois.

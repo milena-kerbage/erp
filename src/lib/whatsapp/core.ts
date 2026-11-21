@@ -1,4 +1,6 @@
 import { databaseFor, type Database } from '../database.ts';
+import { eventoDaOrigem, lerReferencia, limparReferencias, origemDoAnuncio, REF_NA_MENSAGEM, type OrigemDetectada } from './origem.ts';
+import type { OrigemLead } from '../../loja/lib/rastreamento/origem.ts';
 import { databaseLimited } from '../rate-limit.ts';
 import { effectiveConfiguration, environmentConfiguration, integrationSettingsSchema } from './config.ts';
 export { effectiveConfiguration } from './config.ts';
@@ -120,6 +122,7 @@ export async function pruneRetention(now = Date.now()) {
     await database.prepare('DELETE FROM deletion_audit WHERE created < ?').run(cutoff);
     await database.prepare('DELETE FROM integration_audit WHERE created < ?').run(cutoff);
     await database.prepare('DELETE FROM contacts WHERE updated < ? AND NOT EXISTS(SELECT 1 FROM messages WHERE messages.phone = contacts.phone)').run(cutoff);
+    await limparReferencias(database, now);
     await database.prepare('INSERT INTO metadata VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('lastRetentionAt', new Date(now).toISOString());
     return { messages: Number(messages), retentionDays: days };
   });
@@ -424,7 +427,7 @@ async function reconcileStatus(id: string) {
   const row = await db().prepare('SELECT * FROM pending_statuses WHERE message_id = ?').get(id) as {status: string; rank: number; error: string | null} | undefined;
   if (row) await db().prepare('UPDATE messages SET status = ?, status_rank = ?, error = ? WHERE id = ? AND status_rank < ?').run(row.status, row.rank, row.error, id, row.rank);
 }
-export async function receiveWebhook(payload: unknown, now = Date.now(), acceptedMessageIds?: string[]) {
+export async function receiveWebhook(payload: unknown, now = Date.now(), acceptedMessageIds?: string[], origens?: OrigemDetectada[]) {
   const root = object(payload), config = await effectiveConfiguration();
   if (root.object !== 'whatsapp_business_account' || !Array.isArray(root.entry)) throw new WhatsAppError(400, 'Evento WhatsApp inválido.', 'INVALID_WEBHOOK');
   if (!/^[0-9]{5,30}$/.test(config.phoneNumberId) || !/^[0-9]{5,30}$/.test(config.businessAccountId)) throw new WhatsAppError(503, 'Configure os identificadores WhatsApp no servidor.', 'NOT_CONFIGURED');
@@ -529,7 +532,19 @@ export async function receiveWebhook(payload: unknown, now = Date.now(), accepte
           const created = Math.min(timestamp, now);
           await ensureContact(phone, names.get(phone), created);
           const midia = mediaFields(media);
-          await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, created, media_id, mime_type, filename, voice, reply_to) VALUES (?, ?, 'inbound', ?, ?, 'received', ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, text, created, midia.mediaId, midia.mime, midia.filename, midia.voice, string(object(incoming.context).id, 300) || null);
+          // De onde veio a conversa: anúncio Click to WhatsApp (`referral`) ou botão do site ("(ref. CÓDIGO)" no fim da
+          // mensagem pronta, que sai do texto guardado). Vira uma pílula na conversa e segue para a ficha do lead no CRM.
+          let corpo = text, origemDetectada: OrigemLead | null = origemDoAnuncio(object(incoming.referral), created), tipoOrigem: OrigemDetectada['tipo'] = 'anuncio';
+          const ref = type === 'text' ? REF_NA_MENSAGEM.exec(text) : null;
+          if (ref) {
+            const guardada = await lerReferencia(database, ref[1], now);
+            if (guardada) { corpo = text.replace(REF_NA_MENSAGEM, '').trimEnd() || text; if (!origemDetectada) { origemDetectada = guardada; tipoOrigem = 'site'; } }
+          }
+          const inserida = await database.prepare(`INSERT INTO messages (id, phone, direction, type, text, status, created, media_id, mime_type, filename, voice, reply_to) VALUES (?, ?, 'inbound', ?, ?, 'received', ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).run(id, phone, type, corpo, created, midia.mediaId, midia.mime, midia.filename, midia.voice, string(object(incoming.context).id, 300) || null);
+          if (origemDetectada && Number(inserida.changes)) {
+            await registrarEvento(database, phone, eventoDaOrigem(tipoOrigem, origemDetectada), created - 1);
+            origens?.push({ phone, nome: names.get(phone) || '', tipo: tipoOrigem, origem: origemDetectada });
+          }
           // Mensagem nova reabre a conversa resolvida (ela volta para a lista, como na Le Ange).
           await database.prepare("UPDATE contacts SET status = 'aberta' WHERE phone = ? AND status = 'resolvida'").run(phone);
           await database.prepare('UPDATE contacts SET last_inbound = greatest(COALESCE(last_inbound, 0), ?), updated = greatest(updated, ?) WHERE phone = ?').run(created, created, phone);

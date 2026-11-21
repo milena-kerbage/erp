@@ -1,3 +1,4 @@
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import Image from "next/image";
 import Link from "next/link";
 import { css } from "styled-system/css";
@@ -9,7 +10,7 @@ import { VoltarAoTopo } from "./VoltarAoTopo";
 
 type LinkRodape = { rotulo: string; href: string };
 
-const WHATSAPP = `https://wa.me/${EMPRESA.whatsapp.numero}?text=${encodeURIComponent("Oi! Vim pela loja do ateliê.")}`;
+const WHATSAPP = linkWhatsAppAtelie();
 
 // Atalhos em duas colunas (só páginas que existem).
 const ATALHOS: LinkRodape[] = [

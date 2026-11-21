@@ -9,7 +9,9 @@ import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { blocosDaCategoria, LINHA_BLOCOS_CATEGORIA } from "@/loja/lib/catalogo/edicoes";
 import { filtrar, noCaminho, paraListagem } from "@/loja/lib/catalogo/listagem";
 import { comVersao, compartilhamento, robotsDoCatalogo, SITE } from "@/loja/lib/seo/compartilhar";
-import { REGRAS_SEO } from "@/loja/lib/seo/config";
+import { JsonLd } from "@/loja/componentes/seo/JsonLd";
+import { ORIGEM, REGRAS_SEO } from "@/loja/lib/seo/config";
+import { schemaTrilha } from "@/loja/lib/seo/institucional";
 import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 
 // Listagem por categoria no modelo da Lululemon (shop.lululemon.com/c/women-puffer-jackets, nov/2026).
@@ -81,8 +83,23 @@ export default async function PaginaCategoria({ params }: Props) {
   const itensBase = noCaminho(catalogo.produtos, `/${categoria}`).map(paraListagem);
   // Categorias principais com bloco editorial configurado (edicoes.ts), depois de 2 linhas de cards.
   const blocos = blocosDaCategoria(categoria);
+  // Dados estruturados da listagem: a trilha e as primeiras peças, na ordem em que aparecem (ItemList).
+  const listados = filtrar(itensBase, semQuery.listagem.filtros).slice(0, 24);
   return (
     <>
+      <JsonLd dados={schemaTrilha([...dados.trilha, { rotulo: dados.titulo, href: dados.canonical }])} />
+      {listados.length > 0 && (
+        <JsonLd
+          dados={{
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: dados.titulo,
+            url: `${ORIGEM}${dados.canonical}`,
+            numberOfItems: dados.total,
+            itemListElement: listados.map((produto, indice) => ({ "@type": "ListItem", position: indice + 1, url: `${ORIGEM}/produto/${produto.slug}`, name: produto.nome })),
+          }}
+        />
+      )}
       <CabecalhoListagem trilha={dados.trilha} titulo={dados.titulo} total={dados.total} atalhos={dados.atalhos} />
       {/* Fallback = a 1ª página sem filtros da query, já no HTML estático (Google e sem JavaScript). */}
       <Suspense

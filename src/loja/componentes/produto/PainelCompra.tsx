@@ -1,5 +1,6 @@
 "use client";
 
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import Link from "next/link";
 import { createContext, type ReactNode, type RefObject, useContext, useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
@@ -146,7 +147,7 @@ function precoComEscolha(dados: { preco: string; variacao?: { opcoes: Array<{ ro
   return ((Math.round(Number(dados.preco) * 100) + acrescimo) / 100).toFixed(2);
 }
 
-const linkWhatsapp = (texto: string) => `https://wa.me/${EMPRESA.whatsapp.numero}?text=${encodeURIComponent(texto)}`;
+const linkWhatsapp = linkWhatsAppAtelie;
 
 // Painel de compra (lululemon-pdp.md §1.3 e §6): blocos com 32 de espaço (24 no celular), na ordem
 // trilha, título + favorito, preço (com o selo do Pix), cor, tamanho, divisória, bordado, divisória,

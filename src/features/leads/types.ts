@@ -51,6 +51,20 @@ export type Campaign = {
   ad?: string;
   device?: string;
   firstVisitAt?: string;
+  /** Preenchidos pelo rastreamento da loja e do WhatsApp (src/loja/lib/rastreamento/origem.ts). */
+  channel?: string;
+  utmId?: string;
+  adId?: string;
+  lastChannel?: string;
+  lastSource?: string;
+  lastMedium?: string;
+  lastCampaign?: string;
+  lastLandingPage?: string;
+  lastAt?: string;
+  touches?: string;
+  gclid?: string;
+  fbclid?: string;
+  clickId?: string;
 };
 
 /** Andamento do atendimento da conversa. */

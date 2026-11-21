@@ -264,8 +264,9 @@ function validateDetails(input: Json, current: LeadDetails): LeadDetails {
       if (!Array.isArray(value) || value.length > 20) throw new ERPError(400,'Informe até 20 links.','INVALID_INPUT');
       result.links = value.map(item => { const link=jsonObject(item); whitelist(link,['label','url']); return {label:text(link.label,'Nome do link',100,true),url:url(link.url,'Link')}; });
     } else if (key === 'campaign') {
-      const campaign = jsonObject(value); whitelist(campaign,['utmSource','utmMedium','utmCampaign','utmContent','utmTerm','landingPage','referrer','ad','device','firstVisitAt']);
-      result.campaign = Object.fromEntries(Object.entries(campaign).map(([field,content]) => [field,['landingPage','referrer'].includes(field) ? url(content,field) : field === 'firstVisitAt' ? date(content,field,false,true) : text(content,field,300)]));
+      const campaign = jsonObject(value); whitelist(campaign,['utmSource','utmMedium','utmCampaign','utmContent','utmTerm','utmId','landingPage','referrer','ad','adId','device','firstVisitAt','channel','lastChannel','lastSource','lastMedium','lastCampaign','lastLandingPage','lastAt','touches','gclid','fbclid','clickId']);
+      // Campo vazio sai da ficha; URLs e datas conferidas; IDs de clique dos anúncios podem ser longos.
+      result.campaign = Object.fromEntries(Object.entries(campaign).filter(([,content]) => content !== undefined && content !== null && content !== '').map(([field,content]) => [field,['landingPage','referrer','lastLandingPage'].includes(field) ? url(content,field) : ['firstVisitAt','lastAt'].includes(field) ? date(content,field,false,true) : text(content,field,['gclid','fbclid','clickId'].includes(field) ? 600 : 300)]));
     } else Object.assign(result,{[key]:text(value,key,key === 'source' ? 300 : 150)});
   }
   if (result.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result.email)) throw new ERPError(400,'E-mail inválido.','INVALID_EMAIL');

@@ -3,6 +3,7 @@
 // (erp_core.records, recurso "catalogo"). Quando vier, este arquivo passa a ser montado de lá.
 // Caminhos seguem o motor de URLs (src/lib/seo/urls.ts): /<categoria>/<subcategoria>[/<faceta>].
 
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import { EMPRESA, REDES_SOCIAIS } from "@/loja/lib/empresa";
 
 export type LinkNavegacao = { rotulo: string; href: string };
@@ -167,7 +168,7 @@ export const LINKS_UTILITARIOS = {
   edicao: { rotulo: "Edição do mês", href: "/edicao-do-mes" }, // coleção editorial do mês
   pedido: { rotulo: "Meus pedidos", href: "/conta/pedidos" },
   ajuda: { rotulo: "Ajuda", href: "/ajuda" },
-  franquia: { rotulo: "Fale no WhatsApp", href: `https://wa.me/${EMPRESA.whatsapp.numero}`, externo: true },
+  franquia: { rotulo: "Fale no WhatsApp", href: linkWhatsAppAtelie(), externo: true },
   instagram: { rotulo: "Instagram", href: REDES_SOCIAIS.instagram, externo: true },
   // "Minha conta": login por e-mail e senha (contas de cliente), pedidos, cupom de primeira compra, favoritos e dados.
   conta: { rotulo: "Minha conta", href: "/conta" },

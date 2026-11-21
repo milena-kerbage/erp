@@ -1,5 +1,6 @@
 import {
   DotsThreeCircleIcon,
+  FacebookLogoIcon,
   GlobeIcon,
   GoogleLogoIcon,
   HandshakeIcon,
@@ -21,6 +22,7 @@ export type ChoiceOption = {
 
 export const leadSources: ChoiceOption[] = [
   { value: "Instagram", icon: InstagramLogoIcon, tone: "rose" },
+  { value: "Facebook", icon: FacebookLogoIcon, tone: "blue" },
   { value: "Indicação", icon: HandshakeIcon, tone: "green" },
   { value: "Loja online", icon: StorefrontIcon, tone: "peach" },
   { value: "Site", icon: GlobeIcon, tone: "blue" },

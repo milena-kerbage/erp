@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SincronizarCarrinho } from "@/loja/componentes/carrinho/SincronizarCarrinho";
+import { AvisoCookies } from "@/loja/componentes/cookies/AvisoCookies";
 import { ALT_PADRAO, IMAGEM_PADRAO, SITE } from "@/loja/lib/seo/compartilhar";
 import { ORIGEM } from "@/loja/lib/seo/config";
 import { fontVariables } from "@/styles/fonts";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="search" type="application/opensearchdescription+xml" title="Ateliê Milena Kerbage" href="/opensearch.xml" />
         {children}
         <SincronizarCarrinho />
+        <AvisoCookies />
       </body>
     </html>
   );

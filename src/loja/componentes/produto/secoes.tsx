@@ -1,3 +1,4 @@
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import { css, cx } from "styled-system/css";
 import { CardProduto } from "@/loja/componentes/inicio/CardProduto";
 import { Carrossel } from "@/loja/componentes/inicio/Carrossel";
@@ -8,7 +9,7 @@ import { EMPRESA } from "@/loja/lib/empresa";
 import { revelarAoRolar } from "./movimento";
 
 // O painelComum é Client Component: aqui o link do WhatsApp é montado no servidor.
-const linkWhatsapp = (texto: string) => `https://wa.me/${EMPRESA.whatsapp.numero}?text=${encodeURIComponent(texto)}`;
+const linkWhatsapp = linkWhatsAppAtelie;
 
 // Partes de servidor da página de produto abaixo da dobra (lululemon-pdp.md §1.6 e §6), na ordem:
 // "Pensado para", "Por que você vai amar", faixa "Fale com o ateliê", hero editorial da linha e

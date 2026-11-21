@@ -256,3 +256,44 @@ test('respostas rápidas com nome; a ficha acha a oportunidade do CRM pelo telef
     assert.equal(await ficha.leadDoTelefone('5585988887777'), null, 'oportunidade arquivada não vira ficha');
   }
 });
+
+test('origem da conversa: código do botão do site e anúncio Click to WhatsApp viram evento e seguem para o CRM', async () => {
+  const { guardarReferencia, gerarCodigoRef, textoComRef, REF_NA_MENSAGEM } = await import('../src/lib/whatsapp/origem.ts');
+  const F = '5585911110061', G = '5585911110062';
+  const codigo = gerarCodigoRef();
+  assert.match(codigo, /^[2-9A-HJ-NP-Z]{6}$/);
+  assert.match(textoComRef('Oi! Vim pela loja do ateliê.', codigo), REF_NA_MENSAGEM);
+  await guardarReferencia(core.db(), codigo, { channel: 'Google Ads', utmSource: 'google', utmMedium: 'cpc', utmCampaign: 'natal', landingPage: 'https://www.ateliemilenakerbage.com.br/kit-berco', clickedPage: 'https://www.ateliemilenakerbage.com.br/produto/kit-berco-bia' });
+  const origens = [];
+  await core.receiveWebhook(mensagem(F, 'wamid.f-ref', textoComRef('Olá! Tenho uma dúvida sobre o Kit berço Bia.', codigo)), Date.now(), [], origens);
+  assert.equal(origens.length, 1);
+  assert.equal(origens[0].tipo, 'site'); assert.equal(origens[0].phone, F); assert.equal(origens[0].origem.utmCampaign, 'natal');
+  let fio = (await core.messagesFor(F, undefined, 50, 'u1')).messages;
+  assert.equal(fio.find((m) => m.id === 'wamid.f-ref').text, 'Olá! Tenho uma dúvida sobre o Kit berço Bia.', 'o código sai do texto guardado');
+  assert.ok(fio.some((m) => m.type === 'system' && /^Veio do site: Google Ads · campanha natal · entrou por \/kit-berco · chamou em \/produto\/kit-berco-bia$/.test(m.text)));
+  // Código desconhecido: a mensagem fica como chegou e nada é registrado.
+  const nada = [];
+  await core.receiveWebhook(mensagem(F, 'wamid.f-ref2', 'Oi de novo\n\n(ref. ZZZZZZ)'), Date.now(), [], nada);
+  assert.equal(nada.length, 0);
+  // Anúncio Click to WhatsApp: o `referral` da primeira mensagem.
+  const anuncio = [];
+  await core.receiveWebhook(mensagem(G, 'wamid.g-ad', 'Quero saber do enxoval', 0, { referral: { source_url: 'https://www.instagram.com/p/abc/', source_type: 'ad', source_id: '120200', headline: 'Enxoval personalizado', ctwa_clid: 'CLID123' } }), Date.now(), [], anuncio);
+  assert.equal(anuncio.length, 1);
+  assert.equal(anuncio[0].tipo, 'anuncio'); assert.equal(anuncio[0].origem.channel, 'Meta Ads (Click to WhatsApp)'); assert.equal(anuncio[0].origem.utmSource, 'instagram');
+  assert.equal(anuncio[0].origem.ad, 'Enxoval personalizado'); assert.equal(anuncio[0].origem.clickId, 'ctwa_clid=CLID123'); assert.equal(anuncio[0].origem.adId, '120200');
+  fio = (await core.messagesFor(G, undefined, 50, 'u1')).messages;
+  assert.ok(fio.some((m) => m.type === 'system' && m.text === 'Veio de um anúncio (Click to WhatsApp): "Enxoval personalizado"'));
+  // CRM: sem lead com o telefone, cria um com a origem; com lead, completa a ficha.
+  const { aplicarOrigensNoCRM } = await import('../src/lib/whatsapp/origemCrm.ts');
+  const { leadDoTelefone } = await import('../src/lib/whatsapp/ficha.ts');
+  const { getLead } = await import('../src/lib/erp/core.ts');
+  await aplicarOrigensNoCRM([...origens, ...anuncio]);
+  const doSite = await getLead((await leadDoTelefone(F)).id), doAnuncio = await getLead((await leadDoTelefone(G)).id);
+  assert.equal(doSite.details.source, 'Google'); assert.equal(doSite.details.campaign.channel, 'Google Ads'); assert.equal(doSite.details.campaign.utmCampaign, 'natal');
+  assert.equal(doSite.details.campaign.clickedPage, undefined, 'a página do clique fica só no evento da conversa');
+  assert.equal(doAnuncio.details.source, 'Instagram'); assert.equal(doAnuncio.details.campaign.ad, 'Enxoval personalizado'); assert.deepEqual(doAnuncio.lead.tags, ['Anúncio']);
+  // Uma segunda origem não troca o primeiro toque: entra como último toque.
+  await aplicarOrigensNoCRM([{ phone: F, nome: '', tipo: 'site', origem: { channel: 'Busca orgânica (google)', utmSource: 'google', utmMedium: 'organic', landingPage: 'https://www.ateliemilenakerbage.com.br/' } }]);
+  const depois = (await getLead(doSite.lead.id)).details.campaign;
+  assert.equal(depois.channel, 'Google Ads'); assert.equal(depois.lastChannel, 'Busca orgânica (google)'); assert.equal(depois.lastSource, 'google');
+});

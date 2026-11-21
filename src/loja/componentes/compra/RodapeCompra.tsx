@@ -1,3 +1,4 @@
+import { linkWhatsAppAtelie } from "@/loja/lib/whatsapp";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { css } from "styled-system/css";
@@ -6,7 +7,7 @@ import { EMPRESA } from "@/loja/lib/empresa";
 
 type LinkCompra = { rotulo: string; href: string; externo?: boolean };
 
-const WHATSAPP = `https://wa.me/${EMPRESA.whatsapp.numero}`;
+const WHATSAPP = linkWhatsAppAtelie();
 
 const COLUNAS: Array<{ titulo: string; links: LinkCompra[] }> = [
   {
