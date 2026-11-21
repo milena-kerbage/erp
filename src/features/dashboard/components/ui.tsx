@@ -19,8 +19,11 @@ export const Card = styled.section`
   gap: ${({ theme }) => theme.spacing(4)};
   min-width: 0;
   padding: ${({ theme }) => theme.spacing(5)};
+  /* Numa grade contínua (Painel), quem agrupa os cartões troca estas variáveis: sem cantos e só as linhas de
+     dentro (direita e embaixo), para os cartões se dividirem pela borda. */
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  border-radius: ${({ theme }) => theme.radii.xl};
+  border-width: var(--card-border-width, 1px);
+  border-radius: var(--card-radius, ${({ theme }) => theme.radii.xl});
   background-color: ${({ theme }) => theme.palette.neutral[0]};
 `;
 
@@ -29,15 +32,14 @@ export const CardLink = styled(Card.withComponent(Link))`
   color: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease;
+  transition: background-color 160ms ease;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.border.default};
     background-color: ${({ theme }) => theme.palette.neutral[25]};
   }
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.primary.main};
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 `;
 

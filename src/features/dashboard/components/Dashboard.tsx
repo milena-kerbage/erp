@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { downloadCsv } from "@/lib/csv";
 import type { Tone } from "@/styles/theme";
+import { transientOptions } from "@/lib/emotion/transient";
 import { staggerChildren } from "@/styles/animations";
 import {erpRequest,errorMessage} from "@/features/erp/client";
 import type {dashboardSummary} from "@/lib/erp/dashboard";
@@ -56,7 +57,7 @@ import { FunnelCard } from "./FunnelCard";
 import { BirthsCard, ChannelsCard, RevenueCard } from "./ExtraCards";
 import { MonthBars, Sparkline } from "./charts";
 import { SourcesCard } from "./SourcesCard";
-import { Card, CardLink, Delta, Eyebrow, Figure, Help, IconBadge, Note, Segments } from "./ui";
+import { Card, CardLink, Delta, Eyebrow, Figure, Help, IconBadge, Note } from "./ui";
 import { conversasHref, leadsHref } from "../links";
 
 /* ---------- Estilos ---------- */
@@ -136,14 +137,19 @@ const Banner = styled(Link)`
 `;
 
 /**
- * Conteúdo à esquerda, coluna de apoio à direita. As duas colunas têm a mesma
- * altura: a última peça de cada uma estica para fecharem juntas no fim.
+ * Conteúdo à esquerda, coluna de apoio à direita, numa grade contínua: sem espaço entre os cartões e sem cantos
+ * arredondados, eles se dividem só pela borda (a grade desenha o contorno de cima e da esquerda; cada cartão, a linha
+ * da direita e a de baixo). As duas colunas têm a mesma altura e fecham juntas no fim.
  */
 const Layout = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(17.5rem, 22vw, 21rem);
-  gap: ${({ theme }) => theme.spacing(2)};
+  gap: 0;
   align-items: stretch;
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-left: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  --card-border-width: 0 1px 1px 0;
+  --card-radius: 0;
 
   @media (max-width: 1180px) {
     grid-template-columns: minmax(0, 1fr);
@@ -154,7 +160,7 @@ const Column = styled.div`
   ${staggerChildren(8, 60)};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing(2)};
+  gap: 0;
   min-width: 0;
   min-height: 0;
 `;
@@ -244,7 +250,7 @@ const Strip = styled.dl`
 const Metrics = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: ${({ theme }) => theme.spacing(2)};
+  gap: 0;
 
   @media (max-width: 1320px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -276,9 +282,28 @@ const MetricChart = styled.div`
 `;
 
 /** Barra de progresso do indicador, no pé do cartão. */
-const MetricBar = styled.div`
+/** Barra lisa e fina: a parte preenchida na cor do indicador, sobre um trilho neutro. */
+const MetricBar = styled("div", transientOptions)<{ $parte: number; $cor: string }>`
   margin-top: auto;
-  padding-bottom: ${({ theme }) => theme.spacing(3.5)};
+  padding-bottom: ${({ theme }) => theme.spacing(4)};
+
+  span {
+    display: block;
+    height: 0.25rem;
+    border-radius: 999px;
+    background: ${({ theme }) => theme.palette.neutral[100]};
+    overflow: hidden;
+  }
+  span::after {
+    content: "";
+    display: block;
+    width: ${({ $parte }) => Math.min(100, Math.max(0, $parte))}%;
+    min-width: ${({ $parte }) => ($parte > 0 ? "0.25rem" : "0")};
+    height: 100%;
+    border-radius: inherit;
+    background: ${({ $cor }) => $cor};
+    transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 `;
 
 /** Linhas pequenas com barra (ticket por origem). */
@@ -319,7 +344,7 @@ const Bottom = styled.div`
   display: grid;
   flex: 1;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  gap: ${({ theme }) => theme.spacing(2)};
+  gap: 0;
 
   @media (max-width: 1000px) {
     grid-template-columns: minmax(0, 1fr);
@@ -431,8 +456,8 @@ function MetricCard({
           <Sparkline values={series} color={theme.tones[tone].fg} label={`${title} por dia no mês`} height={34} />
         </MetricChart>
       ) : (
-        <MetricBar>
-          <Segments ratio={ratio ?? 0} color={theme.tones[tone].fg} label={`${Math.round((ratio ?? 0) * 100)}%`} />
+        <MetricBar $parte={(ratio ?? 0) * 100} $cor={theme.mode === "dark" ? theme.tones[tone].fg : `color-mix(in srgb, ${theme.tones[tone].fg} 60%, ${theme.tones[tone].soft})`}>
+          <span role="img" aria-label={`${Math.round((ratio ?? 0) * 100)}%`} />
         </MetricBar>
       )}
     </MetricRoot>
