@@ -3,6 +3,8 @@
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
 import { ChartPieSliceIcon, DotsThreeCircleIcon } from "@phosphor-icons/react";
+import { logoDaOrigem } from "@/components/brand/LogosOrigem";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { transientOptions } from "@/lib/emotion/transient";
 import { findChoice, leadSources } from "@/features/leads/options";
 import { formatMoney, formatMoneyShort, type SourceRow } from "../metrics";
@@ -38,13 +40,36 @@ const Columns = styled.ul`
   border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   > li {
+    min-width: 0;
+  }
+
+  /* O canal inteiro reage ao mouse: leads e ticket médio aparecem na dica */
+  .canal {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: ${({ theme }) => theme.spacing(1)};
-    min-width: 0;
+    height: 100%;
     padding: ${({ theme }) => theme.spacing(4, 3)};
     text-align: center;
+    cursor: default;
+    transition: background-color 0.2s ease;
+  }
+  .canal:hover {
+    background-color: ${({ theme }) => theme.colors.interactive.hover};
+  }
+  .canal:hover .logo {
+    transform: translateY(-1px) scale(1.06);
+  }
+  .logo {
+    display: grid;
+    place-items: center;
+    height: 1.875rem;
+    margin-bottom: ${({ theme }) => theme.spacing(1.5)};
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .canal:hover .logo { transform: none; }
   }
 
   > li + li {
@@ -58,7 +83,6 @@ const Badge = styled("span", transientOptions)<{ $color: string }>`
   justify-content: center;
   width: 1.875rem;
   height: 1.875rem;
-  margin-bottom: ${({ theme }) => theme.spacing(1.5)};
   border: 1px solid ${({ $color }) => `${$color}33`};
   border-radius: ${({ theme }) => theme.radii.md};
   background-color: ${({ $color }) => `${$color}1a`};
@@ -86,11 +110,18 @@ const Value = styled.strong`
   white-space: nowrap;
 `;
 
-const Small = styled.small`
-  font-size: 0.6875rem;
-  line-height: 1.35;
-  white-space: nowrap;
-  color: ${({ theme }) => theme.colors.text.muted};
+/** Conteúdo da dica do canal: nome em cima e os números em duas colunas. */
+const Dica = styled.div`
+  display: grid;
+  gap: 6px;
+  min-width: 10.5rem;
+  padding: 2px 0;
+  text-align: left;
+
+  strong { font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; }
+  dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; margin: 0; }
+  dt { opacity: 0.72; font-weight: ${({ theme }) => theme.fontWeights.regular ?? 400}; }
+  dd { margin: 0; font-weight: ${({ theme }) => theme.fontWeights.semibold}; text-align: right; }
 `;
 
 type Part = { id: string; label: string; count: number; value: number; color: string; other: boolean };
@@ -99,7 +130,8 @@ type Part = { id: string; label: string; count: number; value: number; color: st
 
 /**
  * De onde veio o valor dos orçamentos do mês: medidor em tracinhos com o
- * total no meio e, embaixo, uma coluna por canal (parte, valor, leads e ticket).
+ * total no meio e, embaixo, uma coluna por canal com a logo dele, a parte e o valor. Leads e ticket médio aparecem
+ * na dica, ao passar o mouse.
  */
 export function SourcesCard({ rows }: { rows: SourceRow[] }) {
   const theme = useTheme();
@@ -159,20 +191,42 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
             {parts.map((part) => {
               const option = part.other ? undefined : findChoice(leadSources, part.label);
               const Icon = option?.icon ?? DotsThreeCircleIcon;
+              const logo = part.other ? null : logoDaOrigem(part.label, 26);
+              const parte = Math.round((part.value / total) * 100);
               return (
                 <li key={part.id}>
-                  <Badge $color={part.color} aria-hidden>
-                    <Icon size={15} weight="bold" />
-                  </Badge>
-                  <Name>
-                    {part.label}
-                    <strong>{Math.round((part.value / total) * 100)}%</strong>
-                  </Name>
-                  <Value>{formatMoney(part.value)}</Value>
-                  <Small>
-                    {part.count} {part.count === 1 ? "lead" : "leads"}
-                  </Small>
-                  <Small>ticket {formatMoneyShort(part.value / (part.count || 1))}</Small>
+                  <Tooltip
+                    side="top"
+                    delay={120}
+                    label={
+                      <Dica>
+                        <strong>{part.label}</strong>
+                        <dl>
+                          <dt>Leads no mês</dt>
+                          <dd>{part.count}</dd>
+                          <dt>Ticket médio</dt>
+                          <dd>{formatMoney(Math.round(part.value / (part.count || 1)))}</dd>
+                          <dt>Parte do valor</dt>
+                          <dd>{parte}%</dd>
+                        </dl>
+                      </Dica>
+                    }
+                  >
+                    <div className="canal" tabIndex={0} aria-label={`${part.label}: ${parte}% do valor, ${formatMoney(part.value)}, ${part.count} ${part.count === 1 ? "lead" : "leads"}, ticket médio ${formatMoney(Math.round(part.value / (part.count || 1)))}`}>
+                      <span className="logo" aria-hidden>
+                        {logo ?? (
+                          <Badge $color={part.color}>
+                            <Icon size={15} weight="bold" />
+                          </Badge>
+                        )}
+                      </span>
+                      <Name>
+                        {part.label}
+                        <strong>{parte}%</strong>
+                      </Name>
+                      <Value>{formatMoney(part.value)}</Value>
+                    </div>
+                  </Tooltip>
                 </li>
               );
             })}

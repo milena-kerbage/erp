@@ -3,72 +3,84 @@
 import styled from "@emotion/styled";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LockSimpleIcon } from "@phosphor-icons/react";
+import { useState, type ReactNode } from "react";
+import { CaretDownIcon, LockSimpleIcon } from "@phosphor-icons/react";
 import { Dialog } from "@/components/ui/Dialog";
 import { navigation, type NavModule } from "@/config/navigation";
 import { isPathActive } from "@/lib/navigation";
 
+type Opcao = { href: string; rotulo: string; icone?: ReactNode; ativo: boolean; pendentes?: number; bloqueado?: boolean };
+type Grupo = { id: string; titulo: string; opcoes: Opcao[]; pendentes?: number };
+
 /**
- * Menu completo num painel lateral (abre pelo ícone de menu do header): todos os módulos com as seções de cada um,
- * os canais de atendimento com as conversas não lidas, os módulos ainda em produção (com o cadeado) e as
- * configurações. Enxuto de propósito: só os nomes. Clicar em qualquer opção leva à tela e fecha o painel.
+ * Menu completo num painel que entra pela direita, no padrão da gaveta de filtros da loja: título grande, o fechar
+ * redondo e os grupos em sanfona (fechados de início; abrem ao clicar), separados por uma linha. Os grupos: Principal,
+ * Atendimento (com as conversas não lidas), cada módulo que tem seções (E-commerce, Configurações) e os módulos em
+ * produção. Clicar numa opção leva à tela e fecha o painel.
  */
 export function MenuLateral({ aberto, onClose, naoLidas }: { aberto: boolean; onClose: () => void; naoLidas: Record<string, number> }) {
   const pathname = usePathname();
-  const liberados = navigation.main.filter((item) => !("soon" in item));
-  const emProducao: readonly NavModule[] = navigation.main.filter((item) => "soon" in item);
-  const canais = liberados.filter((item) => item.href in naoLidas);
-  const principais = liberados.filter((item) => !(item.href in naoLidas));
+  const [abertos, setAbertos] = useState<Record<string, boolean>>({});
 
-  const linha = (modulo: NavModule, opcoes: { bloqueado?: boolean } = {}) => {
-    const Icone = modulo.icon;
+  const liberados: readonly NavModule[] = navigation.main.filter((item) => !("soon" in item));
+  const emProducao: readonly NavModule[] = navigation.main.filter((item) => "soon" in item);
+  const icone = (modulo: NavModule, ativo: boolean) => { const Icone = modulo.icon; return <Icone size={18} weight={ativo ? "fill" : "regular"} aria-hidden />; };
+  const doModulo = (modulo: NavModule, extra: Partial<Opcao> = {}): Opcao => {
     const ativo = isPathActive(pathname, modulo.href);
-    const pendentes = naoLidas[modulo.href] ?? 0;
-    // Seções do módulo (as mesmas abas do topo da tela): a "Visão geral" entra sozinha quando o módulo tem.
-    const secoes = opcoes.bloqueado ? [] : (modulo.tabs ?? []);
-    return (
-      <li key={modulo.href}>
-        <Link href={modulo.href} className="modulo" data-ativo={ativo || undefined} data-bloqueado={opcoes.bloqueado || undefined} aria-current={ativo && pathname === modulo.href ? "page" : undefined} onClick={onClose}>
-          <span className="icone"><Icone size={18} weight={ativo ? "fill" : "regular"} aria-hidden /></span>
-          <strong>{modulo.label}</strong>
-          {pendentes > 0 && <b aria-label={`${pendentes} não lidas`}>{pendentes > 99 ? "99+" : pendentes}</b>}
-          {opcoes.bloqueado && <span className="selo" title="Em produção" aria-label="em produção"><LockSimpleIcon size={11} weight="fill" aria-hidden /></span>}
-        </Link>
-        {secoes.length > 0 && (
-          <ul className="secoes">
-            {secoes.map((secao) => {
-              const naSecao = isPathActive(pathname, secao.href);
-              return (
-                <li key={secao.href}>
-                  <Link href={secao.href} data-ativo={naSecao || undefined} aria-current={naSecao ? "page" : undefined} onClick={onClose}>{secao.label}</Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </li>
-    );
+    return { href: modulo.href, rotulo: modulo.label, icone: icone(modulo, ativo), ativo, pendentes: naoLidas[modulo.href], ...extra };
   };
+  // Módulo com seções vira um grupo próprio: a "Visão geral" (quando existe) e as seções dele.
+  const comSecoes = (modulo: NavModule): Grupo => ({
+    id: modulo.href,
+    titulo: modulo.label,
+    opcoes: [
+      ...(modulo.overview === false ? [] : [{ href: modulo.href, rotulo: "Visão geral", ativo: pathname === modulo.href }]),
+      ...(modulo.tabs ?? []).map((secao) => ({ href: secao.href, rotulo: secao.label, ativo: isPathActive(pathname, secao.href) })),
+    ],
+  });
+
+  const canais = liberados.filter((modulo) => modulo.href in naoLidas);
+  const grupos: Grupo[] = [
+    { id: "principal", titulo: "Principal", opcoes: liberados.filter((modulo) => !(modulo.href in naoLidas) && !modulo.tabs?.length).map((modulo) => doModulo(modulo)) },
+    { id: "atendimento", titulo: "Atendimento", opcoes: canais.map((modulo) => doModulo(modulo)), pendentes: canais.reduce((soma, modulo) => soma + (naoLidas[modulo.href] ?? 0), 0) },
+    ...liberados.filter((modulo) => modulo.tabs?.length).map(comSecoes),
+    ...navigation.secondary.map((modulo: NavModule) => (modulo.tabs?.length ? comSecoes(modulo) : { id: modulo.href, titulo: modulo.label, opcoes: [doModulo(modulo)] })),
+    { id: "producao", titulo: "Em produção", opcoes: emProducao.map((modulo) => doModulo(modulo, { bloqueado: true })) },
+  ].filter((grupo) => grupo.opcoes.length > 0);
 
   return (
-    <Dialog open={aberto} onClose={onClose} side="left" title="Menu" width="16.5rem">
+    <Dialog open={aberto} onClose={onClose} side="right" title="Menu" width="22.5rem">
       <Lista aria-label="Menu completo">
-        <h3>Principal</h3>
-        <ul>{principais.map((modulo) => linha(modulo))}</ul>
-        {canais.length > 0 && (
-          <>
-            <h3>Atendimento</h3>
-            <ul>{canais.map((modulo) => linha(modulo))}</ul>
-          </>
-        )}
-        <h3>Sistema</h3>
-        <ul>{navigation.secondary.map((modulo) => linha(modulo))}</ul>
-        {emProducao.length > 0 && (
-          <>
-            <h3>Em produção <span>{emProducao.length}</span></h3>
-            <ul>{emProducao.map((modulo) => linha(modulo, { bloqueado: true }))}</ul>
-          </>
-        )}
+        {grupos.map((grupo) => {
+          const expandido = Boolean(abertos[grupo.id]);
+          const aqui = grupo.opcoes.some((opcao) => opcao.ativo);
+          return (
+            <section key={grupo.id} data-aqui={aqui || undefined}>
+              <button type="button" className="titulo" aria-expanded={expandido} aria-controls={`menu-${grupo.id}`} onClick={() => setAbertos((atual) => ({ ...atual, [grupo.id]: !atual[grupo.id] }))}>
+                <span>
+                  {grupo.titulo}
+                  {aqui && <i aria-label="você está aqui" />}
+                </span>
+                {Boolean(grupo.pendentes) && !expandido && <b aria-label={`${grupo.pendentes} não lidas`}>{grupo.pendentes! > 99 ? "99+" : grupo.pendentes}</b>}
+                <CaretDownIcon className="seta" size={18} aria-hidden />
+              </button>
+              {expandido && (
+                <ul id={`menu-${grupo.id}`}>
+                  {grupo.opcoes.map((opcao) => (
+                    <li key={opcao.href}>
+                      <Link href={opcao.href} data-ativo={opcao.ativo || undefined} data-bloqueado={opcao.bloqueado || undefined} aria-current={opcao.ativo ? "page" : undefined} onClick={onClose}>
+                        {opcao.icone && <span className="icone">{opcao.icone}</span>}
+                        <span className="rotulo">{opcao.rotulo}</span>
+                        {Boolean(opcao.pendentes) && <b aria-label={`${opcao.pendentes} não lidas`}>{opcao.pendentes! > 99 ? "99+" : opcao.pendentes}</b>}
+                        {opcao.bloqueado && <LockSimpleIcon className="cadeado" size={13} weight="fill" aria-label="em produção" />}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
       </Lista>
     </Dialog>
   );
@@ -77,56 +89,123 @@ export function MenuLateral({ aberto, onClose, naoLidas }: { aberto: boolean; on
 const Lista = styled.nav`
   display: flex;
   flex-direction: column;
-  padding-bottom: ${({ theme }) => theme.spacing(2)};
+  margin: 0 ${({ theme }) => theme.spacing(1)};
 
-  h3 {
+  /* Cada grupo é uma sanfona com a linha embaixo, como os filtros da loja */
+  section {
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  }
+  section:last-of-type {
+    border-bottom: 0;
+  }
+
+  .titulo {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin: ${({ theme }) => theme.spacing(4, 2, 1.5)};
-    font-size: 0.6875rem;
-    font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: ${({ theme }) => theme.colors.text.muted};
+    gap: ${({ theme }) => theme.spacing(2.5)};
+    width: 100%;
+    padding: ${({ theme }) => theme.spacing(4, 0)};
+    font: inherit;
+    font-size: 1.25rem;
+    font-weight: ${({ theme }) => theme.fontWeights.regular};
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: ${({ theme }) => theme.colors.text.primary};
+    text-align: left;
+    cursor: pointer;
   }
-  h3:first-of-type { margin-top: 0; }
-  h3 span { padding: 0 6px; border-radius: 999px; background: ${({ theme }) => theme.colors.interactive.pressed}; font-size: 0.625rem; line-height: 1rem; letter-spacing: 0; }
+  .titulo > span {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    gap: ${({ theme }) => theme.spacing(2)};
+    min-width: 0;
+  }
+  .titulo:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary.main};
+    outline-offset: 2px;
+    border-radius: ${({ theme }) => theme.radii.sm};
+  }
+  /* O grupo da tela atual leva um ponto ao lado do nome */
+  .titulo i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: ${({ theme }) => theme.colors.primary.main};
+  }
+  .seta {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.text.secondary};
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .titulo[aria-expanded="true"] .seta {
+    transform: rotate(180deg);
+  }
 
-  ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 ${({ theme }) => theme.spacing(4)};
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: grupo-abre 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes grupo-abre {
+    from { opacity: 0; transform: translateY(-4px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    ul { animation: none; }
+    .seta { transition: none; }
+  }
 
-  .modulo {
+  a {
     display: flex;
     align-items: center;
     gap: ${({ theme }) => theme.spacing(3)};
     min-height: 2.25rem;
-    padding: ${({ theme }) => theme.spacing(1, 2)};
-    border-radius: ${({ theme }) => theme.radii.lg};
-    color: ${({ theme }) => theme.colors.text.primary};
+    margin: 0 -${({ theme }) => theme.spacing(2.5)};
+    padding: ${({ theme }) => theme.spacing(1.5, 2.5)};
+    border-radius: ${({ theme }) => theme.radii.md};
+    font-size: 0.9375rem;
+    color: ${({ theme }) => theme.colors.text.secondary};
     text-decoration: none;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
-  .modulo:hover, .modulo:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; }
-  .modulo[data-ativo] { background: ${({ theme }) => theme.colors.interactive.hover}; }
-  .modulo:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary.main}; outline-offset: -2px; }
+  a:hover,
+  a:focus-visible {
+    background: ${({ theme }) => theme.colors.interactive.hover};
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+  a:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary.main};
+    outline-offset: -2px;
+  }
+  a[data-ativo] {
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  }
+  a[data-bloqueado] {
+    color: ${({ theme }) => theme.colors.text.muted};
+  }
 
   .icone {
     flex-shrink: 0;
     display: grid;
     place-items: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: ${({ theme }) => theme.radii.md};
-    background: ${({ theme }) => theme.colors.interactive.hover};
-    color: ${({ theme }) => theme.colors.text.secondary};
+    width: 1.25rem;
   }
-  .modulo[data-ativo] .icone { background: ${({ theme }) => theme.colors.primary.main}; color: ${({ theme }) => theme.colors.primary.contrast}; }
-  /* As logos dos canais já são coloridas: sem o quadradinho de fundo */
-  .icone:has(svg[role="img"]) { background: transparent; }
-  .modulo[data-ativo] .icone:has(svg[role="img"]) { background: transparent; }
-
-  strong { flex: 1; min-width: 0; overflow: hidden; font-size: 0.875rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; line-height: 1.3; white-space: nowrap; text-overflow: ellipsis; }
-  .modulo[data-ativo] strong { font-weight: ${({ theme }) => theme.fontWeights.semibold}; }
+  .rotulo {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .cadeado {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.text.muted};
+  }
 
   b {
     flex-shrink: 0;
@@ -137,30 +216,8 @@ const Lista = styled.nav`
     color: #fff;
     font-size: 0.6875rem;
     font-weight: ${({ theme }) => theme.fontWeights.bold};
+    letter-spacing: 0;
     line-height: 1.25rem;
     text-align: center;
   }
-
-  /* Em produção: mais apagado, só com o cadeado */
-  .modulo[data-bloqueado] strong { color: ${({ theme }) => theme.colors.text.secondary}; }
-  .selo { flex-shrink: 0; display: grid; place-items: center; width: 1.25rem; height: 1.25rem; color: ${({ theme }) => theme.colors.text.muted}; }
-
-  /* Seções do módulo: recuadas, com a linha de guia */
-  .secoes {
-    gap: 0;
-    margin: 2px 0 ${({ theme }) => theme.spacing(1.5)} 1.375rem;
-    padding-left: ${({ theme }) => theme.spacing(3)};
-    border-left: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  }
-  .secoes a {
-    display: block;
-    padding: 5px ${({ theme }) => theme.spacing(2.5)};
-    border-radius: ${({ theme }) => theme.radii.md};
-    font-size: 0.8125rem;
-    color: ${({ theme }) => theme.colors.text.secondary};
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
-  .secoes a:hover, .secoes a:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; color: ${({ theme }) => theme.colors.text.primary}; }
-  .secoes a[data-ativo] { color: ${({ theme }) => theme.colors.text.primary}; font-weight: ${({ theme }) => theme.fontWeights.semibold}; }
 `;

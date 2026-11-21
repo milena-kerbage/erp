@@ -58,14 +58,15 @@ const riseOut = keyframes`
   to { opacity: 0; transform: translateY(6px) scale(0.985); }
 `;
 
+// Painel lateral no padrão da gaveta de filtros da loja: colado na borda, da altura da tela, deslizando de fora.
 const slideIn = keyframes`
-  from { opacity: 0.6; transform: translateX(var(--painel-de, -1.5rem)); }
-  to { opacity: 1; transform: none; }
+  from { transform: translateX(var(--painel-de, -100%)); }
+  to { transform: none; }
 `;
 
 const slideOut = keyframes`
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateX(var(--painel-de, -1.5rem)); }
+  from { transform: none; }
+  to { transform: translateX(var(--painel-de, -100%)); }
 `;
 
 const Backdrop = styled.div`
@@ -83,13 +84,13 @@ const Backdrop = styled.div`
     ${backdropExit};
   }
 
-  /* Painel lateral: encostado no lado, da altura da tela */
+  /* Painel lateral: colado na borda, da altura da tela */
   &[data-side] {
     align-items: stretch;
-    padding: ${({ theme }) => theme.spacing(2)};
+    padding: 0;
   }
   &[data-side="left"] { justify-content: flex-start; }
-  &[data-side="right"] { justify-content: flex-end; --painel-de: 1.5rem; }
+  &[data-side="right"] { justify-content: flex-end; --painel-de: 100%; }
 
   ${({ theme }) => theme.media.md} {
     bottom: var(--keyboard-inset, 0px);
@@ -125,12 +126,13 @@ const Panel = styled("div", transientOptions)<{ $width: string; $height?: string
     [data-side] > & {
       height: auto;
       max-height: none;
-      border-radius: ${({ theme }) => theme.radii.xl};
+      border: 0;
+      border-radius: 0;
       box-shadow: ${({ theme }) => theme.shadows.lg};
-      animation: ${slideIn} 320ms cubic-bezier(0.22, 1, 0.36, 1);
+      animation: ${slideIn} 380ms cubic-bezier(0.22, 1, 0.36, 1);
     }
     [data-side][data-closing] > & {
-      animation: ${slideOut} 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+      animation: ${slideOut} 240ms cubic-bezier(0.4, 0, 1, 1) forwards;
     }
   }
 
@@ -155,12 +157,35 @@ const Head = styled.div`
   justify-content: space-between;
   gap: ${({ theme }) => theme.spacing(3)};
   padding: ${({ theme }) => theme.spacing(5, 5, 0)};
+
+  /* Painel lateral: título grande e o fechar redondo, como na gaveta de filtros da loja */
+  @media (min-width: 1025px) {
+    [data-side] & {
+      align-items: center;
+      padding: ${({ theme }) => theme.spacing(6, 6, 2)};
+    }
+    [data-side] & > button {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background-color: ${({ theme }) => theme.palette.neutral[100]};
+    }
+  }
 `;
 
 const Title = styled.h2`
   font-size: ${({ theme }) => theme.fontSizes.md};
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   color: ${({ theme }) => theme.colors.text.primary};
+
+  @media (min-width: 1025px) {
+    [data-side] & {
+      font-size: 1.75rem;
+      font-weight: ${({ theme }) => theme.fontWeights.regular ?? 400};
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+  }
 `;
 
 const Description = styled.div`

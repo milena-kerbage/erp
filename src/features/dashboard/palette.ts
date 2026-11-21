@@ -9,6 +9,8 @@ import type { ThemeMode } from "@/styles/theme";
 const colors: Record<ThemeMode, Record<string, string>> = {
   light: {
     Site: "#2a78d6",
+    "Loja online": "#0f9aa8",
+    Facebook: "#5a6fd8",
     Instagram: "#eb6834",
     Indicação: "#1baf7a",
     Google: "#eda100",
@@ -18,6 +20,8 @@ const colors: Record<ThemeMode, Record<string, string>> = {
   },
   dark: {
     Site: "#3987e5",
+    "Loja online": "#1fb0bd",
+    Facebook: "#7d8ff0",
     Instagram: "#d95926",
     Indicação: "#199e70",
     Google: "#c98500",
