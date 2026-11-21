@@ -264,6 +264,8 @@ const balloes = css`
     position: relative; display: grid; gap: 0.25rem; max-width: min(36rem, 78%); padding: 0.375rem 0.5625rem 0.3125rem; color: var(--color-ink);
     background-color: var(--bubble-bg); border-radius: 0.75rem; box-shadow: 0 0.0625rem 0.0625rem rgb(0 0 0 / 0.06);
   }
+  /* Pedido do site: largura própria e coluna que nunca passa da bolha (em tela estreita o cartão encolhe junto). */
+  .bubble[data-pedido] { grid-template-columns: minmax(0, 1fr); width: 25rem; max-width: min(25rem, 92%); padding: 0.625rem 0.75rem 0.375rem; }
   /* A mensagem subindo: um brilho suave atravessa a bolha até o servidor confirmar. */
   .bubble[data-pending]::after {
     position: absolute; inset: 0; pointer-events: none; content: ""; border-radius: inherit;

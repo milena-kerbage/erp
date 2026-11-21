@@ -3,7 +3,7 @@
 import styled from "@emotion/styled";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowSquareOutIcon, BabyIcon, CaretDownIcon, MapPinIcon, NoteIcon, ShoppingBagOpenIcon, StorefrontIcon, TicketIcon, TruckIcon } from "@phosphor-icons/react";
+import { ArrowUpRightIcon, BabyIcon, CaretDownIcon, MapPinIcon, NoteIcon, ShoppingBagOpenIcon, TicketIcon, TruckIcon } from "@phosphor-icons/react";
 import { erpRequest } from "@/features/operations/client";
 import { dinheiro, ETAPA_CURTA, TOM_ETAPA } from "@/features/ecommerce/vendas/comum";
 import { jaNasceu, quandoNasce } from "@/features/leads/bebe";
@@ -35,6 +35,7 @@ const buscar = (numero: string) => {
 
 // O que a cliente ESCOLHEU (cor, tamanho, tecido, bordado); "Vendido por kit" é da ficha, não é escolha.
 const escolhasDe = (item: Item) => item.detalhes.filter((detalhe) => !/^Vendido por /i.test(detalhe));
+const pecas = (quantidade: number) => `${quantidade} ${quantidade === 1 ? "peça" : "peças"}`;
 
 const dataCurta = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).replace(/ de /g, " ").replace(".", "");
 
@@ -51,17 +52,27 @@ export function PedidoDoSite({ numero, original }: { numero: string; original: R
 
   // Sem o pedido (apagado, sem acesso, fora do ar): a mensagem como chegou.
   if (falhou) return <>{original}</>;
-  if (!dados) return <Cartao aria-busy><Topo><Selo><ShoppingBagOpenIcon weight="fill" aria-hidden />Pedido do site</Selo><code>{numero}</code></Topo><div className="esqueleto" /><div className="esqueleto curto" /></Cartao>;
+
+  const cabecalho = (situacao?: ReactNode, resumo?: string) => (
+    <Topo>
+      <span className="icone" aria-hidden><ShoppingBagOpenIcon weight="fill" /></span>
+      <span className="titulo">
+        <strong>Pedido do site</strong>
+        <small>{[numero, resumo].filter(Boolean).join(" · ")}</small>
+      </span>
+      {situacao}
+    </Topo>
+  );
+
+  // Carregando: o mesmo desenho do cartão pronto, para a conversa não pular quando o pedido chega.
+  if (!dados) return <Cartao aria-busy>{cabecalho()}<div className="esqueleto" /><div className="esqueleto" /><div className="esqueleto curto" /></Cartao>;
 
   const { pedido, cliente } = dados;
   const bebe = cliente?.bebe;
+  const entrega = [pedido.retirar ? "Retira no ateliê, em Fortaleza" : "Receber em casa (frete a combinar)", pedido.local].filter(Boolean).join(" · ");
   return (
-    <Cartao aria-label={`Pedido ${pedido.numero} feito no site`}>
-      <Topo>
-        <Selo><ShoppingBagOpenIcon weight="fill" aria-hidden />Pedido do site</Selo>
-        <code>{pedido.numero}</code>
-        <Situacao data-tom={TOM_ETAPA[pedido.status]}>{ETAPA_CURTA[pedido.status] ?? pedido.statusRotulo}</Situacao>
-      </Topo>
+    <Cartao aria-label={`Pedido ${pedido.numero} feito no site`} data-pronto="">
+      {cabecalho(<Situacao data-tom={TOM_ETAPA[pedido.status]}>{ETAPA_CURTA[pedido.status] ?? pedido.statusRotulo}</Situacao>, pecas(pedido.quantidade))}
 
       <Itens>
         {pedido.itens.map((item, indice) => (
@@ -69,48 +80,38 @@ export function PedidoDoSite({ numero, original }: { numero: string; original: R
             {item.foto ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.foto.src} alt="" loading="lazy" decoding="async" />
-            ) : <span className="semFoto" aria-hidden><StorefrontIcon /></span>}
-            <div>
+            ) : <span className="semFoto" aria-hidden><ShoppingBagOpenIcon /></span>}
+            <span className="texto">
               <strong>{item.nome}</strong>
-              <span className="linha">
-                {item.quantidade > 1 && <b>{item.quantidade}×</b>}
-                a partir de {dinheiro(item.precoCentavos * item.quantidade)}
-                {item.codigo && <span className="cod">cód. {item.codigo}</span>}
-              </span>
-              {escolhasDe(item).length > 0 && (
-                <span className="escolhas">{escolhasDe(item).map((detalhe) => <em key={detalhe}>{detalhe}</em>)}</span>
-              )}
-              {item.modulos && item.modulos.length > 0 && (
-                <span className="modulos">{item.tipo === "personalizado" ? "Peças escolhidas" : "O que vem"}: {item.modulos.map((modulo) => modulo.nome).join(", ")}</span>
-              )}
-            </div>
+              {escolhasDe(item).map((detalhe) => <span key={detalhe}>{detalhe}</span>)}
+              {item.modulos && item.modulos.length > 0 && <span>{item.tipo === "personalizado" ? "Peças escolhidas" : "O que vem"}: {item.modulos.map((modulo) => modulo.nome).join(", ")}</span>}
+              {(item.quantidade > 1 || item.codigo) && <span className="apoio">{[item.quantidade > 1 && `${item.quantidade} unidades`, item.codigo && `cód. ${item.codigo}`].filter(Boolean).join(" · ")}</span>}
+            </span>
+            <span className="preco">{dinheiro(item.precoCentavos * item.quantidade)}</span>
           </li>
         ))}
       </Itens>
 
       <Total>
         {pedido.cupom && pedido.descontoCentavos > 0 && (
-          <span className="cupom"><TicketIcon aria-hidden />Cupom {pedido.cupom.codigo} · −{dinheiro(pedido.descontoCentavos)}</span>
+          <div className="cupom"><span><TicketIcon aria-hidden />Cupom {pedido.cupom.codigo}</span><span>−{dinheiro(pedido.descontoCentavos)}</span></div>
         )}
-        <span className="valor">
-          <small>{pedido.quantidade} {pedido.quantidade === 1 ? "peça" : "peças"} · a partir de</small>
-          <strong>{dinheiro(pedido.totalCentavos)}</strong>
-        </span>
+        <div className="total"><span>Total a partir de</span><strong>{dinheiro(pedido.totalCentavos)}</strong></div>
       </Total>
 
       <Dados>
         {bebe && (
-          <li><BabyIcon aria-hidden /><span>{[bebe.nome || "Bebê", bebe.data && (jaNasceu(bebe.data) ? `nasceu em ${dataCurta(bebe.data)}` : `previsão ${dataCurta(bebe.data)} · ${quandoNasce(bebe.data)}`)].filter(Boolean).join(" · ")}</span></li>
+          <li><BabyIcon aria-hidden /><span><b>{bebe.nome || "Bebê"}</b>{bebe.data ? (jaNasceu(bebe.data) ? ` · nasceu em ${dataCurta(bebe.data)}` : ` · previsão ${dataCurta(bebe.data)} (${quandoNasce(bebe.data)})`) : ""}</span></li>
         )}
-        <li><TruckIcon aria-hidden /><span>{pedido.retirar ? "Retira no ateliê, em Fortaleza" : "Receber em casa · frete a combinar"}{pedido.local ? ` · ${pedido.local}` : ""}</span></li>
+        <li><TruckIcon aria-hidden /><span>{entrega}</span></li>
         {!pedido.local && cliente?.cidade && <li><MapPinIcon aria-hidden /><span>{cliente.cidade}</span></li>}
-        {pedido.observacoes && <li data-nota><NoteIcon aria-hidden /><span>{pedido.observacoes}</span></li>}
+        {pedido.observacoes && <li><NoteIcon aria-hidden /><span className="nota">{pedido.observacoes}</span></li>}
       </Dados>
 
       <Rodape>
-        <Link href={`/ecommerce/pedidos?pedido=${encodeURIComponent(pedido.numero)}`}>Abrir pedido<ArrowSquareOutIcon aria-hidden /></Link>
+        <Link href={`/ecommerce/pedidos?pedido=${encodeURIComponent(pedido.numero)}`}>Abrir pedido<ArrowUpRightIcon weight="bold" aria-hidden /></Link>
         <button type="button" aria-expanded={verOriginal} onClick={() => setVerOriginal((atual) => !atual)}>
-          {verOriginal ? "Esconder mensagem" : "Mensagem original"}<CaretDownIcon aria-hidden data-aberto={verOriginal || undefined} />
+          {verOriginal ? "Esconder mensagem" : "Ver mensagem"}<CaretDownIcon weight="bold" aria-hidden data-aberto={verOriginal || undefined} />
         </button>
       </Rodape>
       {verOriginal && <Original>{original}</Original>}
@@ -118,135 +119,134 @@ export function PedidoDoSite({ numero, original }: { numero: string; original: R
   );
 }
 
+// As cores partem da cor do texto da própria bolha (currentColor): o cartão acompanha o tema claro, o escuro e
+// qualquer tom de bolha sem depender de um fundo fixo.
+const suave = (percentual: number) => `color-mix(in srgb, currentColor ${percentual}%, transparent)`;
+
 const Cartao = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: 24.5rem;
-  max-width: 100%;
-  padding: 2px 0 4px;
-  color: ${({ theme }) => theme.colors.text.primary};
-  .esqueleto { height: 3.25rem; border-radius: 10px; background: ${({ theme }) => theme.palette.neutral[100]}; animation: pulsar 1.2s ease-in-out infinite; }
-  .esqueleto.curto { height: 1.25rem; width: 60%; }
-  @keyframes pulsar { 50% { opacity: 0.55; } }
-  @media (prefers-reduced-motion: reduce) { .esqueleto { animation: none; } }
+  width: 100%;
+  min-width: 0;
+  padding: 4px 2px 2px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  &[data-pronto] > * { animation: pedido-entra 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  &[data-pronto] > *:nth-child(2) { animation-delay: 40ms; }
+  &[data-pronto] > *:nth-child(3) { animation-delay: 80ms; }
+  &[data-pronto] > *:nth-child(n + 4) { animation-delay: 120ms; }
+  @keyframes pedido-entra { from { opacity: 0; transform: translateY(4px); } }
+  .esqueleto { height: 2.75rem; margin-top: 10px; border-radius: 8px; background: ${suave(7)}; animation: pedido-pulsa 1.2s ease-in-out infinite; }
+  .esqueleto.curto { height: 1rem; width: 55%; }
+  @keyframes pedido-pulsa { 50% { opacity: 0.5; } }
+  @media (prefers-reduced-motion: reduce) { &[data-pronto] > *, .esqueleto { animation: none; } }
 `;
 
 const Topo = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+  gap: 10px;
   min-width: 0;
-  code { overflow: hidden; text-overflow: ellipsis; font-family: inherit; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; color: ${({ theme }) => theme.colors.text.secondary}; }
-`;
-
-const Selo = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px 3px 6px;
-  border-radius: 999px;
-  background: ${({ theme }) => theme.tones.peach.soft};
-  color: ${({ theme }) => theme.tones.peach.fg};
-  font-size: 0.75rem;
-  font-weight: 700;
-  svg { width: 14px; height: 14px; }
+  .icone { flex-shrink: 0; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9px; background: ${({ theme }) => theme.tones.peach.soft}; color: ${({ theme }) => theme.tones.peach.fg}; }
+  .icone svg { width: 17px; height: 17px; }
+  .titulo { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+  .titulo strong { font-size: 0.875rem; font-weight: 600; line-height: 1.25; }
+  .titulo small { overflow: hidden; font-size: 0.75rem; color: ${suave(58)}; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 `;
 
 const Situacao = styled.span`
-  margin-left: auto;
-  padding: 2px 8px;
+  flex-shrink: 0;
+  padding: 3px 9px;
   border-radius: 999px;
   font-size: 0.6875rem;
   font-weight: 600;
-  background: ${({ theme }) => theme.palette.neutral[100]};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  ${({ theme }) => (["blue", "teal", "green", "rose", "peach"] as const).map((tom) => `&[data-tom="${tom}"] { background: ${theme.tones[tom].bg}; color: ${theme.tones[tom].fg}; }`).join("\n")}
+  white-space: nowrap;
+  background: ${suave(7)};
+  ${({ theme }) => (["blue", "teal", "green", "rose", "peach"] as const).map((tom) => `&[data-tom="${tom}"] { background: ${theme.tones[tom].soft}; color: ${theme.tones[tom].fg}; }`).join("\n")}
 `;
 
 const Itens = styled.ul`
   list-style: none;
-  margin: 0;
+  margin: 12px 0 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.background.surface};
-  overflow: hidden;
-  li { display: flex; gap: 10px; padding: 9px 10px; }
-  li + li { border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }
-  img, .semFoto { flex-shrink: 0; width: 3rem; height: 3rem; border-radius: 8px; object-fit: cover; background: ${({ theme }) => theme.palette.neutral[100]}; }
-  .semFoto { display: grid; place-items: center; color: ${({ theme }) => theme.colors.text.muted}; svg { width: 20px; height: 20px; } }
-  li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  strong { font-size: 0.8125rem; font-weight: 600; line-height: 1.3; }
-  .linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; font-size: 0.75rem; color: ${({ theme }) => theme.colors.text.secondary}; }
-  .linha b { color: ${({ theme }) => theme.colors.text.primary}; }
-  .cod { color: ${({ theme }) => theme.colors.text.muted}; }
-  .escolhas { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
-  em { font-style: normal; font-size: 0.6875rem; line-height: 1.35; padding: 2px 7px; border-radius: 6px; background: ${({ theme }) => theme.palette.neutral[100]}; color: ${({ theme }) => theme.colors.text.secondary}; }
-  .modulos { font-size: 0.6875rem; line-height: 1.4; color: ${({ theme }) => theme.colors.text.muted}; }
+  border-top: 1px solid ${suave(10)};
+  li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid ${suave(10)}; }
+  img, .semFoto { flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 8px; object-fit: cover; background: ${suave(6)}; }
+  .semFoto { display: grid; place-items: center; color: ${suave(40)}; }
+  .semFoto svg { width: 18px; height: 18px; }
+  .texto { display: flex; flex: 1; flex-direction: column; gap: 1px; min-width: 0; font-size: 0.75rem; overflow-wrap: anywhere; }
+  .texto strong { font-size: 0.8125rem; font-weight: 600; line-height: 1.3; }
+  .texto > span { color: ${suave(62)}; }
+  .texto > span.apoio { color: ${suave(45)}; }
+  .preco { flex-shrink: 0; padding-top: 1px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 `;
 
 const Total = styled.div`
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px;
-  .cupom { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6875rem; font-weight: 600; color: ${({ theme }) => theme.tones.green.fg}; svg { width: 13px; height: 13px; } }
-  .valor { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; line-height: 1.2; }
-  .valor small { font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; }
-  .valor strong { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0 2px;
+  > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .cupom { font-size: 0.75rem; color: ${({ theme }) => theme.tones.green.fg}; }
+  .cupom span { display: inline-flex; align-items: center; gap: 5px; }
+  .cupom svg { width: 13px; height: 13px; }
+  .total span { color: ${suave(62)}; }
+  .total strong { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 `;
 
 const Dados = styled.ul`
   list-style: none;
-  margin: 0;
-  padding: 8px 0 0;
-  border-top: 1px dashed ${({ theme }) => theme.colors.border.default};
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: ${suave(5)};
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  li { display: flex; gap: 7px; align-items: flex-start; line-height: 1.4; }
-  li span { min-width: 0; overflow-wrap: anywhere; }
-  svg { flex-shrink: 0; width: 14px; height: 14px; margin-top: 1px; color: ${({ theme }) => theme.colors.text.muted}; }
-  li[data-nota] span { white-space: pre-wrap; color: ${({ theme }) => theme.colors.text.primary}; }
+  color: ${suave(70)};
+  li { display: flex; gap: 8px; align-items: flex-start; }
+  li > span { min-width: 0; overflow-wrap: anywhere; }
+  svg { flex-shrink: 0; width: 14px; height: 14px; margin-top: 2px; opacity: 0.7; }
+  b { font-weight: 600; }
+  .nota { white-space: pre-wrap; }
 `;
 
 const Rodape = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
   a, button {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    height: 1.75rem;
-    padding: 0 10px;
+    height: 1.875rem;
+    padding: 0 11px;
+    border: 0;
     border-radius: 8px;
-    border: 1px solid ${({ theme }) => theme.colors.border.subtle};
-    background: ${({ theme }) => theme.colors.background.surface};
-    color: ${({ theme }) => theme.colors.text.primary};
+    background: ${suave(7)};
+    color: inherit;
     font: inherit;
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
+    white-space: nowrap;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition: background-color 0.2s ease;
   }
-  a:hover, button:hover { background: ${({ theme }) => theme.colors.interactive.hover}; border-color: ${({ theme }) => theme.colors.border.default}; }
-  button { border-color: transparent; background: transparent; color: ${({ theme }) => theme.colors.text.secondary}; }
-  svg { width: 13px; height: 13px; transition: transform 0.15s ease; }
+  a:hover, button:hover { background: ${suave(12)}; }
+  button { background: transparent; color: ${suave(62)}; font-weight: 500; }
+  svg { width: 12px; height: 12px; transition: transform 0.2s ease; }
   svg[data-aberto] { transform: rotate(180deg); }
 `;
 
 const Original = styled.div`
+  margin-top: 8px;
   padding: 8px 10px;
   border-radius: 10px;
-  background: ${({ theme }) => theme.palette.neutral[100]};
+  background: ${suave(5)};
   font-size: 0.75rem;
   .text { margin: 0; }
 `;
