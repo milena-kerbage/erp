@@ -115,3 +115,57 @@ test('login pelo Facebook: usuário do sistema acha a página por assigned_pages
   assert.equal((await store.currentConnection()).account_id, '17841400000000');
   await assert.rejects(ajustes.salvarAjustesInstagram({ pageId: 'abc' }, 'gestor'), (erro) => erro.field === 'pageId');
 });
+
+test('só Instagram (sem página): conecta pela conta do token e o chat recebe, sincroniza e responde pelo ID do Instagram', async () => {
+  const api = await import('../src/lib/instagram/api.ts');
+  const store = await import('../src/lib/instagram/store.ts');
+  const chat = await import('../src/lib/instagram/chat.ts');
+  const IG = '17841499999999', CLIENTE = '9988776655', OUTRO = '5544332211';
+  const chamadas = [];
+  const fetcher = async (endereco, opcoes = {}) => {
+    const u = new URL(String(endereco)), caminho = u.pathname.replace(/^\/v\d+\.0\//, '');
+    chamadas.push(`${opcoes.method || 'GET'} ${caminho}`);
+    if (caminho === 'oauth/access_token') return Response.json({ access_token: 'EAAsistema' + 'y'.repeat(40) });
+    if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, type: 'SYSTEM_USER', app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic', 'instagram_manage_messages'], granular_scopes: [{ scope: 'instagram_basic', target_ids: [IG] }], expires_at: 0 } });
+    if (caminho === IG && u.searchParams.get('fields') === 'id,username') return Response.json({ id: IG, username: 'milenakerbageatelie' });
+    if (caminho === `${IG}/conversations`) return Response.json({ data: [{ participants: { data: [{ id: IG, username: 'milenakerbageatelie' }, { id: OUTRO, username: 'cliente.antiga' }] }, messages: { data: [
+      { id: 'mid.h2', message: 'Obrigada!', from: { id: IG }, created_time: new Date(Date.now() - 3 * 86400000).toISOString() },
+      { id: 'mid.h1', message: 'Vocês fazem kit berço?', from: { id: OUTRO }, created_time: new Date(Date.now() - 4 * 86400000).toISOString() },
+    ] } }] });
+    if (caminho === `${IG}/messages` && opcoes.method === 'POST') return Response.json({ recipient_id: CLIENTE, message_id: `mid.out.${chamadas.length}` });
+    if (caminho === CLIENTE) return Response.json({ name: 'Cliente Nova', username: 'cliente.nova', profile_pic: 'https://cdn.example/foto.jpg' });
+    if (caminho === OUTRO) return Response.json({ name: 'Cliente Antiga', username: 'cliente.antiga' });
+    return Response.json({ data: [] });
+  };
+  await store.instagramDb().prepare('DELETE FROM instagram_connections').run(); // a conta dos testes anteriores era outra
+  await api.exchangeCode('codigo', fetcher);
+  const conexao = await store.currentConnection();
+  assert.equal(conexao.account_id, IG); assert.equal(conexao.username, 'milenakerbageatelie');
+  assert.equal(config.instagramConfig().pageId, '', 'sem página');
+
+  // Webhook: mensagem recebida e o eco do que a conta mandou pelo app.
+  const agora = Date.now();
+  assert.equal(await chat.receberDoWebhook({ sender: { id: CLIENTE }, recipient: { id: IG }, timestamp: agora - 60000, message: { mid: 'mid.in1', text: 'Oi! Quero um orçamento' } }, IG, agora), CLIENTE);
+  await chat.receberDoWebhook({ sender: { id: IG }, recipient: { id: CLIENTE }, timestamp: agora - 30000, message: { mid: 'mid.eco1', text: 'Oi! Claro', is_echo: true } }, IG, agora);
+  assert.equal(await chat.receberDoWebhook({ sender: { id: CLIENTE }, recipient: { id: IG }, timestamp: agora, message: { mid: 'mid.in1', text: 'repetida' } }, IG, agora), null, 'mensagem repetida não duplica');
+  assert.equal(await chat.naoLidas(), 1);
+  await chat.completarPerfis([CLIENTE], fetcher);
+
+  // Histórico do Direct pela conta do Instagram.
+  const sync = await chat.sincronizarHistorico(fetcher);
+  assert.equal(sync.mensagens, 2);
+  assert.ok(chamadas.includes(`GET ${IG}/conversations`));
+  const conversas = await chat.listarConversas();
+  assert.deepEqual(conversas.map((c) => c.username), ['cliente.nova', 'cliente.antiga'], 'mais recente primeiro');
+  assert.equal(conversas[0].nome, 'Cliente Nova'); assert.equal(conversas[0].naoLidas, 1);
+  assert.deepEqual((await chat.mensagensDe(CLIENTE)).map((m) => [m.id, m.direcao]), [['mid.in1', 'entrada'], ['mid.eco1', 'saida']]);
+  await chat.marcarLidas(CLIENTE);
+  assert.equal(await chat.naoLidas(), 0);
+
+  // Resposta: dentro de 24 h normal; entre 1 e 7 dias com HUMAN_AGENT; depois de 7 dias, bloqueada.
+  await chat.enviarTexto(CLIENTE, 'Mando o orçamento já', 'Equipe', fetcher);
+  assert.ok(chamadas.includes(`POST ${IG}/messages`));
+  await chat.enviarTexto(OUTRO, 'Ainda tem interesse?', 'Equipe', fetcher);
+  await assert.rejects(chat.enviarTexto(OUTRO, 'Oi', 'Equipe', fetcher, Date.now() + 8 * 86400000), { code: 'WINDOW_CLOSED' });
+  assert.equal((await chat.mensagensDe(CLIENTE)).at(-1).texto, 'Mando o orçamento já');
+});

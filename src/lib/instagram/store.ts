@@ -25,7 +25,10 @@ CREATE TABLE IF NOT EXISTS instagram_deletion_requests (
  code TEXT PRIMARY KEY, subject_hash TEXT NOT NULL, status TEXT NOT NULL, created_at INTEGER NOT NULL,
  local_deleted_at INTEGER NOT NULL, reviewed_at INTEGER, review_note TEXT);
 CREATE TABLE IF NOT EXISTS instagram_lifecycle (app_id TEXT PRIMARY KEY, changed_at INTEGER NOT NULL);
-CREATE UNIQUE INDEX IF NOT EXISTS instagram_pending_deletion ON instagram_deletion_requests(subject_hash) WHERE status = 'pending_review';`;
+CREATE UNIQUE INDEX IF NOT EXISTS instagram_pending_deletion ON instagram_deletion_requests(subject_hash) WHERE status = 'pending_review';
+CREATE TABLE IF NOT EXISTS instagram_chat_contatos (igsid TEXT PRIMARY KEY, account_id TEXT NOT NULL, username TEXT NOT NULL DEFAULT '', nome TEXT NOT NULL DEFAULT '', foto TEXT NOT NULL DEFAULT '', ultima_entrada INTEGER, atualizado INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS instagram_chat_mensagens (id TEXT PRIMARY KEY, igsid TEXT NOT NULL REFERENCES instagram_chat_contatos(igsid) ON DELETE CASCADE, account_id TEXT NOT NULL, direcao TEXT NOT NULL, tipo TEXT NOT NULL, texto TEXT NOT NULL DEFAULT '', anexos TEXT NOT NULL DEFAULT '[]', criado INTEGER NOT NULL, lida INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'recebida', autor TEXT);
+CREATE INDEX IF NOT EXISTS instagram_chat_msg_contato ON instagram_chat_mensagens(igsid, criado);`;
 
 export const instagramDb = () => databaseFor('meta', process.env.META_DELETION_DB_PATH || '.data/meta-deletion.sqlite', schema);
 export function instagramTransaction<T>(operation: () => Promise<T>) {

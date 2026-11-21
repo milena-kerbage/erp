@@ -3,7 +3,7 @@ import { Conversas } from "@/features/whatsapp/conversas/Conversas";
 import { normalizeWhatsAppPhone } from "@/features/whatsapp/client";
 
 export const metadata: Metadata = {
-  title: "Conversas",
+  title: "WhatsApp",
 };
 
 /** A URL identifica o telefone real, no formato internacional, da conversa WhatsApp. */

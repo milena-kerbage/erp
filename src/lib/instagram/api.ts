@@ -84,10 +84,11 @@ export async function subscribeAccount(fetcher: typeof fetch = fetch) {
   if (!fields.length) throw new InstagramError(409, 'Autorize mensagens ou comentários para habilitar notificações.', 'PERMISSION_REQUIRED');
   if (config.modo === 'facebook') {
     // Mensagens do Instagram pela página ligada: o app é inscrito na página (os campos do objeto "instagram" ficam no painel).
-    if (!/^\d{1,32}$/.test(config.pageId)) throw new InstagramError(409, 'Conecte o Instagram de novo para identificar a página do Facebook.', 'PAGE_UNKNOWN');
-    const inscrever = async (campos: string) => metaRequest(`https://graph.facebook.com/${config.version}/${config.pageId}/subscribed_apps`, { method: 'POST', body: new URLSearchParams({ subscribed_fields: campos, access_token: await connectionToken(c) }) }, fetcher);
+    // Com página: inscreve a página; só Instagram: inscreve a própria conta do Instagram nos campos autorizados.
+    const alvo = /^\d{1,32}$/.test(config.pageId) ? config.pageId : c.account_id;
+    const inscrever = async (campos: string) => metaRequest(`https://graph.facebook.com/${config.version}/${alvo}/subscribed_apps`, { method: 'POST', body: new URLSearchParams({ subscribed_fields: campos, access_token: await connectionToken(c) }) }, fetcher);
     let resposta: ObjectValue;
-    try { resposta = await inscrever('messages,messaging_postbacks,message_reactions,message_reads'); }
+    try { resposta = await inscrever(alvo === c.account_id ? fields.join(',') : 'messages,messaging_postbacks,message_reactions,message_reads'); }
     catch { resposta = await inscrever('messages'); }
     if (resposta.success !== true) throw new InstagramError(502, 'A Meta não confirmou a inscrição da página.', 'SUBSCRIPTION_FAILED');
     const atualizado = await instagramDb().prepare('UPDATE instagram_connections SET fields_json = ? WHERE subject_hash = ? AND token_cipher = ?').run(JSON.stringify(fields), c.subject_hash, c.token_cipher);
@@ -176,6 +177,28 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
     } catch { /* página sem acesso para este token */ }
   }
   const escolhida = paginas.find((p) => p.username.toLowerCase() === config.expectedUsername) ?? (paginas.length === 1 && (!config.expectedUsername || contasInstagram.has(paginas[0].ig)) ? paginas[0] : undefined);
+  // Só Instagram, sem página do Facebook: a conta vem das permissões do token e o próprio token (usuário do sistema)
+  // acessa a conta direto pelo ID do Instagram.
+  if (!escolhida && contasInstagram.size) {
+    const contas: Array<{ id: string; username: string }> = [];
+    for (const id of [...contasInstagram].slice(0, 10)) {
+      try {
+        const url = new URL(`${base}/${id}`);
+        url.search = new URLSearchParams({ fields: 'id,username', access_token: userToken }).toString();
+        const conta = await metaRequest(url, {}, fetcher);
+        if (typeof conta.username === 'string') contas.push({ id: String(conta.id ?? id), username: conta.username });
+      } catch { /* conta sem acesso para este token */ }
+    }
+    const conta = contas.find((c) => c.username.toLowerCase() === config.expectedUsername) ?? (contas.length === 1 && !config.expectedUsername ? contas[0] : undefined);
+    if (conta && /^[a-zA-Z0-9._]{1,30}$/.test(conta.username)) {
+      const vence = Number(info.expires_at), expiresIn = Number.isSafeInteger(vence) && vence > 0 ? Math.max(3600, Math.min(31536000, vence - Math.floor(Date.now() / 1000))) : 31536000;
+      await gravarPaginaInstagram('', 'instagram-login');
+      const granted = ['instagram_business_basic', ...escopos.map((escopo) => ESCOPOS_FACEBOOK[escopo]).filter(Boolean)];
+      await saveConnection({ subjectId: identifier(info.user_id ?? conta.id), accountId: identifier(conta.id), username: conta.username, token: token(userToken), scopes: [...new Set(granted)], expiresIn, authorizedAt });
+      return { connected: true };
+    }
+    if (contas.length) throw new InstagramError(403, `A conta autorizada foi ${contas.map((c) => `@${c.username}`).join(', ')}; na janela da Meta, selecione o @${config.expectedUsername}.`, 'WRONG_ACCOUNT');
+  }
   if (!escolhida) {
     throw new InstagramError(403, paginas.length
       ? `A conta autorizada foi ${paginas.map((p) => `@${p.username || p.ig}`).join(', ')}; na janela da Meta, selecione a página ligada ao @${config.expectedUsername}.`

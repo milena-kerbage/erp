@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { navigation } from "@/config/navigation";
 import { isPathActive } from "@/lib/navigation";
 import { useUnreadConversations } from "@/features/leads/store";
+import { useInstagramUnread } from "@/features/whatsapp/unread";
+import { ModulosEmProducao } from "./ModulosEmProducao";
 import { useCurrentUser } from "@/features/settings/store";
 import { SIDEBAR_NAV_ID, useSidebar } from "./SidebarContext";
 import { SidebarItem } from "./SidebarItem";
@@ -23,26 +25,35 @@ export function Sidebar() {
   const pathname = usePathname();
   const { expanded } = useSidebar();
   const unread = useUnreadConversations();
+  const unreadInstagram = useInstagramUnread();
+  const liberados = navigation.main.filter((item) => !("soon" in item));
+  const emProducao = navigation.main.filter((item) => "soon" in item);
   const currentUser = useCurrentUser() ?? fallbackUser;
 
   return (
     <Aside $expanded={expanded}>
       <Nav id={SIDEBAR_NAV_ID} aria-label="Menu principal">
         <List $expanded={expanded}>
-          {navigation.main.map((item) => (
-            <li key={item.href}>
-              <SidebarItem
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-                expanded={expanded}
-                active={isPathActive(pathname, item.href)}
-                locked={"soon" in item}
-                indicator={item.href === "/conversas" && unread > 0}
-                indicatorLabel={`${unread} ${unread === 1 ? "conversa não lida" : "conversas não lidas"}`}
-              />
-            </li>
-          ))}
+          {liberados.map((item) => {
+            const naoLidas = item.href === "/conversas" ? unread : item.href === "/instagram" ? unreadInstagram : 0;
+            return (
+              <li key={item.href}>
+                <SidebarItem
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  expanded={expanded}
+                  active={isPathActive(pathname, item.href)}
+                  indicator={naoLidas > 0}
+                  indicatorLabel={`${naoLidas} ${naoLidas === 1 ? "conversa não lida" : "conversas não lidas"}`}
+                />
+              </li>
+            );
+          })}
+          {/* Os módulos em produção numa opção só, que lista todos numa janela. */}
+          <li>
+            <ModulosEmProducao modulos={emProducao} expanded={expanded} ativo={emProducao.some((item) => isPathActive(pathname, item.href))} />
+          </li>
         </List>
       </Nav>
 

@@ -1,6 +1,7 @@
 import { InstagramError, instagramConfig, retentionDays } from './config.ts';
 import { digest, seal, secretMatches, subjectHash } from './crypto.ts';
 import { currentConnection, instagramDb, instagramTransaction, pruneEvents } from './store.ts';
+import { receberDoWebhook } from './chat.ts';
 
 export function verifyChallenge(url: URL) {
   const { verifyToken } = instagramConfig(), q = url.searchParams;
@@ -33,6 +34,7 @@ export async function receiveWebhook(payload: unknown, now = Date.now()) {
   return instagramTransaction(async () => {
     const connection = await currentConnection();
     let stored = 0, ignored = 0, updates = 0;
+    const novosContatos: string[] = [];
     for (const entry of payload.entry as unknown[]) {
       if (!record(entry) || typeof entry.id !== 'string' || !/^\d{1,32}$/.test(entry.id)) throw new InstagramError(400, 'Conta do evento inválida.');
       if (!connection || entry.id !== connection.account_id) { ignored++; continue; }
@@ -51,6 +53,8 @@ export async function receiveWebhook(payload: unknown, now = Date.now()) {
         let suppressed = false;
         for (const h of hashes) if (await db.prepare('SELECT subject_hash FROM instagram_suppression WHERE subject_hash = ?').get(h)) { suppressed = true; break; }
         if (suppressed) { ignored++; continue; }
+        // Direct: a mensagem (ou o eco do que a conta enviou) entra no chat do ERP.
+        if (event.kind === 'messaging') { const contato = await receberDoWebhook(event.value, entry.id, now); if (contato) novosContatos.push(contato); }
         const encoded = canonical({ account: entry.id, kind: event.kind, value: event.value });
         const id = digest(`${instagramConfig().appId}:${encoded}`);
         const result = await db.prepare('INSERT INTO instagram_events (id,app_id,account_id,kind,payload_cipher,received_at) VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING')
@@ -60,6 +64,6 @@ export async function receiveWebhook(payload: unknown, now = Date.now()) {
         stored++;
       }
     }
-    return { stored, ignored };
+    return { stored, ignored, novosContatos };
   });
 }

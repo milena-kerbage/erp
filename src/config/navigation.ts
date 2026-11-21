@@ -3,7 +3,6 @@ import {
   CalculatorIcon,
   CalendarBlankIcon,
   ChartLineUpIcon,
-  ChatsCircleIcon,
   ClipboardTextIcon,
   GearSixIcon,
   InfoIcon,
@@ -20,6 +19,7 @@ import {
   WalletIcon,
 } from "@phosphor-icons/react/ssr";
 import type { Icon } from "@phosphor-icons/react";
+import { IconeInstagram, IconeWhatsApp } from "@/components/brand/LogosCanais";
 
 export type NavTab = {
   label: string;
@@ -64,7 +64,9 @@ export const navigation = {
       icon: SquaresFourIcon,
     },
     { label: "Leads", href: "/leads", icon: UserFocusIcon },
-    { label: "Conversas", href: "/conversas", icon: ChatsCircleIcon },
+    // Atendimento: cada canal com a própria tela e a logo colorida; uma troca no topo das listas liga os dois.
+    { label: "WhatsApp", href: "/conversas", icon: IconeWhatsApp },
+    { label: "Instagram", href: "/instagram", icon: IconeInstagram },
     {
       label: "Clientes",
       href: "/clientes",

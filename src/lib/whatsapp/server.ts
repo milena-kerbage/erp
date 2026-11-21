@@ -4,12 +4,14 @@ import { developmentAccess } from '@/lib/auth/environment';
 import { trustedOrigin, HttpError } from '@/lib/auth/http';
 import { effectiveConfiguration, limited, readBytes, WhatsAppError, type JsonObject } from './core';
 import { IntegrationConfigurationError } from './config';
+import { InstagramError } from '../instagram/config';
 import { DatabaseConfigurationError, DatabaseOperationError } from '../database.ts';
 
 export const noStore = { 'Cache-Control': 'no-store, private', 'X-Content-Type-Options': 'nosniff' };
 export function errorResponse(error: unknown) {
   if (error instanceof WhatsAppError) return Response.json({error: error.message, code: error.code, ...(error.field ? {field: error.field} : {}), ...(error.details !== undefined ? {details: error.details} : {})}, {status: error.status, headers: noStore});
   if (error instanceof IntegrationConfigurationError) return Response.json({error: error.message, code: error.code, ...(error.field ? {field: error.field} : {})}, {status: error.status, headers: noStore});
+  if (error instanceof InstagramError) return Response.json({error: error.message, code: error.code}, {status: error.status, headers: noStore});
   if (error instanceof HttpError) return Response.json({error: error.message}, {status: error.status, headers: noStore});
   if (error instanceof DatabaseConfigurationError || error instanceof DatabaseOperationError) return Response.json({error: error.message, code: error.code}, {status: error.status, headers: noStore});
   return Response.json({error: 'A operação não pôde ser concluída. Verifique a configuração e tente novamente.'}, {status: 500, headers: noStore});

@@ -29,6 +29,16 @@ Em **Configurações > Instagram** o gestor faz tudo sem mexer na hospedagem (me
 
 **O token de verificação do webhook não muda:** o de `INSTAGRAM_VERIFY_TOKEN` (já cadastrado na Meta) sempre prevalece; um novo só é gerado e salvo se não houver nenhum. Assinatura dos webhooks: segredo próprio salvo > `INSTAGRAM_WEBHOOK_APP_SECRET` > App Secret do WhatsApp (mesmo app da Meta).
 
+## Chat do Instagram (Direct) no ERP (nov/2026)
+
+Menu **Instagram** (`/instagram`, logo colorida), ao lado do **WhatsApp** (antigo "Conversas", `/conversas`); uma troca no topo das duas listas leva de um canal ao outro com as não lidas de cada um.
+
+- **Dados:** `erp_meta.instagram_chat_contatos` e `instagram_chat_mensagens` (migração `019_instagram_chat.sql`). Entram pelo webhook (`messaging`: recebidas e ecos do que a conta enviou, inclusive pelo app) e pela sincronização do histórico (`GET {dono}/conversations?platform=instagram`, até 50 mensagens por conversa), automática na primeira abertura e no botão de atualizar. Nome, @ e foto vêm do perfil de cada pessoa.
+- **Quem fala na API (`dono`):** login pelo Facebook com página → a página; **só Instagram, sem página** → o ID da conta do Instagram com o token de usuário do sistema; login do Instagram → `me` em graph.instagram.com.
+- **Resposta:** texto até 1000 caracteres; até 24 h após a última mensagem da pessoa, resposta comum; de 1 a 7 dias, etiqueta `HUMAN_AGENT`; depois, a Meta não permite.
+- **Conexão sem página:** quando o token do Login do Facebook para Empresas não mostra página, a conta do Instagram sai das permissões do próprio token (`granular_scopes` de `instagram_basic`) e as notificações inscrevem a conta do Instagram.
+- **API:** `GET/POST /api/instagram/chat` (lista, não lidas, sincronizar) e `GET/POST/PATCH /api/instagram/chat/{igsid}` (mensagens, responder, marcar lidas), com a sessão da equipe.
+
 ## Configurar
 
 1. Aplicar `supabase/migrations/015_instagram.sql` no banco da instalação depois das migrações anteriores. É aditiva, cria tabelas privadas em `erp_meta` e habilita RLS. O script geral `npm run db:migrate -- --confirm=APLICAR-MIGRACOES --allow-existing` reaplica todas as migrações idempotentes; conferir o destino antes. Nenhuma migração remota é aplicada pela implementação local.

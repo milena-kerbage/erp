@@ -2,7 +2,8 @@
 
 // A lista de conversas no desenho do ERP da Le Ange (conversation-list.tsx): busca com o botão de filtros, os recortes em
 // chips (todas, não lidas, aguardando e, no chip da seta, minhas, favoritas, fixadas e resolvidas) e, no topo, o grupo de
-// quem espera a equipe, do mais antigo para o mais novo. Recolhida, vira um trilho só com as fotos.
+// quem espera a equipe, do mais recente para o mais antigo. Recolhida, vira um trilho só com as fotos.
+import { TrocaCanal } from "@/features/canais/TrocaCanal";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   CameraIcon, CaretDownIcon, CheckCircleIcon, CheckIcon, CheckSquareIcon, ChecksIcon, ChatsCircleIcon, ClockIcon, FileTextIcon, HandIcon, LockSimpleIcon, MagnifyingGlassIcon, MicrophoneIcon,
@@ -186,7 +187,8 @@ export function Lista({ estado, equipe, eu, aoNovaConversa, trilho = false, aoEx
       )}
       <div className="listHead">
         <div className="listTitleRow">
-          <h1 className="listTitle">Conversas</h1>
+          <h1 className="listTitle" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>WhatsApp</h1>
+          <TrocaCanal atual="whatsapp" />
           <span className="listTitleActions">
             <Tooltip label={sons ? "Silenciar os sons" : "Ligar os sons"} side="bottom">
               <button type="button" className="squareButton" data-size="sm" aria-label={sons ? "Silenciar os sons" : "Ligar os sons"} aria-pressed={!sons} onClick={() => { ligarSons(!sons); setSons(!sons); }}>{sons ? <SpeakerHighIcon /> : <SpeakerSlashIcon />}</button>
