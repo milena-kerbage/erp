@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { FiltroCategoria } from "../../categoria";
-import { ArchivedLeads } from "../ArchivedLeads";
 import { NewLeadForm } from "../NewLeadForm";
 import styled from "@emotion/styled";
-import { ArchiveIcon, KanbanIcon, PlusIcon, TableIcon } from "@phosphor-icons/react";
+import { KanbanIcon, PlusIcon, TableIcon } from "@phosphor-icons/react";
 import { HeaderActions } from "@/components/layout/Header/HeaderActions";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -33,7 +32,6 @@ const Screen = styled.div`
  * trata o resto, nas duas visões.
  */
 export function LeadsView({ funnelId, categoriaInicial, visaoInicial }: { funnelId?: string; categoriaInicial?: FiltroCategoria; visaoInicial?: View }) {
-  const [showArchived, setShowArchived] = useState(false);
   const [creating, setCreating] = useState(false);
   const [view, setView] = useViewMode<View>("leads", "table", VIEWS, "kanban");
   // Link direto (ex.: /clientes → tabela só de clientes) vale sobre a última visão usada.
@@ -56,7 +54,6 @@ export function LeadsView({ funnelId, categoriaInicial, visaoInicial }: { funnel
           { value: "table", label: "Tabela", icon: TableIcon },
         ]}
       />
-      <IconButton icon={ArchiveIcon} label="Oportunidades arquivadas" variant="ghost" onClick={() => setShowArchived(true)} />
       <WideOnly>
         <Button icon={PlusIcon} onClick={() => setCreating(true)}>Novo lead</Button>
       </WideOnly>
@@ -68,7 +65,6 @@ export function LeadsView({ funnelId, categoriaInicial, visaoInicial }: { funnel
 
   return (
     <>
-      {showArchived && <ArchivedLeads open onClose={() => setShowArchived(false)} />}
       {creating && <NewLeadForm open onClose={() => setCreating(false)} funnelId={funnel.id} />}
       {view === "kanban" && (
         <HeaderActions>

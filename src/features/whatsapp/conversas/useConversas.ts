@@ -53,7 +53,8 @@ export function mesclar(atuais: WhatsAppMessage[], doServidor: WhatsAppMessage[]
   return [...servidor, ...locais].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id));
 }
 
-export function useConversas(inicial?: string) {
+export function useConversas(inicial?: string, opcoes: { semUrl?: boolean } = {}) {
+  const semUrl = Boolean(opcoes.semUrl);
   const [aba, setAba] = useState<Aba>("todas");
   const [busca, setBusca] = useState("");
   const [buscaAtiva, setBuscaAtiva] = useState("");
@@ -180,11 +181,14 @@ export function useConversas(inicial?: string) {
     try { await whatsappRequest("read", { body: { phone } }); } catch { /* a próxima abertura tenta de novo */ }
   }, []);
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (selecionado) url.searchParams.set("phone", selecionado); else url.searchParams.delete("phone");
-    window.history.replaceState(window.history.state, "", url);
+    // Na tela de conversas a URL acompanha a conversa aberta (dá para copiar o link); dentro da oportunidade, não.
+    if (!semUrl) {
+      const url = new URL(window.location.href);
+      if (selecionado) url.searchParams.set("phone", selecionado); else url.searchParams.delete("phone");
+      window.history.replaceState(window.history.state, "", url);
+    }
     if (selecionado) void carregarFio(selecionado, true);
-  }, [selecionado, carregarFio]);
+  }, [selecionado, carregarFio, semUrl]);
   // Lida só quando alguém está olhando: com a aba visível agora ou assim que ela voltar a ficar visível.
   useEffect(() => {
     if (!selecionado || !conversaSelecionada || !(conversaSelecionada.unreadCount > 0 || conversaSelecionada.markedUnread)) return;

@@ -32,9 +32,15 @@ const ROTULO_TIPO: Record<string, string> = { image: "Foto", video: "Vídeo", au
 const previa = (c: Conversa) => c.ultimaMensagem || ROTULO_TIPO[c.ultimoTipo] || "Mensagem";
 const DIA = 86_400_000;
 
-export function ChatInstagram() {
+export function ChatInstagram({ conversaInicial }: { conversaInicial?: string }) {
   const [lista, setLista] = useState<Lista | null>(null);
-  const [selecionado, setSelecionado] = useState<string>();
+  const [selecionado, setSelecionado] = useState<string | undefined>(conversaInicial);
+  // A URL acompanha a conversa aberta (/instagram?conversa=<id>): dá para copiar o link e abrir direto nela.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selecionado) url.searchParams.set("conversa", selecionado); else url.searchParams.delete("conversa");
+    window.history.replaceState(window.history.state, "", url);
+  }, [selecionado]);
   const [busca, setBusca] = useState("");
   const [sincronizando, setSincronizando] = useState(false);
   const [aviso, setAviso] = useState("");

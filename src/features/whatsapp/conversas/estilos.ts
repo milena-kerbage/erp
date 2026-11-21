@@ -68,6 +68,9 @@ export const Raiz = styled.div`
   transition: grid-template-columns var(--duration-slow) var(--ease-settle);
 
   &[data-panel] { grid-template-columns: var(--list-width) minmax(0, 1fr) var(--panel-width); }
+  /* Dentro da oportunidade: só a conversa, na largura toda. */
+  &[data-embutida] { grid-template-columns: minmax(0, 1fr); }
+  &[data-embutida] .threadName { cursor: default; }
   /* A lista recolhida vira um trilho só com as fotos; o botão no alto abre de novo. */
   &[data-list="closed"] { --list-width: 4.25rem; }
 
@@ -777,7 +780,7 @@ export const AcoesMensagem = styled.div`
     display: grid; place-items: center; width: 2.5rem; height: 2.5rem; font-size: 1.375rem; line-height: 1; cursor: pointer; background: none; border: 0; border-radius: 50%;
     transition: transform 0.15s ease, background-color 0.15s ease;
   }
-  .quickReactions button:hover { transform: translateY(-2px) scale(1.15); background-color: ${({ theme }) => theme.palette.neutral[0]}; }
+  .quickReactions button:hover { background-color: ${({ theme }) => theme.palette.neutral[0]}; }
   .quickReactions button[data-on] { background-color: ${({ theme }) => theme.palette.neutral[0]}; box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary.main}; }
 
   .grupo { display: flex; flex-direction: column; gap: 2px; }

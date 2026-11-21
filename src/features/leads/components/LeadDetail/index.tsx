@@ -12,9 +12,10 @@ import { useDockActionsRegistration, type DockActions } from "@/lib/dock";
 import { useIsMobile } from "@/lib/useMediaQuery";
 import { useFunnels, useWorkspace } from "@/features/settings/store";
 import { composerAttachments, useLeads } from "../../store";
+import { ConversaDaOportunidade, telefoneWhatsAppDoLead } from "@/features/whatsapp/conversas/ConversaDaOportunidade";
 import { LeadChat } from "./LeadChat";
 import { LeadProfile } from "./LeadProfile";
-import { Aside, Card, PaneSwitch, PaneSwitchItem, PaneThumb, Root } from "./styles";
+import { Aside, Card, ChatTabs, PaneSwitch, PaneSwitchItem, PaneThumb, Root } from "./styles";
 
 type Pane = "info" | "chat";
 
@@ -30,6 +31,8 @@ export function LeadDetail({ leadId }: { leadId: string }) {
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [requested,setRequested]=useState<string|null>(null);
   const [pane, setPane] = useState<Pane>("info");
+  // A conversa da oportunidade é a do WhatsApp; as notas do CRM (ex.: pedido feito na loja) ficam na aba ao lado.
+  const [chatTab, setChatTab] = useState<"whatsapp" | "notas">("whatsapp");
   const {
     leads,
     hydrate,
@@ -121,6 +124,9 @@ export function LeadDetail({ leadId }: { leadId: string }) {
   if (error && (!lead || !leadDetails)) return <div role="alert" style={{ padding: "2rem" }}>{error} <Button onClick={() => void hydrate(leadId)}>Tentar novamente</Button></div>;
   if (!lead || !leadDetails) notFound();
 
+  const whatsapp = telefoneWhatsAppDoLead(lead.phone);
+  const notas = (messages[lead.id] ?? []).length;
+
   return (
     <Root data-flush data-pane={pane}>
       <PageTitle>{lead.name}</PageTitle>
@@ -166,6 +172,15 @@ export function LeadDetail({ leadId }: { leadId: string }) {
       </Aside>
 
       <Card aria-label={`Conversa com ${lead.name}`} data-pane-id="chat">
+        {whatsapp && (
+          <ChatTabs role="tablist" aria-label="Conversa da oportunidade">
+            <button type="button" role="tab" aria-selected={chatTab === "whatsapp"} onClick={() => setChatTab("whatsapp")}>WhatsApp</button>
+            <button type="button" role="tab" aria-selected={chatTab === "notas"} onClick={() => setChatTab("notas")}>Notas da oportunidade{notas > 0 && <span>{notas}</span>}</button>
+          </ChatTabs>
+        )}
+        {whatsapp && chatTab === "whatsapp" ? (
+          <ConversaDaOportunidade telefone={whatsapp} lead={lead} funil={funnel} aoMoverEtapa={(stage) => stage !== lead.stage && moveLead(lead.id, stage, teamMember.name)} />
+        ) : (
         <LeadChat
           lead={lead}
           messages={messages[lead.id] ?? []}
@@ -183,6 +198,7 @@ export function LeadDetail({ leadId }: { leadId: string }) {
             })
           }
         />
+        )}
       </Card>
     </Root>
   );

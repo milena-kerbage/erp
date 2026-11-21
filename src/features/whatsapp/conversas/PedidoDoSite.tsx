@@ -104,14 +104,14 @@ export function PedidoDoSite({ numero, original }: { numero: string; original: R
       {/* O essencial num relance: bebê, entrega e cidade em etiquetas (o detalhe fica na dica); o recado da cliente em destaque. */}
       <Resumo>
         {bebe && (
-          <span title={bebe.data ? `${jaNasceu(bebe.data) ? "Nasceu em" : "Previsão de nascimento:"} ${dataCurta(bebe.data)}` : undefined}>
-            <BabyIcon aria-hidden /><b>{bebe.nome || "Bebê"}</b>{bebe.data ? ` · ${quandoNasce(bebe.data)}` : ""}
+          <span data-encolhe="" title={`${bebe.nome || "Bebê"}${bebe.data ? ` · ${jaNasceu(bebe.data) ? "nasceu em" : "previsão"} ${dataCurta(bebe.data)}` : ""}`}>
+            <BabyIcon aria-hidden /><i><b>{bebe.nome || "Bebê"}</b>{bebe.data ? ` · ${quandoNasce(bebe.data)}` : ""}</i>
           </span>
         )}
         <span title={pedido.retirar ? "Prefere retirar no ateliê, em Fortaleza" : "Quer receber em casa: frete e prazo a combinar"}>
-          <TruckIcon aria-hidden />{pedido.retirar ? "Retira no ateliê" : "Receber em casa"}
+          <TruckIcon aria-hidden /><i>{pedido.retirar ? "Retirada" : "Entrega"}</i>
         </span>
-        {(pedido.local || cliente?.cidade) && <span><MapPinIcon aria-hidden />{pedido.local || cliente?.cidade}</span>}
+        {(pedido.local || cliente?.cidade) && <span data-encolhe="" title={pedido.local || cliente?.cidade}><MapPinIcon aria-hidden /><i>{pedido.local || cliente?.cidade}</i></span>}
       </Resumo>
       {pedido.observacoes && (
         <Recado type="button" data-aberto={recadoAberto || undefined} aria-expanded={recadoAberto} title={recadoAberto ? undefined : "Ver o recado inteiro"} onClick={() => setRecadoAberto((atual) => !atual)}>
@@ -162,7 +162,7 @@ const Topo = styled.div`
   .icone svg { width: 17px; height: 17px; }
   .titulo { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
   .titulo strong { font-size: 0.875rem; font-weight: 600; line-height: 1.25; }
-  .titulo small { overflow: hidden; font-size: 0.75rem; color: ${suave(58)}; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  .titulo small { overflow: hidden; font-size: 0.75rem; color: ${suave(58)}; white-space: nowrap; text-overflow: ellipsis; }
 `;
 
 const Situacao = styled.span`
@@ -189,7 +189,7 @@ const Itens = styled.ul`
   .texto strong { font-size: 0.8125rem; font-weight: 600; line-height: 1.3; }
   .texto > span { color: ${suave(62)}; }
   .texto > span.apoio { color: ${suave(45)}; }
-  .preco { flex-shrink: 0; padding-top: 1px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .preco { flex-shrink: 0; padding-top: 1px; font-weight: 600; white-space: nowrap; }
 `;
 
 const Total = styled.div`
@@ -202,29 +202,32 @@ const Total = styled.div`
   .cupom span { display: inline-flex; align-items: center; gap: 5px; }
   .cupom svg { width: 13px; height: 13px; }
   .total span { color: ${suave(62)}; }
-  .total strong { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .total strong { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; }
 `;
 
 const Resumo = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
+  min-width: 0;
   margin-top: 10px;
+  /* Sempre numa linha só: quem tem mais texto (o bebê) cede espaço primeiro e termina em reticências. */
   > span {
     display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
-    gap: 6px;
-    max-width: 100%;
-    padding: 4px 10px 4px 8px;
+    gap: 5px;
+    min-width: 0;
+    padding: 4px 9px 4px 7px;
     border-radius: 999px;
     background: ${suave(6)};
     font-size: 0.75rem;
     color: ${suave(78)};
-    overflow: hidden;
     white-space: nowrap;
-    text-overflow: ellipsis;
   }
-  svg { flex-shrink: 0; width: 14px; height: 14px; opacity: 0.75; }
+  > span > i { min-width: 0; overflow: hidden; font-style: normal; text-overflow: ellipsis; }
+  /* A entrega ("Entrega"/"Retirada") nunca encolhe; o bebê e a cidade cedem espaço quando o texto é longo. */
+  > span[data-encolhe] { flex-shrink: 1; }
+  svg { flex-shrink: 0; width: 13px; height: 13px; opacity: 0.75; }
   b { font-weight: 600; }
 `;
 

@@ -37,11 +37,13 @@ function horaJanela(iso: string) {
 }
 type Item = { m: WhatsAppMessage; novoDia: boolean; primeira: boolean; album?: WhatsAppMessage[]; parada?: boolean };
 
-export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil, aoMoverEtapa, painel, aoAlternarPainel, listaFechada, aoAlternarLista }: {
+export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil, aoMoverEtapa, painel, aoAlternarPainel, listaFechada, aoAlternarLista, embutida = false }: {
   estado: Estado; phone: string; conversa: WhatsAppConversation | null; fio?: Fio; equipe: readonly Member[]; eu: Member;
   /** A oportunidade do CRM com este telefone, quando existe: a etapa dela fica presa abaixo do cabeçalho. */
   lead?: Lead; funil?: Funnel; aoMoverEtapa: (etapa: string) => void;
   painel: boolean; aoAlternarPainel: () => void; listaFechada: boolean; aoAlternarLista: () => void;
+  /** Dentro da oportunidade: só a conversa, sem lista, ficha, fechar nem a régua de etapas (a ficha ao lado já tem). */
+  embutida?: boolean;
 }) {
   const { setSelecionado, organizar, enviarTexto, enviarNota, enviarArquivo, descartarFalha, reenviarFalha, apagarMensagem, editarNota, reagir, carregarAntigas, recarregarFio, salvarNaFicha, setErro } = estado;
   const mensagens = useMemo(() => fio?.messages ?? [], [fio?.messages]);
@@ -112,11 +114,11 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
   useEffect(() => {
     let sobreposto = false;
     const antes = (e: KeyboardEvent) => { if (e.key === "Escape") sobreposto = Boolean(document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')); };
-    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape" && !e.defaultPrevented && !sobreposto && !acoes && foto === null && !modelo && !respondendo) setSelecionado(undefined); };
+    const tecla = (e: KeyboardEvent) => { if (!embutida && e.key === "Escape" && !e.defaultPrevented && !sobreposto && !acoes && foto === null && !modelo && !respondendo) setSelecionado(undefined); };
     window.addEventListener("keydown", antes, true);
     window.addEventListener("keydown", tecla);
     return () => { window.removeEventListener("keydown", antes, true); window.removeEventListener("keydown", tecla); };
-  }, [acoes, foto, modelo, respondendo, setSelecionado]);
+  }, [acoes, foto, modelo, respondendo, setSelecionado, embutida]);
   useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(""), 2600); return () => window.clearTimeout(t); }, [aviso]);
 
   const fotos = useMemo(() => mensagens.filter((m) => m.type === "image" && (m.hasMedia || m.local?.previewUrl)), [mensagens]);
@@ -166,12 +168,12 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
   return (
     <ColunaConversa data-pane="conversa" aria-label={`Conversa com ${nome}`} style={{ "--composer-h": `${altura}px` } as CSSProperties}>
       <header className="threadHead">
-        <Tooltip label={listaFechada ? "Mostrar a lista de conversas" : "Recolher a lista de conversas"} side="bottom">
+        {!embutida && <Tooltip label={listaFechada ? "Mostrar a lista de conversas" : "Recolher a lista de conversas"} side="bottom">
           <button type="button" className="iconGhost listToggle" aria-label={listaFechada ? "Mostrar a lista de conversas" : "Recolher a lista de conversas"} aria-pressed={listaFechada} onClick={aoAlternarLista}><SidebarSimpleIcon mirrored /></button>
-        </Tooltip>
-        <span className="back"><button type="button" className="iconGhost" data-soft="" aria-label="Voltar para a lista" onClick={() => setSelecionado(undefined)}><ArrowLeftIcon /></button></span>
+        </Tooltip>}
+        <span className="back" hidden={embutida}><button type="button" className="iconGhost" data-soft="" aria-label="Voltar para a lista" onClick={() => setSelecionado(undefined)}><ArrowLeftIcon /></button></span>
         <Avatar name={nome} seed={phone} size="sm" shape="circle" />
-        <button type="button" className="threadName" onClick={aoAlternarPainel} aria-label={`${painel ? "Esconder" : "Mostrar"} a ficha de ${nome}`}>
+        <button type="button" className="threadName" onClick={aoAlternarPainel} aria-label={embutida ? nome : `${painel ? "Esconder" : "Mostrar"} a ficha de ${nome}`}>
           <span className="threadTitle">
             <strong>{nome}</strong>
             <Tooltip label={dicaJanela} side="bottom"><span className="windowBadge" data-open={(aberta && !conversa?.optedOut) || undefined} role="img" aria-label={dicaJanela}>{aberta && !conversa?.optedOut ? <LockSimpleOpenIcon weight="bold" /> : <LockSimpleIcon weight="bold" />}</span></Tooltip>
@@ -210,22 +212,23 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
                 : <MenuItem icon={CheckCircleIcon} onSelect={() => mudarSituacao("resolvida")}>Resolver conversa</MenuItem>}
               <MenuSeparator />
               {conversa.assignee !== eu.id && <MenuItem icon={HandIcon} onSelect={() => void organizar(phone, { responsavel: eu.id, responsavelNome: eu.name })}>Assumir a conversa</MenuItem>}
-              {lead && <MenuItem icon={ArrowSquareOutIcon} href={`/leads/${lead.id}`}>Abrir oportunidade</MenuItem>}
+              {lead && !embutida && <MenuItem icon={ArrowSquareOutIcon} href={`/leads/${lead.id}`}>Abrir oportunidade</MenuItem>}
+              {embutida && <MenuItem icon={ArrowSquareOutIcon} href={`/conversas?phone=${encodeURIComponent(phone)}`}>Abrir no WhatsApp</MenuItem>}
               <MenuItem icon={ExportIcon} onSelect={() => window.location.assign(`/api/whatsapp/exportar?phone=${encodeURIComponent(phone)}`)}>Exportar conversa</MenuItem>
               <MenuItem icon={CopyIcon} onSelect={() => void navigator.clipboard?.writeText(telefoneFormatado(phone)).then(() => setAviso("Telefone copiado"))}>Copiar telefone</MenuItem>
             </Menu>
-            <Tooltip label={painel ? "Esconder a ficha" : "Mostrar a ficha"} side="bottom">
+            {!embutida && <Tooltip label={painel ? "Esconder a ficha" : "Mostrar a ficha"} side="bottom">
               <button type="button" className="iconGhost" aria-label={painel ? "Esconder a ficha" : "Mostrar a ficha"} aria-pressed={painel} onClick={aoAlternarPainel}><SidebarSimpleIcon /></button>
-            </Tooltip>
-            <Tooltip label="Fechar a conversa (Esc)" side="bottom">
+            </Tooltip>}
+            {!embutida && <Tooltip label="Fechar a conversa (Esc)" side="bottom">
               <button type="button" className="iconGhost closeThread" aria-label="Fechar a conversa (Esc)" onClick={() => setSelecionado(undefined)}><XIcon /></button>
-            </Tooltip>
+            </Tooltip>}
           </div>
         )}
       </header>
 
       {/* A etapa da oportunidade, presa abaixo do cabeçalho: muda de etapa sem sair da conversa. */}
-      {lead && funil && etapa && (
+      {!embutida && lead && funil && etapa && (
         // Uma linha só: a etapa (abre a lista para mover), a régua das etapas (cada trecho leva direto a ela), a posição
         // no funil e o atalho para a oportunidade.
         <div className="pinnedPipeline">

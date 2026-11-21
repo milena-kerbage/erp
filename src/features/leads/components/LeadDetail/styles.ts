@@ -714,3 +714,33 @@ export const DropOverlay = styled.div`
   color: ${({ theme }) => theme.colors.text.brand};
   pointer-events: none;
 `;
+
+/** Abas da conversa da oportunidade: o WhatsApp de verdade e as notas do CRM. */
+export const ChatTabs = styled.div`
+  display: flex;
+  flex-shrink: 0;
+  gap: ${({ theme }) => theme.spacing(1)};
+  padding: ${({ theme }) => theme.spacing(1.5, 3)};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  background-color: ${({ theme }) => theme.colors.background.surface};
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 1.875rem;
+    padding: 0 ${({ theme }) => theme.spacing(3)};
+    border-radius: ${({ theme }) => theme.radii.md};
+    font-size: 0.8125rem;
+    font-weight: ${({ theme }) => theme.fontWeights.medium};
+    color: ${({ theme }) => theme.colors.text.secondary};
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  button:hover { background: ${({ theme }) => theme.colors.interactive.hover}; color: ${({ theme }) => theme.colors.text.primary}; }
+  button[aria-selected="true"] { background: ${({ theme }) => theme.colors.interactive.pressed}; color: ${({ theme }) => theme.colors.text.primary}; }
+  button span { min-width: 1.125rem; padding: 0 5px; border-radius: 999px; background: ${({ theme }) => theme.colors.interactive.pressed}; font-size: 0.6875rem; line-height: 1.125rem; text-align: center; }
+
+  ${({ theme }) => theme.media.md} {
+    padding-inline: ${({ theme }) => theme.spacing(4)};
+  }
+`;
