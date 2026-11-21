@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
 import { CaretDownIcon } from "@phosphor-icons/react";
@@ -8,6 +9,7 @@ import { IconTile } from "@/components/ui/IconTile";
 import { Select } from "@/components/ui/Select";
 import { transientOptions } from "@/lib/emotion/transient";
 import { stageIcon, type Funnel } from "@/features/leads/funnels";
+import { leadsHref } from "../links";
 import { formatMoney, wholeShares, type StageValue } from "../metrics";
 import { Card, CardHead, EmptyNote } from "./ui";
 
@@ -32,20 +34,31 @@ const Grade = styled.div`
   }
 `;
 
+const Numeros_li = `display: grid; min-height: 0;`;
+
 const Numeros = styled.ul`
   ${linhasIguais}
+
+  > li { ${Numeros_li} border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle}; }
+  > li:last-of-type { border-bottom: 0; }
 `;
 
-const Linha = styled("li", transientOptions)<{ $dim: boolean }>`
+/** A linha inteira leva para os leads daquela etapa. */
+const Linha = styled(Link, transientOptions)<{ $dim: boolean }>`
   display: grid;
   grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
   align-items: center;
   min-height: 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  margin: 0 -${({ theme }) => theme.spacing(2)};
+  padding: 0 ${({ theme }) => theme.spacing(2)};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: inherit;
+  text-decoration: none;
   opacity: ${({ $dim }) => ($dim ? 0.4 : 1)};
-  transition: opacity 200ms;
+  transition: opacity 200ms, background-color 160ms;
 
-  &:last-of-type { border-bottom: 0; }
+  &:hover, &:focus-visible { background-color: ${({ theme }) => theme.colors.interactive.hover}; }
+  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary.main}; outline-offset: -2px; }
 
   > div { display: flex; flex-direction: column; min-width: 0; padding: ${({ theme }) => theme.spacing(0, 3)}; line-height: 1.2; }
   > div:first-of-type { padding-left: 0; }
@@ -67,15 +80,16 @@ const Funil = styled.div`
   > svg {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
+    display: block;
+    overflow: visible;
+    pointer-events: none;
   }
   path {
     transition: opacity 200ms;
   }
 `;
 
-const Etapa = styled("div", transientOptions)<{ $cor: string; $dim: boolean }>`
+const Etapa = styled(Link, transientOptions)<{ $cor: string; $dim: boolean }>`
   position: relative;
   display: flex;
   flex-direction: column;
@@ -84,8 +98,9 @@ const Etapa = styled("div", transientOptions)<{ $cor: string; $dim: boolean }>`
   gap: 3px;
   min-height: 0;
   /* Um respiro em cima: a aba da gaveta anterior entra aqui */
-  padding: 5px 20% 0;
+  padding: 6px 20% 0;
   color: ${({ $cor }) => $cor};
+  text-decoration: none;
   font-size: 0.75rem;
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   line-height: 1.15;
@@ -94,7 +109,27 @@ const Etapa = styled("div", transientOptions)<{ $cor: string; $dim: boolean }>`
   transition: opacity 200ms;
 
   span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: -6px; border-radius: ${({ theme }) => theme.radii.md}; }
 `;
+
+/** Tamanho real do desenho, em pixels: o recorte entre as gavetas tem medida fixa, não estica com o cartão. */
+function useTamanho<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [tamanho, setTamanho] = useState({ largura: 0, altura: 0 });
+  useLayoutEffect(() => {
+    const alvo = ref.current;
+    if (!alvo) return;
+    const medir = () => setTamanho((atual) => { const largura = alvo.clientWidth, altura = alvo.clientHeight; return atual.largura === largura && atual.altura === altura ? atual : { largura, altura }; });
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(alvo);
+    return () => observador.disconnect();
+  }, []);
+  return [ref, tamanho] as const;
+}
+
+// O recorte da referência: uma linha fina e reta na cor do cartão, que desce num V pequeno e agudo no meio.
+const RECORTE = { meia: 8, altura: 10, traco: 2 };
 
 const Trigger = styled.button`
   display: inline-flex;
@@ -151,13 +186,19 @@ export function FunnelCard({
   // nome (contraste AA). No tema escuro, o destaque e o texto claro do mesmo tom.
   const cheia = (id: string) => (theme.mode === "dark" ? tom(id).soft : `color-mix(in srgb, ${tom(id).fg} 10%, ${tom(id).soft})`);
   const sobre = (id: string) => tom(id).fg;
-  // Desenho: 100 de largura; cada etapa ocupa 100 de altura. O funil afunila até 56% da largura. Cada gaveta desce
-  // numa aba em triângulo, e o contorno na cor do cartão abre o recorte onde ela encaixa na gaveta de baixo.
-  const n = Math.max(stages.length, 1), recuo = 22 / n, ABA = { meia: 7, altura: 12 };
+  // Desenho em pixels reais. O funil afunila até 56% da largura; cada gaveta termina reta e desce numa aba em V no
+  // meio. Por cima, a linha do recorte (reta, com o V) na cor do cartão separa uma gaveta da outra.
+  const [desenho, { largura, altura }] = useTamanho<HTMLDivElement>();
+  const n = Math.max(stages.length, 1), recuo = (largura * 0.22) / n, meio = largura / 2;
+  const y = (indice: number) => Math.round((altura * indice) / n);
   const gaveta = (indice: number) => {
-    const cima = indice * recuo, baixo = (indice + 1) * recuo, y0 = indice * 100, y1 = (indice + 1) * 100;
-    const aba = indice < n - 1 ? ` L${50 + ABA.meia} ${y1} L50 ${y1 + ABA.altura} L${50 - ABA.meia} ${y1}` : "";
-    return `M${cima} ${y0} L${100 - cima} ${y0} L${100 - baixo} ${y1}${aba} L${baixo} ${y1} Z`;
+    const cima = indice * recuo, baixo = (indice + 1) * recuo, y0 = y(indice), y1 = y(indice + 1);
+    const aba = indice < n - 1 ? ` L${meio + RECORTE.meia} ${y1} L${meio} ${y1 + RECORTE.altura} L${meio - RECORTE.meia} ${y1}` : "";
+    return `M${cima} ${y0} L${largura - cima} ${y0} L${largura - baixo} ${y1}${aba} L${baixo} ${y1} Z`;
+  };
+  const recorte = (indice: number) => {
+    const borda = indice * recuo - 2, linha = y(indice);
+    return `M${borda} ${linha} L${meio - RECORTE.meia} ${linha} L${meio} ${linha + RECORTE.altura} L${meio + RECORTE.meia} ${linha} L${largura - borda} ${linha}`;
   };
 
   return (
@@ -194,32 +235,39 @@ export function FunnelCard({
         <Grade onPointerLeave={() => setHover(null)}>
           <Numeros aria-label="Leads e valor por etapa">
             {stages.map((stage, indice) => (
-              <Linha key={stage.id} $dim={hover !== null && hover !== stage.id} onPointerEnter={() => setHover(stage.id)}>
-                <div>
-                  <small>Leads</small>
-                  <strong>{stage.count}</strong>
-                  <em>{count > 0 ? `${partesDosLeads[indice]}%` : "–"} do funil</em>
-                </div>
-                <div>
-                  <small>Valor</small>
-                  <strong>{formatMoney(stage.value)}</strong>
-                  <em>{total > 0 ? `${partesDoValor[indice]}%` : "–"} do valor</em>
-                </div>
-              </Linha>
+              <li key={stage.id}>
+                <Linha href={leadsHref({ etapas: [`${funnel.id}:${stage.id}`] })} aria-label={`${stage.label}: ${stage.count} ${stage.count === 1 ? "lead" : "leads"}, ${formatMoney(stage.value)}. Abrir a lista`} $dim={hover !== null && hover !== stage.id} onPointerEnter={() => setHover(stage.id)}>
+                  <div>
+                    <small>Leads</small>
+                    <strong>{stage.count}</strong>
+                    <em>{count > 0 ? `${partesDosLeads[indice]}%` : "–"} do funil</em>
+                  </div>
+                  <div>
+                    <small>Valor</small>
+                    <strong>{formatMoney(stage.value)}</strong>
+                    <em>{total > 0 ? `${partesDoValor[indice]}%` : "–"} do valor</em>
+                  </div>
+                </Linha>
+              </li>
             ))}
           </Numeros>
 
-          <Funil role="img" aria-label={`Funil ${funnel.name}: ${stages.map((stage) => `${stage.label}, ${stage.count}`).join("; ")}`}>
-            <svg viewBox={`0 0 100 ${n * 100}`} preserveAspectRatio="none" aria-hidden>
-              {/* De baixo para cima: a aba de cada gaveta fica por cima da seguinte */}
-              {stages.map((stage, indice) => ({ stage, indice })).reverse().map(({ stage, indice }) => (
-                <path key={stage.id} d={gaveta(indice)} fill={cheia(stage.id)} stroke={theme.palette.neutral[0]} strokeWidth="3" strokeLinejoin="round" vectorEffect="non-scaling-stroke" opacity={hover !== null && hover !== stage.id ? 0.55 : 1} />
-              ))}
-            </svg>
+          <Funil ref={desenho} aria-label={`Funil ${funnel.name}`}>
+            {largura > 0 && (
+              <svg width={largura} height={altura} viewBox={`0 0 ${largura} ${altura}`} aria-hidden>
+                {/* De baixo para cima: a aba de cada gaveta fica por cima da seguinte */}
+                {stages.map((stage, indice) => ({ stage, indice })).reverse().map(({ stage, indice }) => (
+                  <path key={stage.id} d={gaveta(indice)} fill={cheia(stage.id)} opacity={hover !== null && hover !== stage.id ? 0.55 : 1} />
+                ))}
+                {stages.slice(1).map((stage, indice) => (
+                  <path key={stage.id} d={recorte(indice + 1)} fill="none" stroke={theme.palette.neutral[0]} strokeWidth={RECORTE.traco} strokeLinejoin="miter" strokeMiterlimit={8} />
+                ))}
+              </svg>
+            )}
             {stages.map((stage) => {
               const Icone = stageIcon(etapa(stage.id) ?? { label: stage.label });
               return (
-                <Etapa key={stage.id} $cor={sobre(stage.id)} $dim={hover !== null && hover !== stage.id} onPointerEnter={() => setHover(stage.id)}>
+                <Etapa key={stage.id} href={leadsHref({ etapas: [`${funnel.id}:${stage.id}`] })} aria-label={`${stage.label}: ${stage.count} ${stage.count === 1 ? "lead" : "leads"}, abrir a lista`} $cor={sobre(stage.id)} $dim={hover !== null && hover !== stage.id} onPointerEnter={() => setHover(stage.id)}>
                   <Icone size={17} weight="fill" aria-hidden />
                   <span>{stage.label}</span>
                 </Etapa>

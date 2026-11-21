@@ -109,7 +109,10 @@ const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, ""
 const DAY = 24 * 60 * 60 * 1000;
 
 type CreatedFilter = "any" | "7" | "30" | "90";
-type EventFilter = "any" | "30" | "90" | "none";
+type EventFilter = "any" | "30" | "60" | "90" | "none";
+
+/** Filtros com que a tabela já abre (links do Painel): etapas como "funil:etapa", origens, período e prazo. */
+export type FiltrosIniciais = { etapas?: string[]; origens?: string[]; criados?: "7" | "30" | "90"; nascimento?: "30" | "60" | "90" | "none"; parados?: boolean };
 
 const sortLabels: Record<SortKey, string> = {
   name: "Nome",
@@ -180,10 +183,11 @@ type ClientsTableProps = {
   toolbarEnd?: ReactNode;
   /** Categoria inicial (Leads e clientes numa tabela só): "cliente", "lead" ou "todas". */
   categoriaInicial?: FiltroCategoria;
+  filtrosIniciais?: FiltrosIniciais;
 };
 
 /** Todos os leads do sistema em tabela ou cards: ordenação, filtros, seleção e exportação. */
-export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoriaInicial = "todas" }: ClientsTableProps = {}) {
+export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoriaInicial = "todas", filtrosIniciais }: ClientsTableProps = {}) {
   const theme = useTheme();
   const router = useRouter();
 
@@ -196,16 +200,17 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
   const view: View = embedded && !mobile ? "table" : savedView;
 
   const [query, setQuery] = useState("");
-  const [funnelFilter, setFunnelFilter] = useState<string[]>([]);
+  // As etapas só valem com um funil em foco: o link que traz etapas já põe o funil delas no filtro.
+  const [funnelFilter, setFunnelFilter] = useState<string[]>(() => [...new Set((filtrosIniciais?.etapas ?? []).map((etapa) => etapa.split(":")[0]))].slice(0, 1));
   const [categoria, setCategoria] = useState<FiltroCategoria>(categoriaInicial);
   /** Etapas como "funil:etapa" (só quando há um funil em foco). */
-  const [stageFilter, setStageFilter] = useState<string[]>([]);
-  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [stageFilter, setStageFilter] = useState<string[]>(() => { const etapas = filtrosIniciais?.etapas ?? [], funil = etapas[0]?.split(":")[0]; return etapas.filter((etapa) => etapa.startsWith(`${funil}:`)); });
+  const [sourceFilter, setSourceFilter] = useState<string[]>(filtrosIniciais?.origens ?? []);
   const [ownerFilter, setOwnerFilter] = useState<string[]>([]);
-  const [createdFilter, setCreatedFilter] = useState<CreatedFilter>("any");
-  const [eventFilter, setEventFilter] = useState<EventFilter>("any");
+  const [createdFilter, setCreatedFilter] = useState<CreatedFilter>(filtrosIniciais?.criados ?? "any");
+  const [eventFilter, setEventFilter] = useState<EventFilter>(filtrosIniciais?.nascimento ?? "any");
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const [staleOnly, setStaleOnly] = useState(false);
+  const [staleOnly, setStaleOnly] = useState(Boolean(filtrosIniciais?.parados));
   const [sort, setSort] = useState<SortState>({ key: "created", direction: "desc" });
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [scrolled, setScrolled] = useState(false);
@@ -378,6 +383,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
       onChange: (value) => setEventFilter(value as EventFilter),
       options: [
         { value: "30", label: "Nasce nos próximos 30 dias", leading: <CalendarDotsIcon size={16} /> },
+        { value: "60", label: "Nasce nos próximos 60 dias", leading: <CalendarDotsIcon size={16} /> },
         { value: "90", label: "Nasce nos próximos 90 dias", leading: <CalendarDotsIcon size={16} /> },
         { value: "none", label: "Sem previsão", leading: <CalendarBlankIcon size={16} /> },
         { value: "any", label: "Qualquer data", leading: <CalendarBlankIcon size={16} /> },

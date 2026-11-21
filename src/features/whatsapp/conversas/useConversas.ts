@@ -53,9 +53,9 @@ export function mesclar(atuais: WhatsAppMessage[], doServidor: WhatsAppMessage[]
   return [...servidor, ...locais].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id));
 }
 
-export function useConversas(inicial?: string, opcoes: { semUrl?: boolean } = {}) {
+export function useConversas(inicial?: string, opcoes: { semUrl?: boolean; aba?: Aba } = {}) {
   const semUrl = Boolean(opcoes.semUrl);
-  const [aba, setAba] = useState<Aba>("todas");
+  const [aba, setAba] = useState<Aba>(opcoes.aba ?? "todas");
   const [busca, setBusca] = useState("");
   const [buscaAtiva, setBuscaAtiva] = useState("");
   const [filtros, setFiltros] = useState<Filtros>(SEM_FILTROS);

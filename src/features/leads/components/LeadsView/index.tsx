@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { useViewMode, ViewSwitch } from "@/components/ui/ViewSwitch";
 import { NarrowOnly, WideOnly } from "@/styles/responsive";
-import { ClientsTable } from "@/features/clients/components/ClientsTable";
+import { ClientsTable, type FiltrosIniciais } from "@/features/clients/components/ClientsTable";
 import { useFunnels } from "@/features/settings/store";
 import { FunnelSelect } from "../FunnelSelect";
 import { LeadsBoard } from "../LeadsBoard";
@@ -31,7 +31,7 @@ const Screen = styled.div`
  * filtro "Categoria" (Cliente = funil Clientes; Lead = os demais). A barra do topo (busca, filtros, visão e "novo")
  * trata o resto, nas duas visões.
  */
-export function LeadsView({ funnelId, categoriaInicial, visaoInicial }: { funnelId?: string; categoriaInicial?: FiltroCategoria; visaoInicial?: View }) {
+export function LeadsView({ funnelId, categoriaInicial, visaoInicial, filtrosIniciais }: { funnelId?: string; categoriaInicial?: FiltroCategoria; visaoInicial?: View; filtrosIniciais?: FiltrosIniciais }) {
   const [creating, setCreating] = useState(false);
   const [view, setView] = useViewMode<View>("leads", "table", VIEWS, "kanban");
   // Link direto (ex.: /clientes → tabela só de clientes) vale sobre a última visão usada.
@@ -77,7 +77,7 @@ export function LeadsView({ funnelId, categoriaInicial, visaoInicial }: { funnel
           <LeadsBoard funnelId={funnelId} toolbarEnd={controls} />
         </Screen>
       ) : (
-        <ClientsTable embedded toolbarEnd={controls} categoriaInicial={categoriaInicial} />
+        <ClientsTable embedded toolbarEnd={controls} categoriaInicial={categoriaInicial} filtrosIniciais={filtrosIniciais} />
       )}
     </>
   );

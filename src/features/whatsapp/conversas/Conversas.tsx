@@ -20,14 +20,14 @@ import { ColunaConversa, Raiz } from "./estilos";
 import { Ficha } from "./Ficha";
 import { textoDaMensagem } from "./formato";
 import { Lista } from "./Lista";
-import { useConversas } from "./useConversas";
+import { useConversas, type Aba } from "./useConversas";
 
 const CHAVE_FICHA = "erp:whatsapp:ficha", CHAVE_LISTA = "erp:whatsapp:lista";
 const ler = (chave: string) => { try { return localStorage.getItem(chave); } catch { return null; } };
 const gravar = (chave: string, valor: string) => { try { localStorage.setItem(chave, valor); } catch { /* sem armazenamento */ } };
 
-export function Conversas({ telefoneInicial, telefoneInvalido }: { telefoneInicial?: string; telefoneInvalido?: boolean }) {
-  const estado = useConversas(telefoneInicial);
+export function Conversas({ telefoneInicial, telefoneInvalido, abaInicial }: { telefoneInicial?: string; telefoneInvalido?: boolean; abaInicial?: Aba }) {
+  const estado = useConversas(telefoneInicial, { aba: abaInicial });
   const { selecionado, setSelecionado, conversaSelecionada, fio, erro, setErro, leadId } = estado;
   const equipe = useTeam();
   const { currentUser: eu } = useWorkspace();

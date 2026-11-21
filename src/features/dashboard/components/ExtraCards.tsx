@@ -10,6 +10,7 @@ import { findChoice, leadSources } from "@/features/leads/options";
 import { transientOptions } from "@/lib/emotion/transient";
 import { parseDateOnly } from "@/lib/format";
 import type { Tone } from "@/styles/theme";
+import { leadsHref, origensDoCanal } from "../links";
 import { change, formatMoney, joinSources, type SourceRow } from "../metrics";
 import { Card, CardHead, Delta, EmptyNote } from "./ui";
 
@@ -21,7 +22,7 @@ const plural = (quantidade: number, um: string, varios: string) => `${quantidade
 /* ---------- Bebês chegando ---------- */
 
 /** As três janelas do prazo, da mais urgente para a mais tranquila: a cor acompanha a urgência. */
-const JANELAS: readonly { de: number; ate: number; rotulo: string; tom: Tone }[] = [
+const JANELAS: readonly { de: number; ate: 30 | 60 | 90; rotulo: string; tom: Tone }[] = [
   { de: 0, ate: 30, rotulo: "até 30 dias", tom: "rose" },
   { de: 30, ate: 60, rotulo: "31 a 60", tom: "peach" },
   { de: 60, ate: 90, rotulo: "61 a 90", tom: "green" },
@@ -35,7 +36,8 @@ const Prazo = styled.div`
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing(1.5, 1)};
 
-  .conta { display: flex; align-items: baseline; gap: ${({ theme }) => theme.spacing(1.5)}; min-width: 0; line-height: 1.1; }
+  .conta { display: flex; align-items: baseline; gap: ${({ theme }) => theme.spacing(1.5)}; min-width: 0; margin: -3px -4px; padding: 3px 4px; border-radius: ${({ theme }) => theme.radii.sm}; color: inherit; line-height: 1.1; text-decoration: none; transition: background-color 160ms; }
+  .conta:hover, .conta:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; }
   .conta strong { font-size: 1.25rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; letter-spacing: -0.02em; color: ${({ theme }) => theme.colors.text.primary}; }
   .conta small { overflow: hidden; font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; white-space: nowrap; text-overflow: ellipsis; }
 
@@ -131,12 +133,12 @@ export function BirthsCard({ births }: { births: Births }) {
   return (
     <Card aria-label="Bebês chegando">
       <CardHead title="Bebês chegando" subtitle={births.d90 ? `${plural(births.d90, "nascimento", "nascimentos")} em 90 dias` : "O prazo de cada enxoval"} />
-      <Prazo role="img" aria-label={`Nascimentos previstos: ${JANELAS.map((janela, indice) => `${contas[indice]} ${janela.rotulo}`).join(", ")}`}>
+      <Prazo>
         {JANELAS.map((janela, indice) => (
-          <span className="conta" key={janela.ate}>
+          <Link className="conta" key={janela.ate} href={leadsHref({ nascimento: janela.ate })} aria-label={`${contas[indice]} ${contas[indice] === 1 ? "nascimento" : "nascimentos"} ${janela.rotulo}${indice ? " dias" : ""}: abrir quem nasce em até ${janela.ate} dias`}>
             <strong>{contas[indice]}</strong>
             <small>{janela.rotulo}</small>
-          </span>
+          </Link>
         ))}
         {JANELAS.map((janela, indice) => (
           <Trecho key={janela.ate} $tom={janela.tom} data-ponta={indice === 0 ? "inicio" : indice === JANELAS.length - 1 ? "fim" : undefined} aria-hidden>
@@ -193,10 +195,18 @@ const RevenueRoot = styled(Card)`
   flex: 1 1 auto;
 `;
 
-const Destaque = styled.div`
+const Destaque = styled(Link)`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 160ms;
+
+  &:hover, &:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; }
 
   small { font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; }
   > span { display: flex; flex-wrap: wrap; align-items: center; gap: ${({ theme }) => theme.spacing(1, 2)}; }
@@ -213,7 +223,9 @@ const Colunas = styled.ul`
   min-height: 6.25rem;
 
   li { display: flex; min-width: 0; }
-  li > span { display: flex; flex: 1; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; cursor: default; }
+  li > span { display: flex; flex: 1; min-width: 0; }
+  li a { display: flex; flex: 1; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; border-radius: ${({ theme }) => theme.radii.sm}; color: inherit; text-decoration: none; }
+  li a:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary.main}; outline-offset: 2px; }
   .valor { overflow: hidden; font-size: 0.625rem; color: ${({ theme }) => theme.colors.text.muted}; text-align: center; white-space: nowrap; }
   .trilho { display: flex; flex: 1; align-items: flex-end; min-height: 2.5rem; }
   .mes { font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; text-align: center; }
@@ -266,7 +278,7 @@ export function RevenueCard({ rows = [] }: { rows?: RevenueRow[] }) {
         <EmptyNote>Nenhuma venda fechada nos últimos seis meses.</EmptyNote>
       ) : (
         <>
-          <Destaque>
+          <Destaque href={leadsHref({ categoria: "cliente" })} aria-label={`Mês passado, ${nomeDoMes.format(mesDe(passado.month))}: ${formatMoney(passado.value)}. Abrir os clientes`}>
             <small>Mês passado, {nomeDoMes.format(mesDe(passado.month))}</small>
             <span>
               <strong>{formatMoney(passado.value)}</strong>
@@ -278,13 +290,15 @@ export function RevenueCard({ rows = [] }: { rows?: RevenueRow[] }) {
               const papel = row === atual ? "atual" : row === passado ? "passado" : "antes";
               const mes = mesDe(row.month);
               return (
-                <li key={row.month} data-papel={papel} aria-label={`${nomeDoMes.format(mes)}: ${formatMoney(row.value)} em ${plural(row.count, "venda", "vendas")}${papel === "atual" ? ", mês em andamento" : ""}`}>
+                <li key={row.month} data-papel={papel}>
                   <Tooltip side="top" delay={120} label={`${nomeDoMes.format(mes)}: ${formatMoney(row.value)} em ${plural(row.count, "venda", "vendas")}${papel === "atual" ? " (em andamento)" : ""}`}>
-                    <span className="valor" aria-hidden>{curto(row.value)}</span>
-                    <span className="trilho" aria-hidden>
-                      <Barra $altura={(row.value / maximo) * 100} $papel={papel} />
-                    </span>
-                    <span className="mes" aria-hidden>{mesCurto.format(mes).replace(".", "")}</span>
+                    <Link href={leadsHref({ categoria: "cliente" })} aria-label={`${nomeDoMes.format(mes)}: ${formatMoney(row.value)} em ${plural(row.count, "venda", "vendas")}${papel === "atual" ? ", mês em andamento" : ""}. Abrir os clientes`}>
+                      <span className="valor" aria-hidden>{curto(row.value)}</span>
+                      <span className="trilho" aria-hidden>
+                        <Barra $altura={(row.value / maximo) * 100} $papel={papel} />
+                      </span>
+                      <span className="mes" aria-hidden>{mesCurto.format(mes).replace(".", "")}</span>
+                    </Link>
                   </Tooltip>
                 </li>
               );
@@ -301,9 +315,10 @@ export function RevenueCard({ rows = [] }: { rows?: RevenueRow[] }) {
 const Canais = styled.ul`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing(2.5)};
+  gap: ${({ theme }) => theme.spacing(1)};
 
-  li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto auto; align-items: center; gap: ${({ theme }) => theme.spacing(1.5, 2)}; font-size: 0.8125rem; }
+  a { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto auto; align-items: center; gap: ${({ theme }) => theme.spacing(1.5, 2)}; margin: 0 -${({ theme }) => theme.spacing(2)}; padding: ${({ theme }) => theme.spacing(1.5, 2)}; border-radius: ${({ theme }) => theme.radii.md}; color: inherit; font-size: 0.8125rem; text-decoration: none; transition: background-color 160ms; }
+  a:hover, a:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; }
   .logo { display: grid; place-items: center; color: ${({ theme }) => theme.colors.text.muted}; }
   .nome { overflow: hidden; font-weight: ${({ theme }) => theme.fontWeights.medium}; color: ${({ theme }) => theme.colors.text.primary}; white-space: nowrap; text-overflow: ellipsis; }
   .de { font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; white-space: nowrap; }
@@ -348,11 +363,13 @@ export function ChannelsCard({ rows }: { rows: SourceRow[] }) {
             const taxa = row.count ? (row.converted / row.count) * 100 : 0;
             return (
               <li key={row.source}>
-                <span className="logo" aria-hidden>{logoDaOrigem(row.source, 18) ?? <Icone size={17} />}</span>
-                <span className="nome">{row.source}</span>
-                <span className="de">{row.converted} de {row.count}</span>
-                <span className="taxa">{Math.round(taxa)}%</span>
-                <Trilho $parte={taxa} aria-hidden />
+                <Link href={leadsHref({ origens: origensDoCanal(row.source), criados: 30 })} aria-label={`${row.source}: ${row.converted} de ${plural(row.count, "lead virou", "leads viraram")} cliente, ${Math.round(taxa)}%. Abrir a lista`}>
+                  <span className="logo" aria-hidden>{logoDaOrigem(row.source, 18) ?? <Icone size={17} />}</span>
+                  <span className="nome">{row.source}</span>
+                  <span className="de">{row.converted} de {row.count}</span>
+                  <span className="taxa">{Math.round(taxa)}%</span>
+                  <Trilho $parte={taxa} aria-hidden />
+                </Link>
               </li>
             );
           })}

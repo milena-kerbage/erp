@@ -56,7 +56,8 @@ import { FunnelCard } from "./FunnelCard";
 import { BirthsCard, ChannelsCard, RevenueCard } from "./ExtraCards";
 import { MonthBars, Sparkline } from "./charts";
 import { SourcesCard } from "./SourcesCard";
-import { Card, Delta, Eyebrow, Figure, Help, IconBadge, Note, Segments } from "./ui";
+import { Card, CardLink, Delta, Eyebrow, Figure, Help, IconBadge, Note, Segments } from "./ui";
+import { conversasHref, leadsHref } from "../links";
 
 /* ---------- Estilos ---------- */
 
@@ -64,7 +65,7 @@ const Root = styled.div`
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing(4)};
+  gap: ${({ theme }) => theme.spacing(3)};
   min-width: 0;
 `;
 
@@ -141,7 +142,7 @@ const Banner = styled(Link)`
 const Layout = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(17.5rem, 22vw, 21rem);
-  gap: ${({ theme }) => theme.spacing(3)};
+  gap: ${({ theme }) => theme.spacing(2)};
   align-items: stretch;
 
   @media (max-width: 1180px) {
@@ -153,14 +154,14 @@ const Column = styled.div`
   ${staggerChildren(8, 60)};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing(3)};
+  gap: ${({ theme }) => theme.spacing(2)};
   min-width: 0;
   min-height: 0;
 `;
 
 /* Cartão principal */
 
-const Hero = styled(Card)`
+const Hero = styled(CardLink)`
   gap: 0;
   padding: 0;
   overflow: hidden;
@@ -243,7 +244,7 @@ const Strip = styled.dl`
 const Metrics = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: ${({ theme }) => theme.spacing(3)};
+  gap: ${({ theme }) => theme.spacing(2)};
 
   @media (max-width: 1320px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -254,7 +255,7 @@ const Metrics = styled.div`
   }
 `;
 
-const MetricRoot = styled(Card)`
+const MetricRoot = styled(CardLink)`
   gap: ${({ theme }) => theme.spacing(1.5)};
   height: 7rem;
   padding: ${({ theme }) => theme.spacing(3.5, 4, 0)};
@@ -318,7 +319,7 @@ const Bottom = styled.div`
   display: grid;
   flex: 1;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  gap: ${({ theme }) => theme.spacing(3)};
+  gap: ${({ theme }) => theme.spacing(2)};
 
   @media (max-width: 1000px) {
     grid-template-columns: minmax(0, 1fr);
@@ -389,6 +390,7 @@ const BigFigure = styled.strong`
  */
 function MetricCard({
   title,
+  href,
   tone,
   value,
   unit,
@@ -399,6 +401,8 @@ function MetricCard({
   series,
 }: {
   title: string;
+  /** Para onde o cartão leva: a lista com o recorte deste número. */
+  href: string;
   tone: Tone;
   value: ReactNode;
   unit?: string;
@@ -412,7 +416,7 @@ function MetricCard({
 }) {
   const theme = useTheme();
   return (
-    <MetricRoot aria-label={title}>
+    <MetricRoot href={href} aria-label={`${title}: abrir a lista`}>
       <MetricTitle>{title}</MetricTitle>
       <FigureRow>
         <BigFigure>
@@ -496,6 +500,11 @@ export function Dashboard() {
   };
 
   const firstName = user?.name.split(" ")[0];
+  // Destinos dos cartões: os leads que entraram nos últimos 30 dias e os que estão em orçamento ou negociação
+  // (da terceira etapa do funil de vendas até a penúltima), como no número de "Orçamentos abertos".
+  const recentes = leadsHref({ criados: 30 });
+  const vendas = salesFunnel(funnels);
+  const emOrcamento = vendas ? vendas.stages.slice(2, -1).map((stage) => `${vendas.id}:${stage.id}`) : [];
   // Todos os crescimentos comparam com o mesmo trecho do mês passado (do dia 1 até o dia de hoje).
   const versus = data ? `vs 1 a ${formatMonthDay(data.previous.until)}` : undefined;
 
@@ -531,7 +540,7 @@ export function Dashboard() {
       ) : (
         <Layout>
           <Column>
-            <Hero aria-label="Entrada no funil no mês">
+            <Hero href={recentes} aria-label="Entrada no funil no mês: abrir os leads dos últimos 30 dias">
               <HeroLinha>
                 <div className="principal">
                   <Eyebrow>Entrada no funil em {formatMonthName(now)}</Eyebrow>
@@ -568,19 +577,19 @@ export function Dashboard() {
             </Hero>
 
             <Metrics>
-              <MetricCard title="Leads novos" tone="green" value={data.fresh} delta={change(data.fresh, data.previous.count || null)} deltaVersus={versus}
+              <MetricCard title="Leads novos" href={recentes} tone="green" value={data.fresh} delta={change(data.fresh, data.previous.count || null)} deltaVersus={versus}
                 series={data.month.map((day) => (day.future ? null : day.count))} />
-              <MetricCard title="Ticket médio" tone="blue" value={formatMoney(Math.round(data.ticket))} delta={change(data.ticket, data.previous.count ? data.previous.value / data.previous.count : null)} deltaVersus={versus}
+              <MetricCard title="Ticket médio" href={recentes} tone="blue" value={formatMoney(Math.round(data.ticket))} delta={change(data.ticket, data.previous.count ? data.previous.value / data.previous.count : null)} deltaVersus={versus}
                 series={data.month.map((day) => (day.future ? null : day.count ? day.value / day.count : 0))} />
-              <MetricCard title="Conversão" tone="rose" value={percent(data.fresh ? (data.won / data.fresh) * 100 : 0)} unit={`${data.won} de ${data.fresh}`}
+              <MetricCard title="Conversão" href={leadsHref({ categoria: "cliente", criados: 30 })} tone="rose" value={percent(data.fresh ? (data.won / data.fresh) * 100 : 0)} unit={`${data.won} de ${data.fresh}`}
                 delta={change(data.fresh ? data.won / data.fresh : 0, data.previous.count ? data.previousWon / data.previous.count : null)} deltaVersus={versus} ratio={data.fresh ? data.won / data.fresh : 0} />
-              <MetricCard title="Fechados" tone="yellow" value={formatMoney(data.wonValue)} delta={change(data.wonValue, data.previousWonValue || null)} deltaVersus={versus}
+              <MetricCard title="Fechados" href={leadsHref({ categoria: "cliente", criados: 30 })} tone="yellow" value={formatMoney(data.wonValue)} delta={change(data.wonValue, data.previousWonValue || null)} deltaVersus={versus}
                 ratio={data.monthTotal ? data.wonValue / data.monthTotal : 0} />
-              <MetricCard title="Orçamentos abertos" tone="peach" value={data.proposals} unit={formatMoney(data.proposalsValue)} ratio={data.salesLeads ? data.proposals / data.salesLeads : 0} />
-              <MetricCard title="Esperando resposta" tone="teal" value={data.atendimento?.aguardando ?? 0} unit={`${data.atendimento?.naoLidas ?? 0} não lidas`}
+              <MetricCard title="Orçamentos abertos" href={leadsHref({ etapas: emOrcamento })} tone="peach" value={data.proposals} unit={formatMoney(data.proposalsValue)} ratio={data.salesLeads ? data.proposals / data.salesLeads : 0} />
+              <MetricCard title="Esperando resposta" href={conversasHref("aguardando")} tone="teal" value={data.atendimento?.aguardando ?? 0} unit={`${data.atendimento?.naoLidas ?? 0} não lidas`}
                 ratio={data.atendimento && data.atendimento.aguardando + data.atendimento.naoLidas > 0 ? data.atendimento.aguardando / Math.max(data.atendimento.aguardando, data.atendimento.naoLidas) : 0} />
-              <MetricCard title="Bebês em 30 dias" tone="lavender" value={data.births.d30} unit={`${data.births.d90} em 90 dias`} ratio={data.births.d90 ? data.births.d30 / data.births.d90 : 0} />
-              <MetricCard title="Sem contato há 7 dias" tone="neutral" value={data.staleCount} unit={`de ${data.active}`} ratio={data.active ? data.staleCount / data.active : 0} />
+              <MetricCard title="Bebês em 30 dias" href={leadsHref({ nascimento: 30 })} tone="lavender" value={data.births.d30} unit={`${data.births.d90} em 90 dias`} ratio={data.births.d90 ? data.births.d30 / data.births.d90 : 0} />
+              <MetricCard title="Sem contato há 7 dias" href={leadsHref({ parados: true })} tone="neutral" value={data.staleCount} unit={`de ${data.active}`} ratio={data.active ? data.staleCount / data.active : 0} />
             </Metrics>
 
             <Bottom>

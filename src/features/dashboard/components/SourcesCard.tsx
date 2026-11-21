@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
 import { ChartPieSliceIcon, DotsThreeCircleIcon } from "@phosphor-icons/react";
@@ -7,6 +8,7 @@ import { logoDaOrigem } from "@/components/brand/LogosOrigem";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { transientOptions } from "@/lib/emotion/transient";
 import { findChoice, leadSources } from "@/features/leads/options";
+import { leadsHref, origensDoCanal } from "../links";
 import { formatMoney, formatMoneyShort, joinSources, type SourceRow } from "../metrics";
 import { MAX_SLICES, otherColor, sourceColor } from "../palette";
 import { Gauge } from "./charts";
@@ -24,12 +26,19 @@ const Top = styled.div`
   padding: ${({ theme }) => theme.spacing(5, 5, 0)};
 `;
 
-const GaugeArea = styled.div`
+/** O medidor leva para os leads que entraram no período. */
+const GaugeArea = styled(Link)`
   display: flex;
   flex: 1;
   align-items: center;
   justify-content: center;
   padding: ${({ theme }) => theme.spacing(5, 5, 6)};
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+
+  &:hover, &:focus-visible { background-color: ${({ theme }) => theme.palette.neutral[25]}; }
+  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary.main}; outline-offset: -2px; }
 `;
 
 /** Uma coluna por canal, com divisórias, como a referência. */
@@ -40,6 +49,11 @@ const Columns = styled.ul`
   border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   > li {
+    display: grid;
+    min-width: 0;
+  }
+  > li > span {
+    display: grid;
     min-width: 0;
   }
 
@@ -51,9 +65,14 @@ const Columns = styled.ul`
     gap: ${({ theme }) => theme.spacing(1)};
     height: 100%;
     padding: ${({ theme }) => theme.spacing(3.5, 1.5)};
+    color: inherit;
     text-align: center;
-    cursor: default;
+    text-decoration: none;
     transition: background-color 0.2s ease;
+  }
+  .canal:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary.main};
+    outline-offset: -2px;
   }
   .canal:hover {
     background-color: ${({ theme }) => theme.colors.interactive.hover};
@@ -123,7 +142,7 @@ const Dica = styled.div`
 /** Valor curto para caber sem quebrar: 31.239 → "R$ 31K"; abaixo de mil, o valor inteiro. */
 const valorCurto = (valor: number) => (valor >= 1000 ? `R$ ${Math.round(valor / 1000).toLocaleString("pt-BR")}K` : formatMoney(Math.round(valor)));
 
-type Part = { id: string; label: string; count: number; value: number; color: string; other: boolean };
+type Part = { id: string; label: string; count: number; value: number; color: string; other: boolean; sources: string[] };
 
 /* ---------- Componente ---------- */
 
@@ -148,6 +167,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
       value: row.value,
       color: sourceColor(row.source, theme.mode),
       other: false,
+      sources: origensDoCanal(row.source),
     })),
     ...(rest.length
       ? [
@@ -158,6 +178,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
             value: rest.reduce((sum, row) => sum + row.value, 0),
             color: otherColor(theme.mode),
             other: rest.length > 1,
+            sources: rest.flatMap((row) => origensDoCanal(row.source)),
           },
         ]
       : []),
@@ -178,7 +199,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
         <EmptyNote>Nenhum orçamento chegou neste mês ainda.</EmptyNote>
       ) : (
         <>
-          <GaugeArea>
+          <GaugeArea href={leadsHref({ criados: 30 })} aria-label="Abrir os leads dos últimos 30 dias">
             <Gauge
               label="Valor dos orçamentos do mês por origem"
               parts={parts.map((part) => ({ id: part.id, label: part.label, value: part.value, color: part.color }))}
@@ -211,7 +232,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
                       </Dica>
                     }
                   >
-                    <div className="canal" tabIndex={0} aria-label={`${part.label}: ${parte}% do valor, ${formatMoney(part.value)}, ${part.count} ${part.count === 1 ? "lead" : "leads"}, ticket médio ${formatMoney(Math.round(part.value / (part.count || 1)))}`}>
+                    <Link className="canal" href={leadsHref({ origens: part.sources, criados: 30 })} aria-label={`${part.label}: ${parte}% do valor, ${formatMoney(part.value)}, ${part.count} ${part.count === 1 ? "lead" : "leads"}, ticket médio ${formatMoney(Math.round(part.value / (part.count || 1)))}`}>
                       <span className="logo" aria-hidden>
                         {logo ?? (
                           <Badge $color={part.color}>
@@ -221,7 +242,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
                       </span>
                       <Name>{part.label}</Name>
                       <Value>{valorCurto(part.value)}</Value>
-                    </div>
+                    </Link>
                   </Tooltip>
                 </li>
               );

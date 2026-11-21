@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import styled from "@emotion/styled";
 import { ArrowDownRightIcon, ArrowUpRightIcon, QuestionIcon, type Icon } from "@phosphor-icons/react";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -21,6 +22,23 @@ export const Card = styled.section`
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: ${({ theme }) => theme.radii.xl};
   background-color: ${({ theme }) => theme.palette.neutral[0]};
+`;
+
+/** O mesmo cartão, inteiro clicável: leva para a tela com o recorte daquele número. */
+export const CardLink = styled(Card.withComponent(Link))`
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.border.default};
+    background-color: ${({ theme }) => theme.palette.neutral[25]};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary.main};
+    outline-offset: 2px;
+  }
 `;
 
 const Head = styled.header`
