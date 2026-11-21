@@ -19,7 +19,8 @@ export function TrocaCanal({ atual }: { atual: "whatsapp" | "instagram" }) {
       {canais.map(({ id, rotulo, href, Logo, naoLidas }) => (
         <Tooltip key={id} label={naoLidas ? `${rotulo} · ${naoLidas} não lidas` : rotulo} side="bottom">
           <Link href={href} role="tab" aria-selected={atual === id} data-ativo={atual === id || undefined} aria-label={naoLidas ? `${rotulo}, ${naoLidas} não lidas` : rotulo}>
-            <Logo size={22} />
+            <Logo size={18} />
+            {atual === id && <span>{rotulo}</span>}
             {naoLidas > 0 && atual !== id && <b>{naoLidas > 99 ? "99+" : naoLidas}</b>}
           </Link>
         </Tooltip>
@@ -30,16 +31,19 @@ export function TrocaCanal({ atual }: { atual: "whatsapp" | "instagram" }) {
 
 const Trilho = styled.div`
   display: inline-flex;
-  gap: 4px;
-  padding: 3px;
+  gap: 2px;
+  padding: 2px;
   border-radius: ${({ theme }) => theme.radii.full};
   background: ${({ theme }) => theme.palette.neutral[100]};
   a {
     position: relative;
-    display: grid;
-    place-items: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 1.875rem;
+    height: 1.875rem;
+    padding: 0 6px;
     border-radius: ${({ theme }) => theme.radii.full};
     opacity: 0.7;
     filter: saturate(0.75);
@@ -47,7 +51,8 @@ const Trilho = styled.div`
   }
   a:hover { opacity: 1; filter: none; background: ${({ theme }) => theme.palette.neutral[50]}; }
   a:active { transform: scale(0.94); }
-  a[data-ativo] { opacity: 1; filter: none; background: ${({ theme }) => theme.palette.neutral[0]}; box-shadow: 0 1px 3px rgb(0 0 0 / 0.1); }
+  /* O canal atual mostra sempre o nome ao lado da logo. */
+  a[data-ativo] { padding: 0 10px 0 7px; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary}; text-decoration: none; opacity: 1; filter: none; background: ${({ theme }) => theme.palette.neutral[0]}; box-shadow: 0 1px 3px rgb(0 0 0 / 0.1); }
   a:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary.main}; outline-offset: 1px; }
   b {
     position: absolute;
