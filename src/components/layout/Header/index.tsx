@@ -48,7 +48,7 @@ export function Header() {
       </Center>
 
       <End>
-        <PageActions ref={setActionsTarget} />
+        <PageActions ref={setActionsTarget} data-acoes="" />
         <SearchTrigger />
         <NotificationsMenu />
         <MenuConta name={user.name} role={user.role} email={user.email} seed={user.seed} avatarUrl={user.avatarUrl} />

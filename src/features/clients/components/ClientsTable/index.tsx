@@ -58,7 +58,6 @@ import {
   CardName,
   ClientCardRoot,
   EmptyRow,
-  Footer,
   HeadCount,
   Inline,
   Muted,
@@ -885,19 +884,6 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
       </TableScroll>
 
       <LeadPagination />
-      <Footer>
-        <span>
-          Mostrando {visible.length} de {pagination.total}{" "}
-          {funnelId ? (rows.length === 1 ? "lead" : "leads") : rows.length === 1 ? "cliente" : "clientes"}
-        </span>
-        <span>
-          {embedded
-            ? "Clique na linha para abrir a oportunidade"
-            : view === "cards"
-              ? "Clique no card para ver a ficha"
-              : "Clique na linha para ver a ficha"}
-        </span>
-      </Footer>
 
       {/* Sem key: a mesma janela fecha com a saída animada (a ficha se reinicia ao trocar de lead) */}
       {!embedded && <LeadModal leadId={openId} onClose={() => setOpenId(null)} />}

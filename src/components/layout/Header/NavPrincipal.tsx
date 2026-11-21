@@ -4,7 +4,7 @@ import styled from "@emotion/styled";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useState, type CSSProperties, type ReactNode } from "react";
-import { HourglassMediumIcon, type Icon } from "@phosphor-icons/react";
+import { SquaresFourIcon, type Icon } from "@phosphor-icons/react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { navigation, type NavModule } from "@/config/navigation";
 import { isPathActive } from "@/lib/navigation";
@@ -16,10 +16,13 @@ type Canal = "whatsapp" | "instagram";
 
 const CANAL: Record<string, Canal> = { "/conversas": "whatsapp", "/instagram": "instagram" };
 
-/** Canal ativo: fundo clarinho na cor do aplicativo. */
+/**
+ * Canal ativo: um véu translúcido na cor do aplicativo, por cima do fundo do header. Translúcido (e não uma cor
+ * clara fixa) para ficar suave tanto no tema claro quanto no escuro.
+ */
 const CORES_CANAL: Record<Canal, CSSProperties> = {
-  whatsapp: { "--canal-bg": "#DDF7E6", "--canal-borda": "#B5E9C6" } as CSSProperties,
-  instagram: { "--canal-bg": "linear-gradient(135deg, #FFF1E2 0%, #FDE3F0 55%, #EEE4FF 100%)", "--canal-borda": "#F4C6DC" } as CSSProperties,
+  whatsapp: { "--canal-bg": "rgb(37 211 102 / 0.13)", "--canal-borda": "rgb(37 211 102 / 0.22)" } as CSSProperties,
+  instagram: { "--canal-bg": "linear-gradient(135deg, rgb(255 168 61 / 0.15) 0%, rgb(225 48 108 / 0.13) 55%, rgb(131 58 180 / 0.15) 100%)", "--canal-borda": "rgb(225 48 108 / 0.2)" } as CSSProperties,
 };
 
 const INICIO = new Set(["/", "/leads"]);
@@ -49,7 +52,7 @@ export function NavPrincipal() {
       emProducao.length > 0 && (
         <ItemMenu
           key="em-producao"
-          modulo={{ label: `Em produção (${emProducao.length})`, href: "", icon: HourglassMediumIcon }}
+          modulo={{ label: `Em produção (${emProducao.length})`, href: "", icon: SquaresFourIcon }}
           ativo={emProducao.some((modulo) => isPathActive(pathname, modulo.href))}
           rotuloAtivo="Em produção"
           onClick={() => setProducaoAberta(true)}
@@ -136,21 +139,21 @@ const estiloItem = ({ theme }: { theme: import("@emotion/react").Theme }) => `
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background-color 0.25s ease, color 0.2s ease, border-color 0.25s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 
   .icone { position: relative; display: inline-flex; }
+  .rotulo { animation: rotulo-entra 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  @keyframes rotulo-entra { from { opacity: 0; transform: translateX(-4px); } }
 
   &:hover { background: ${theme.colors.interactive.hover}; color: ${theme.colors.text.primary}; }
   &:active { transform: scale(0.94); }
   &:focus-visible { outline: 2px solid ${theme.colors.primary.main}; outline-offset: 1px; }
 
-  /* Página atual: pílula clara com o nome ao lado do ícone. */
+  /* Página atual: um véu suave (sem sombra) com o nome ao lado do ícone. */
   &[data-ativo] {
     padding: 0 12px 0 9px;
-    border-color: ${theme.colors.border.subtle};
-    background: ${theme.palette.neutral[0]};
+    background: ${theme.colors.interactive.pressed};
     color: ${theme.colors.text.primary};
-    box-shadow: ${theme.shadows.sm};
   }
   &[data-ativo]:not([data-canal]) .icone { color: ${theme.colors.primary.main}; }
 
@@ -158,9 +161,9 @@ const estiloItem = ({ theme }: { theme: import("@emotion/react").Theme }) => `
   &[data-canal] { color: ${theme.colors.text.secondary}; }
   &[data-canal]:not([data-ativo]) .icone > svg { opacity: 0.85; filter: saturate(0.85); transition: opacity 0.15s ease, filter 0.15s ease; }
   &[data-canal]:not([data-ativo]):hover .icone > svg { opacity: 1; filter: none; }
-  &[data-canal][data-ativo] { background: var(--canal-bg); border-color: var(--canal-borda); box-shadow: none; }
+  &[data-canal][data-ativo] { background: var(--canal-bg); border-color: var(--canal-borda); }
 
-  @media (prefers-reduced-motion: reduce) { transition: none; }
+  @media (prefers-reduced-motion: reduce) { transition: none; .rotulo { animation: none; } }
 `;
 
 const Atalho = styled(Link)`${estiloItem}`;

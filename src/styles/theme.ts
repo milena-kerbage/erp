@@ -207,7 +207,7 @@ export const theme = {
     sidebarExpanded: "15rem",
     headerHeight: "3.5rem",
     panelGap: "0.75rem",
-    panelRadius: "1rem",
+    panelRadius: "0.625rem",
   },
 
   breakpoints: {

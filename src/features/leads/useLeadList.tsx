@@ -11,9 +11,10 @@ export function useLeadList(query:LeadQuery={}) {
 }
 export function LeadPagination(){
   const {pagination,listIds,loadMore,loading,error}=useLeads();
-  return <div style={{padding:'0.75rem',display:'flex',gap:'1rem',alignItems:'center',flexWrap:'wrap'}}>
-    <span role="status">{listIds.length} de {pagination.total} resultados</span>
-    {pagination.hasMore&&<Button variant="secondary" loading={loading} onClick={()=>void loadMore()}>Carregar mais</Button>}
+  // Só aparece quando há o que fazer: mais registros para carregar ou um erro. Sem contagem solta no rodapé.
+  if(!pagination.hasMore&&!error) return null;
+  return <div style={{padding:'0.75rem',display:'flex',gap:'1rem',alignItems:'center',justifyContent:'center',flexWrap:'wrap'}}>
+    {pagination.hasMore&&<Button variant="secondary" loading={loading} onClick={()=>void loadMore()}>Carregar mais ({listIds.length} de {pagination.total})</Button>}
     {error&&<span role="alert">{error}</span>}
   </div>;
 }

@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
   const storePath = [PREFIXO_LOJA, PASTA_PUBLICA_LOJA].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
   if (storePath) return new NextResponse('Not Found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
   const publicPage = ['/login', '/recuperar-senha', '/redefinir-senha', '/convite', '/politicas', '/privacidade', '/termos', '/exclusao-de-dados', '/exclusao-de-dados/status', '/exclusao-de-dados/instagram/status', '/cookies', '/politica-de-comunicacao'].includes(path);
-  const publicAsset = /^\/(logotipo-horizontal|simbolo|assinatura)-(green|black|white)\.svg$/.test(path) || ['/icon.png', '/apple-icon.png', '/favicon.ico', '/robots.txt'].includes(path);
+  const publicAsset = /^\/(logotipo-horizontal|simbolo|assinatura)-(green|black|white)\.svg$/.test(path) || ['/icon.png', '/apple-icon.png', '/favicon.ico', '/robots.txt', '/login-atelie.webp'].includes(path);
   const authApi = path.startsWith('/api/auth/');
   // ERP Route Handlers validam sessão/papel ou chave de escopo permitido junto aos dados.
   const erpApi = path === '/api/erp' || path.startsWith('/api/erp/');

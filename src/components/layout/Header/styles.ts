@@ -16,6 +16,15 @@ export const Root = styled.header`
   padding: 0 ${({ theme }) => theme.spacing(4)};
 `;
 
+const buscaSoIcone = `
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  min-width: 2.25rem;
+  padding: 0;
+  justify-content: center;
+  > span, > kbd { display: none; }
+`;
+
 export const Start = styled.div`
   display: flex;
   align-items: center;
@@ -54,14 +63,13 @@ export const End = styled.div`
     min-width: 2.25rem;
   }
 
-  /* Telas médias: a busca vira só a lupa */
+  /* Página com botões no header (ou tela média): a busca vira só a lupa, para o menu respirar */
+  &:has(> [data-acoes]:not(:empty)) > button[data-busca] {
+    ${buscaSoIcone}
+  }
   ${({ theme }) => theme.media.xl} {
     > button[data-busca] {
-      flex: 0 0 2.25rem;
-      width: 2.25rem;
-      padding: 0;
-      justify-content: center;
-      > span, > kbd { display: none; }
+      ${buscaSoIcone}
     }
   }
 `;

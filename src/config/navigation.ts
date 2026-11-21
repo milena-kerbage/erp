@@ -10,10 +10,10 @@ import {
   PackageIcon,
   SealCheckIcon,
   SparkleIcon,
-  SquaresFourIcon,
-  StorefrontIcon,
+  HandbagIcon,
+  HouseIcon,
   ToggleLeftIcon,
-  UserFocusIcon,
+  UsersThreeIcon,
   UsersIcon,
   WalletIcon,
 } from "@phosphor-icons/react/ssr";
@@ -60,10 +60,10 @@ export const navigation = {
     {
       label: "Painel",
       href: "/",
-      icon: SquaresFourIcon,
+      icon: HouseIcon,
     },
     // Leads e clientes na mesma tabela (a categoria vem do funil); /clientes redireciona para cá.
-    { label: "Leads e clientes", href: "/leads", icon: UserFocusIcon },
+    { label: "Leads e clientes", href: "/leads", icon: UsersThreeIcon },
     // Atendimento: cada canal com a própria tela e a logo colorida; uma troca no topo das listas liga os dois.
     { label: "WhatsApp", href: "/conversas", icon: IconeWhatsApp },
     { label: "Instagram", href: "/instagram", icon: IconeInstagram },
@@ -110,7 +110,7 @@ export const navigation = {
     {
       label: "E-commerce",
       href: "/ecommerce",
-      icon: StorefrontIcon,
+      icon: HandbagIcon,
       // "Visão geral" (/ecommerce) entra sozinha antes das seções.
       tabs: [
         { label: "Pedidos", href: "/ecommerce/pedidos" },
