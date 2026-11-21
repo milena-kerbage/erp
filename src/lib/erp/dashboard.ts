@@ -47,7 +47,10 @@ export async function dashboardSummary(now=Date.now(),offsetMinutes=180){
       if(quando<inicioSerie||quando>=next)continue;
       const chave=new Date(quando-offset).toISOString().slice(0,7),atual=porMes.get(chave)??{value:0,count:0};atual.value+=Number(row.budget)/100;atual.count+=1;porMes.set(chave,atual);
     }
-    const revenue=Array.from({length:MESES},(_,indice)=>{const chave=new Date(Date.UTC(year,month-(MESES-1)+indice,1)).toISOString().slice(0,7);return{month:chave,value:porMes.get(chave)?.value??0,count:porMes.get(chave)?.count??0};});
+    // Quanto entrou em orçamentos em cada mês (pela criação da ficha): a linha de comparação do faturamento.
+    const mes=pg?`to_char(to_timestamp((created - ${offset})/1000.0) AT TIME ZONE 'UTC','YYYY-MM')`:`strftime('%Y-%m',(created - ${offset})/1000,'unixepoch')`;
+    const entradas=new Map((await db.prepare(`SELECT ${mes} AS month,SUM(${budget}) AS budget FROM leads WHERE archived_at IS NULL AND created>=? AND created<? GROUP BY ${mes}`).all(inicioSerie,next)).map(r=>[String(r.month),Number(r.budget)/100]));
+    const revenue=Array.from({length:MESES},(_,indice)=>{const chave=new Date(Date.UTC(year,month-(MESES-1)+indice,1)).toISOString().slice(0,7);return{month:chave,value:porMes.get(chave)?.value??0,count:porMes.get(chave)?.count??0,entered:entradas.get(chave)??0};});
     // Bebês chegando: o prazo do enxoval. Nascimentos previstos nos próximos 30, 60 e 90 dias e os mais próximos.
     const hoje=new Date(now-offset).toISOString().slice(0,10),ate=(dias:number)=>new Date(now-offset+dias*86400000).toISOString().slice(0,10),nascimento=json('details_json','eventDate');
     const prazo=await db.prepare(`SELECT SUM(CASE WHEN ${nascimento}<=? THEN 1 ELSE 0 END) AS d30,SUM(CASE WHEN ${nascimento}<=? THEN 1 ELSE 0 END) AS d60,COUNT(*) AS d90 FROM leads WHERE archived_at IS NULL AND ${nascimento}>=? AND ${nascimento}<=?`).get(ate(30),ate(60),hoje,ate(90));

@@ -54,7 +54,8 @@ import {
   valueByStage,
 } from "../metrics";
 import { FunnelCard } from "./FunnelCard";
-import { BirthsCard, ChannelsCard, RevenueCard } from "./ExtraCards";
+import { BirthsCard, ChannelsCard } from "./ExtraCards";
+import { RevenueCard } from "./RevenueCard";
 import { MonthBars, Sparkline } from "./charts";
 import { SourcesCard } from "./SourcesCard";
 import { Card, CardLink, Delta, Eyebrow, Figure, Help, IconBadge, Note } from "./ui";
@@ -630,13 +631,13 @@ export function Dashboard() {
               <FunnelCard funnel={funnel} funnels={funnels} stages={stages} onFunnelChange={setFunnelId} />
               <SourcesCard rows={data.sources} />
             </Bottom>
+            <ChannelsCard rows={data.sources} />
           </Column>
 
-          {/* Coluna lateral, discreta: o prazo dos enxovais, o faturamento mês a mês e quanto cada canal converte */}
+          {/* Coluna lateral, discreta: o prazo dos enxovais e o faturamento mês a mês */}
           <Column>
             <BirthsCard births={data.births} />
             <RevenueCard rows={data.revenue} />
-            <ChannelsCard rows={data.sources} />
           </Column>
         </Layout>
       )}

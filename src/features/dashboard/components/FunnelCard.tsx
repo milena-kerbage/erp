@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
@@ -12,6 +12,7 @@ import { stageIcon, type Funnel } from "@/features/leads/funnels";
 import { leadsHref } from "../links";
 import { formatMoney, wholeShares, type StageValue } from "../metrics";
 import { Card, CardHead, EmptyNote } from "./ui";
+import { useTamanho } from "./useTamanho";
 
 /* ---------- Estilos ---------- */
 
@@ -112,22 +113,6 @@ const Etapa = styled(Link, transientOptions)<{ $cor: string; $dim: boolean }>`
   &:focus-visible { outline: 2px solid currentColor; outline-offset: -6px; border-radius: ${({ theme }) => theme.radii.md}; }
 `;
 
-/** Tamanho real do desenho, em pixels: o recorte entre as gavetas tem medida fixa, não estica com o cartão. */
-function useTamanho<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [tamanho, setTamanho] = useState({ largura: 0, altura: 0 });
-  useLayoutEffect(() => {
-    const alvo = ref.current;
-    if (!alvo) return;
-    const medir = () => setTamanho((atual) => { const largura = alvo.clientWidth, altura = alvo.clientHeight; return atual.largura === largura && atual.altura === altura ? atual : { largura, altura }; });
-    medir();
-    const observador = new ResizeObserver(medir);
-    observador.observe(alvo);
-    return () => observador.disconnect();
-  }, []);
-  return [ref, tamanho] as const;
-}
-
 // O recorte da referência: uma linha fina e reta na cor do cartão, que desce num V pequeno e agudo no meio.
 const RECORTE = { meia: 8, altura: 10, traco: 2 };
 
@@ -205,7 +190,6 @@ export function FunnelCard({
     <Card aria-label={`Funil ${funnel?.name ?? ""}`}>
       <CardHead
         title="Funil de vendas"
-        subtitle={`${formatMoney(total)} em ${count} ${count === 1 ? "lead" : "leads"}, hoje`}
       >
         <Select
           label="Funil do cartão"

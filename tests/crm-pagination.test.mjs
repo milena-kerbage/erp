@@ -47,6 +47,7 @@ test('dashboard recebe agregados globais e somente cinco fichas de atenção',as
 });
 test('dashboard: faturamento por mês pelo fechamento do histórico e próximos nascimentos',async()=>{
  const linha=(id,funil,etapa,criado,orcamento,extras={})=>db.prepare('INSERT INTO leads VALUES (?,?,?,?,?,?,?,?,?,NULL)').run(id,funil,etapa,JSON.stringify({id,name:id,phone:'85999990000',budget:orcamento,funnelId:funil,stage:etapa,tags:[],createdAt:new Date(criado).toISOString()}),JSON.stringify({owner:{seed:'owner-1',name:'Gestão'},source:'Instagram',links:[],attachments:[],history:[],...extras}),'open',1,criado,now);
+ const baseline=await dashboardSummary(now,180);
  // Entrou em setembro e fechou em outubro: conta em outubro. Sem histórico de etapa: conta no mês em que entrou.
  await linha('venda-outubro','vendas','fechado',Date.parse('2026-09-20T12:00:00-03:00'),1000,{history:[{id:'h1',at:'2026-10-05T15:00:00.000Z',by:'Gestão',type:'stage',stage:'fechado'}]});
  await linha('venda-novembro','clientes','confirmado',Date.parse('2026-11-03T12:00:00-03:00'),500.5);
@@ -55,6 +56,8 @@ test('dashboard: faturamento por mês pelo fechamento do histórico e próximos 
   const summary=await dashboardSummary(now,180);
   assert.deepEqual(summary.revenue.map(item=>item.month),['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11']);
   assert.deepEqual(summary.revenue.map(item=>[item.value,item.count]),[[0,0],[0,0],[0,0],[0,0],[1000,1],[500.5,1]]);
+  // O que entrou em orçamentos conta pelo mês de criação: a venda de outubro entrou em setembro.
+  assert.equal(summary.revenue[3].entered-baseline.revenue[3].entered,1000);assert.equal(summary.revenue[4].entered,baseline.revenue[4].entered);assert.equal(Math.round((summary.revenue[5].entered-baseline.revenue[5].entered)*100),50050);
   assert.equal(summary.births.d30,1);assert.equal(summary.births.next[0].baby,'Helena');assert.equal(summary.births.next[0].client,false);
  }finally{await db.prepare("DELETE FROM leads WHERE id IN ('venda-outubro','venda-novembro','bebe-10-dias')").run();}
 });

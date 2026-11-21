@@ -189,7 +189,6 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
       <Top>
         <CardHead
           title="Vendas por origem"
-          subtitle="Participação no valor dos orçamentos do mês"
           icon={ChartPieSliceIcon}
           tone="teal"
         />
