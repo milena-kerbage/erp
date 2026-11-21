@@ -1,5 +1,6 @@
 "use client";
 
+import { stageIcon } from "@/features/leads/funnels";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@emotion/react";
@@ -302,11 +303,11 @@ export function LeadModal({ leadId, onClose }: { leadId: string | null; onClose:
                     value: item.id,
                     label: item.label,
                     meta: `${position + 1}/${funnel.stages.length}`,
-                    leading: <CircleDashedIcon size={18} weight="bold" color={theme.tones[item.tone].fg} />,
+                    leading: (() => { const Icone = stageIcon(item); return <Icone size={18} weight="bold" color={theme.tones[item.tone].fg} />; })(),
                   }))}
                   trigger={({ open: _open, ...props }) => (
                     <FieldTrigger type="button" {...props} $variant="badge" $tone={stage?.tone ?? "neutral"}>
-                      <CircleDashedIcon weight="bold" aria-hidden />
+                      {(() => { const Icone = stageIcon(stage); return <Icone weight="bold" aria-hidden />; })()}
                       {stage?.label}
                     </FieldTrigger>
                   )}

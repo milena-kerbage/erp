@@ -1,5 +1,18 @@
 import {
   ArrowsClockwiseIcon,
+  CalculatorIcon,
+  CalendarCheckIcon,
+  ChatCircleDotsIcon,
+  CheckCircleIcon,
+  CircleDashedIcon,
+  CreditCardIcon,
+  PackageIcon,
+  PauseCircleIcon,
+  PhoneCallIcon,
+  SealCheckIcon,
+  TruckIcon,
+  UserPlusIcon,
+  XCircleIcon,
   BabyIcon,
   ButterflyIcon,
   CakeIcon,
@@ -35,6 +48,8 @@ export type FunnelStage = {
   id: string;
   label: string;
   tone: Tone;
+  /** Nome do ícone (stageIcons); sem ele, o ícone é sugerido pelo nome da etapa. */
+  icon?: string;
 };
 
 export type Funnel = {
@@ -85,4 +100,53 @@ export const funnelTones: readonly Tone[] = ["blue", "lavender", "peach", "rose"
 /** Funil pelo id, ou o primeiro da lista. */
 export function pickFunnel(list: readonly Funnel[], id: string | undefined): Funnel {
   return list.find((funnel) => funnel.id === id) ?? list[0];
+}
+
+/**
+ * Ícones das etapas do funil (Configurações › Funis e etapas). O nome é o que fica gravado na etapa.
+ * `pistas`: trechos do nome da etapa que sugerem o ícone quando ninguém escolheu um ("Orçamento" → calculadora).
+ */
+export const stageIcons: readonly { name: string; icon: Icon; pistas: readonly string[] }[] = [
+  { name: "Novo", icon: UserPlusIcon, pistas: ["novo", "nova", "entrada", "chegou"] },
+  { name: "Conversa", icon: ChatCircleDotsIcon, pistas: ["contato", "conversa", "atendimento", "respond"] },
+  { name: "Ligação", icon: PhoneCallIcon, pistas: ["ligar", "ligacao", "retornar"] },
+  { name: "Orçamento", icon: CalculatorIcon, pistas: ["orcamento", "proposta", "cotacao"] },
+  { name: "Negociação", icon: HandshakeIcon, pistas: ["negocia", "acordo"] },
+  { name: "Interesse", icon: HeartIcon, pistas: ["interesse", "interessad"] },
+  { name: "Agendado", icon: CalendarCheckIcon, pistas: ["agend", "visita", "reuniao"] },
+  { name: "Pagamento", icon: CreditCardIcon, pistas: ["pagamento", "sinal", "pix", "cobran"] },
+  { name: "Confirmado", icon: CheckCircleIcon, pistas: ["confirmad", "aprovad"] },
+  { name: "Fechado", icon: SealCheckIcon, pistas: ["fechad", "ganh", "vendid", "recuperad", "conclu"] },
+  { name: "Medidas", icon: RulerIcon, pistas: ["medida", "prova"] },
+  { name: "Corte", icon: ScissorsIcon, pistas: ["corte", "producao", "produzindo", "confec"] },
+  { name: "Costura", icon: NeedleIcon, pistas: ["costura", "ajuste", "bordado", "acabamento"] },
+  { name: "Pronto", icon: PackageIcon, pistas: ["pronto", "embala", "separad"] },
+  { name: "Entrega", icon: TruckIcon, pistas: ["entreg", "envi", "despach", "retir"] },
+  { name: "Presente", icon: GiftIcon, pistas: ["presente", "entregue"] },
+  { name: "Reativar", icon: ArrowsClockwiseIcon, pistas: ["reativ", "retorno", "remarketing", "recontato"] },
+  { name: "Aguardando", icon: HourglassIcon, pistas: ["aguard", "espera", "pendente"] },
+  { name: "Pausado", icon: PauseCircleIcon, pistas: ["pausad", "parad", "frio"] },
+  { name: "Perdido", icon: XCircleIcon, pistas: ["perdid", "cancelad", "desist", "sem resposta"] },
+  { name: "Bebê", icon: BabyIcon, pistas: ["bebe", "nasc"] },
+  { name: "Meta", icon: TargetIcon, pistas: ["qualific", "meta"] },
+  { name: "Destaque", icon: StarIcon, pistas: ["vip", "priorid", "destaque"] },
+  { name: "Brilho", icon: SparkleIcon, pistas: [] },
+];
+
+const semAcento = (texto: string) => texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Ícone da etapa: o escolhido nas configurações ou, sem escolha, o sugerido pelo nome; por fim o círculo. */
+export function stageIcon(stage: Pick<FunnelStage, "label" | "icon"> | undefined | null): Icon {
+  if (!stage) return CircleDashedIcon;
+  const escolhido = stage.icon && stageIcons.find((item) => item.name === stage.icon);
+  if (escolhido) return escolhido.icon;
+  const nome = semAcento(stage.label);
+  // "Entregue" bate em "entreg" (caminhão) antes de "entregue" (presente): a ordem da lista decide os empates.
+  return stageIcons.find((item) => item.pistas.some((pista) => nome.includes(pista)))?.icon ?? CircleDashedIcon;
+}
+
+/** Nome do ícone em uso na etapa (para marcar o escolhido no seletor). */
+export function stageIconName(stage: Pick<FunnelStage, "label" | "icon">): string | undefined {
+  const icone = stageIcon(stage);
+  return stageIcons.find((item) => item.icon === icone)?.name;
 }

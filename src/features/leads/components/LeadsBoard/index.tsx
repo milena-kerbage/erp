@@ -1,5 +1,6 @@
 "use client";
 
+import { stageIcon } from "@/features/leads/funnels";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
@@ -269,6 +270,7 @@ export function LeadsBoard({ funnelId, toolbarEnd }: LeadsBoardProps) {
               key={`${funnel.id}:${stage.id}`}
               title={stage.label}
               tone={stage.tone}
+              icon={stageIcon(stage)}
               count={byStage.find(group=>group.funnelId===funnel.id&&group.stage===stage.id)?.count??0}
               meta={total > 0 ? formatMoneyShort(total) : undefined}
               addLabel="Adicionar lead"

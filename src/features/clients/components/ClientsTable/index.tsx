@@ -1,4 +1,5 @@
 "use client";
+import { stageIcon } from "@/features/leads/funnels";
 import {useLeadList,LeadPagination} from "@/features/leads/useLeadList";
 
 import { useMemo, useState, type MouseEvent, type ReactNode, type UIEvent } from "react";
@@ -152,7 +153,7 @@ function StageSelect({ row, onMove }: { row: Row; onMove: (stage: string) => voi
         value: item.id,
         label: item.label,
         meta: `${position + 1}/${funnel.stages.length}`,
-        leading: <CircleDashedIcon size={18} weight="bold" color={theme.tones[item.tone].fg} />,
+        leading: (() => { const Icone = stageIcon(item); return <Icone size={18} weight="bold" color={theme.tones[item.tone].fg} />; })(),
       }))}
       trigger={({ open: _open, ...props }) => (
         <FieldTrigger
@@ -162,7 +163,7 @@ function StageSelect({ row, onMove }: { row: Row; onMove: (stage: string) => voi
           $tone={stage?.tone ?? "neutral"}
           aria-label={`Etapa: ${stage?.label}, ${stageIndex + 1} de ${funnel.stages.length}. Mover`}
         >
-          <CircleDashedIcon weight="bold" aria-hidden />
+          {(() => { const Icone = stageIcon(stage); return <Icone weight="bold" aria-hidden />; })()}
           {stage?.label}
         </FieldTrigger>
       )}
@@ -338,7 +339,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
             options: stageFunnel.stages.map((stage) => ({
               value: `${stageFunnel.id}:${stage.id}`,
               label: stage.label,
-              leading: <CircleDashedIcon size={16} weight="bold" color={theme.tones[stage.tone].fg} />,
+              leading: (() => { const Icone = stageIcon(stage); return <Icone size={16} weight="bold" color={theme.tones[stage.tone].fg} />; })(),
             })),
           },
         ]

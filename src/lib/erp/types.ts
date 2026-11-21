@@ -4,7 +4,7 @@ import type { Preferences } from '../../features/settings/types.ts';
 export type ERPRole = 'admin' | 'manager' | 'member';
 export type ERPActor = {id: string; name: string; email: string; permission: ERPRole};
 export type ERPTone = 'blue' | 'lavender' | 'peach' | 'rose' | 'green' | 'yellow' | 'teal' | 'neutral';
-export type FunnelDTO = {id: string; name: string; icon: string; tone: ERPTone; stages: {id: string; label: string; tone: ERPTone}[]; revision: number; position: number};
+export type FunnelDTO = {id: string; name: string; icon: string; tone: ERPTone; stages: {id: string; label: string; tone: ERPTone; icon?: string}[]; revision: number; position: number};
 export type LeadDTO = Lead & {revision: number; updatedAt: string; archivedAt?: string};
 export type ERPPage = {limit: number; offset: number};
 export type ERPPagination = ERPPage & {total: number; hasMore: boolean};

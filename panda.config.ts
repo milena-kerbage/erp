@@ -35,6 +35,8 @@ export default defineConfig({
         parallaxMidia: { from: { transform: "translateY(-11.5%)" }, to: { transform: "translateY(11.5%)" } },
         brilhoEsqueleto: { "0%": { transform: "translateX(-100%)" }, "60%, 100%": { transform: "translateX(100%)" } },
         subirSecao: { from: { opacity: "0", transform: "translateY(24px)" }, to: { opacity: "1", transform: "none" } },
+        // Aviso de "salvo" (fixo e centralizado: o translateX precisa ficar nos dois quadros).
+        avisoSalvo: { from: { opacity: "0", transform: "translate(-50%, 12px)" }, to: { opacity: "1", transform: "translate(-50%, 0)" } },
         // Home e cabeçalho (lululemon-referencia.md §1.3, §1.5, §3.3)
         brilhoDestaque: { from: { backgroundPosition: "100% 0" }, to: { backgroundPosition: "0% 0" } },
         revelarLetra: { from: { opacity: "0", transform: "translateY(100%)" }, to: { opacity: "1", transform: "none" } },

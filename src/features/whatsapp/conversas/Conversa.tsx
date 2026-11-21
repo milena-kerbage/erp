@@ -3,6 +3,7 @@
 // A conversa, no desenho do ERP da Le Ange (inbox-screen.tsx): o cabeçalho com o nome, a janela de 24 horas, quem responde,
 // a situação, a estrela e as ações; a etapa da oportunidade presa logo abaixo; as mensagens por dia sobre o fundo
 // pontilhado; e o campo preso no pé, por cima delas.
+import { stageIcon } from "@/features/leads/funnels";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTheme } from "@emotion/react";
 import {
@@ -234,13 +235,13 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
         <div className="pinnedPipeline">
           <Menu label="Mover para outra etapa" align="start" width="15rem" trigger={(props) => (
             <button {...props} type="button" className="stageButton" aria-label={`Etapa: ${etapa.label}. Mover`}>
-              <CircleDashedIcon weight="bold" color={theme.tones[etapa.tone].fg} aria-hidden />
+              {(() => { const Icone = stageIcon(etapa); return <Icone weight="bold" color={theme.tones[etapa.tone].fg} aria-hidden />; })()}
               <span>{etapa.label}</span>
               <CaretDownIcon aria-hidden />
             </button>
           )}>
             <MenuLabel>Mover para</MenuLabel>
-            {funil.stages.map((item, posicao) => <MenuItem key={item.id} selected={item.id === etapa.id} meta={`${posicao + 1}/${funil.stages.length}`} leading={<CircleDashedIcon size={18} weight="bold" color={theme.tones[item.tone].fg} />} onSelect={() => aoMoverEtapa(item.id)}>{item.label}</MenuItem>)}
+            {funil.stages.map((item, posicao) => <MenuItem key={item.id} selected={item.id === etapa.id} meta={`${posicao + 1}/${funil.stages.length}`} leading={(() => { const Icone = stageIcon(item); return <Icone size={18} weight="bold" color={theme.tones[item.tone].fg} />; })()} onSelect={() => aoMoverEtapa(item.id)}>{item.label}</MenuItem>)}
           </Menu>
           <div className="stageTrack" role="group" aria-label="Etapas do funil">
             {funil.stages.map((item, posicao) => {

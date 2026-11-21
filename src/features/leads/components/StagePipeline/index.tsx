@@ -1,5 +1,6 @@
 "use client";
 
+import { stageIcon } from "@/features/leads/funnels";
 import type { ReactNode } from "react";
 import { useTheme, type Theme } from "@emotion/react";
 import styled from "@emotion/styled";
@@ -117,11 +118,11 @@ export function StagePipeline({ stages, current, onMove, leading }: StagePipelin
             value: item.id,
             label: item.label,
             meta: `${position + 1}/${stages.length}`,
-            leading: <CircleDashedIcon size={18} weight="bold" color={theme.tones[item.tone].fg} />,
+            leading: (() => { const Icone = stageIcon(item); return <Icone size={18} weight="bold" color={theme.tones[item.tone].fg} />; })(),
           }))}
           trigger={({ open: _open, ...props }) => (
             <FieldTrigger type="button" {...props} aria-label={`Etapa: ${stage?.label}. Mover`}>
-              {stage && <CircleDashedIcon size={15} weight="bold" color={theme.tones[stage.tone].fg} aria-hidden />}
+              {stage && (() => { const Icone = stageIcon(stage); return <Icone size={15} weight="bold" color={theme.tones[stage.tone].fg} aria-hidden />; })()}
               <StageName>{stage?.label}</StageName>
               <Position>
                 {index + 1}/{stages.length}

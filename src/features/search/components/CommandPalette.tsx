@@ -1,5 +1,6 @@
 "use client";
 
+import { stageIcon } from "@/features/leads/funnels";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -525,7 +526,7 @@ function useSearchData(query: string,open:boolean) {
           <>
             {stage && (
               <Pill $tone={stage.tone}>
-                <CircleDashedIcon size={11} weight="bold" aria-hidden />
+                {(() => { const Icone = stageIcon(stage); return <Icone size={11} weight="bold" aria-hidden />; })()}
                 {stage.label}
               </Pill>
             )}
@@ -582,7 +583,7 @@ function useSearchData(query: string,open:boolean) {
           href: `/leads?funil=${funnel.id}`,
           leading: (
             <IconBubble>
-              <CircleDashedIcon size={17} weight="bold" color={theme.tones[stage.tone].fg} />
+              {(() => { const Icone = stageIcon(stage); return <Icone size={17} weight="bold" color={theme.tones[stage.tone].fg} />; })()}
             </IconBubble>
           ),
           meta: `${inStage} ${inStage === 1 ? "lead" : "leads"}`,

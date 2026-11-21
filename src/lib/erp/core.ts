@@ -178,9 +178,9 @@ function validateFunnel(input: Json, current?: FunnelDTO) {
   const stagesInput = merged.stages ?? [{id:'novo',label:'Novo lead',tone:'blue'},{id:'contato',label:'Em contato',tone:'lavender'},{id:'fechado',label:'Fechado',tone:'green'}];
   if (!Array.isArray(stagesInput) || stagesInput.length < 1 || stagesInput.length > 30) throw new ERPError(400,'O funil deve ter entre 1 e 30 etapas.','INVALID_INPUT');
   const stages = stagesInput.map(value => {
-    const stage = jsonObject(value,'Etapa'); whitelist(stage,['id','label','tone']);
+    const stage = jsonObject(value,'Etapa'); whitelist(stage,['id','label','tone','icon']);
     const id = identifier(stage.id,'ID da etapa'), label = text(stage.label,'Nome da etapa',100,true), stageTone = String(stage.tone ?? 'neutral');
-    if (!tones.includes(stageTone)) throw new ERPError(400,'Cor da etapa inválida.','INVALID_INPUT'); return {id,label,tone:stageTone as FunnelDTO['tone']};
+    if (!tones.includes(stageTone)) throw new ERPError(400,'Cor da etapa inválida.','INVALID_INPUT'); const stageIcon = stage.icon === undefined || stage.icon === null || stage.icon === '' ? undefined : text(stage.icon,'Ícone da etapa',40); return {id,label,tone:stageTone as FunnelDTO['tone'],...(stageIcon ? {icon:stageIcon} : {})};
   });
   if (new Set(stages.map(stage => stage.id)).size !== stages.length) throw new ERPError(400,'As etapas precisam ter IDs únicos.','DUPLICATE_STAGE');
   return {name,icon,tone:tone as FunnelDTO['tone'],stages};

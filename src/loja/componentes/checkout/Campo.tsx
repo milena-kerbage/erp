@@ -340,7 +340,7 @@ export function Marcacao({ id, children, ...input }: { id: string; children: Rea
   );
 }
 
-function Mensagem({ id, erro, dica }: { id: string; erro?: string; dica?: ReactNode }) {
+export function Mensagem({ id, erro, dica }: { id: string; erro?: string; dica?: ReactNode }) {
   if (erro)
     return (
       <p id={`${id}-erro`} className={css({ fontSize: "sm", color: "erro" })}>
@@ -356,9 +356,9 @@ function Mensagem({ id, erro, dica }: { id: string; erro?: string; dica?: ReactN
   return null;
 }
 
-const rotuloEstilo = css({ fontSize: "sm", fontWeight: "semibold", color: "escuro" });
+export const rotuloEstilo = css({ fontSize: "sm", fontWeight: "semibold", color: "escuro" });
 
-const campo = css({
+export const campo = css({
   w: "full",
   h: "12",
   px: "4",

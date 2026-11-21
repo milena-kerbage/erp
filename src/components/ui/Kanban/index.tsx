@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type DragEvent, type ReactNode, type Ref } from "react";
-import { CircleDashedIcon, PlusIcon } from "@phosphor-icons/react";
+import { CircleDashedIcon, PlusIcon, type Icon } from "@phosphor-icons/react";
 import type { Tone } from "@/styles/theme";
 import {
   AddButton,
@@ -38,6 +38,8 @@ export function KanbanBoard({
 type KanbanColumnProps = {
   title: string;
   tone: Tone;
+  /** Ícone da etapa ao lado do título (padrão: círculo tracejado). */
+  icon?: Icon;
   count: number;
   /** Total à direita do título (ex.: soma dos orçamentos da etapa). */
   meta?: ReactNode;
@@ -59,6 +61,7 @@ export const KANBAN_DRAG_TYPE = "application/x-kanban-item";
 export function KanbanColumn({
   title,
   tone,
+  icon: IconeDaEtapa = CircleDashedIcon,
   count,
   meta,
   emptyLabel = "Nada nesta etapa",
@@ -98,7 +101,7 @@ export function KanbanColumn({
     >
       <ColumnHeader>
         <TitlePill $tone={tone}>
-          <CircleDashedIcon size={16} weight="bold" aria-hidden />
+          <IconeDaEtapa size={16} weight="bold" aria-hidden />
           <TitleText>{title}</TitleText>
           <Count $tone={tone} aria-hidden>
             {count}

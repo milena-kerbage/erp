@@ -7,6 +7,7 @@ import { css, cx } from "styled-system/css";
 import { botaoContorno, botaoEscuro, largo, linkAcao, tituloBloco, tituloPagina } from "@/loja/componentes/carrinho/estilos";
 import { Dialogo } from "@/loja/componentes/carrinho/Dialogo";
 import { AreaTexto, Campo, Marcacao, Selecao } from "@/loja/componentes/checkout/Campo";
+import { CampoData } from "@/loja/componentes/checkout/CampoData";
 import { CheckCircle, WhatsappLogo } from "@/loja/componentes/icones";
 import { linkWhatsApp } from "@/loja/lib/checkout/pedido";
 import { mascararCpf, mascararTelefone } from "@/loja/lib/checkout/validacao";
@@ -110,25 +111,44 @@ function valoresDe(cliente: ContaCliente): Formulario {
 }
 
 export function DadosPessoais() {
+  // Salvar troca a revisão da conta e o formulário é remontado com os dados novos: o aviso de "salvo" fica aqui em
+  // cima para não sumir junto (era por isso que não aparecia nada depois de salvar).
+  const [salvoEm, setSalvoEm] = useState<number | null>(null);
+  const [avisoVisivel, setAvisoVisivel] = useState(false);
+  useEffect(() => {
+    if (!salvoEm) return;
+    setAvisoVisivel(true);
+    const fechar = window.setTimeout(() => setAvisoVisivel(false), 4500);
+    return () => window.clearTimeout(fechar);
+  }, [salvoEm]);
   return (
     <div className={css({ mt: { base: "8", desktop: "12" } })}>
+      {avisoVisivel && (
+        <div role="status" aria-live="polite" className={avisoSalvo}>
+          <CheckCircle size={20} weight="fill" aria-hidden />
+          Dados salvos
+        </div>
+      )}
       <h1 className={tituloPagina}>Dados pessoais</h1>
       <p className={css({ mt: "3", mb: "8", maxW: "leitura", fontSize: "md", lineHeight: "relaxed", color: "textoSuave" })}>
         Só nome e WhatsApp são obrigatórios. O resto é opcional e ajuda a vendedora a agilizar o pedido; deixe em branco para apagar.
       </p>
-      <SoLogada>{(cliente) => <FormularioDados key={cliente.revisao} cliente={cliente} />}</SoLogada>
+      <SoLogada>{(cliente) => <FormularioDados key={cliente.revisao} cliente={cliente} salvoEm={salvoEm} aoSalvar={() => setSalvoEm(Date.now())} />}</SoLogada>
     </div>
   );
 }
 
-function FormularioDados({ cliente }: { cliente: ContaCliente }) {
+function FormularioDados({ cliente, salvoEm, aoSalvar }: { cliente: ContaCliente; salvoEm: number | null; aoSalvar: () => void }) {
   const [valores, setValores] = useState<Formulario>(() => valoresDe(cliente));
   const [erros, setErros] = useState<Record<string, string>>({});
-  const [mensagem, setMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  // Remontado logo depois de salvar: já nasce com a confirmação, com a hora, ao lado do botão.
+  const [mensagem, setMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(() =>
+    salvoEm && Date.now() - salvoEm < 60_000 ? { tipo: "ok", texto: `Dados salvos às ${new Date(salvoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.` } : null);
   const [enviando, setEnviando] = useState(false);
 
   function mudar(campo: keyof Formulario, valor: string) {
     setValores((atual) => ({ ...atual, [campo]: valor }));
+    if (mensagem?.tipo === "ok") setMensagem(null); // voltou a editar: a confirmação antiga sai
     if (erros[campo]) setErros((atuais) => ({ ...atuais, [campo]: "" }));
   }
 
@@ -138,6 +158,7 @@ function FormularioDados({ cliente }: { cliente: ContaCliente }) {
     setMensagem(null);
     try {
       const resposta = await chamarConta<RespostaConta>("conta/perfil", { metodo: "PATCH", corpo: { revisao: cliente.revisao, ...valores } });
+      aoSalvar();
       definirConta(resposta);
       setMensagem({ tipo: "ok", texto: "Dados salvos." });
     } catch (erro) {
@@ -193,7 +214,7 @@ function FormularioDados({ cliente }: { cliente: ContaCliente }) {
               </option>
             ))}
           </Selecao>
-          <Campo id="dados-bebeData" rotulo="Data" type="date" value={valores.bebeData} onChange={(e) => mudar("bebeData", e.target.value)} erro={erros.bebeData} />
+          <CampoData id="dados-bebeData" rotulo="Data" value={valores.bebeData} onChange={(data) => mudar("bebeData", data)} erro={erros.bebeData} />
         </div>
         <Campo id="dados-bebeNome" rotulo="Nome do bebê" autoComplete="off" maxLength={LIMITES_CONTA.bebeNome} value={valores.bebeNome} onChange={(e) => mudar("bebeNome", e.target.value)} erro={erros.bebeNome} dica="Se já tiver escolhido: ajuda no bordado." />
       </fieldset>
@@ -464,4 +485,9 @@ export function RedefinirSenha() {
 }
 
 const alerta = css({ p: "3", borderRadius: "md", bg: "alertaSuave", fontSize: "sm", lineHeight: "texto", color: "erro" });
+const avisoSalvo = css({
+  position: "fixed", zIndex: "[70]", left: "[50%]", bottom: "6", transform: "translateX(-50%)", display: "inline-flex", alignItems: "center", gap: "2",
+  px: "5", h: "12", borderRadius: "full", bg: "escuro", color: "[#fff]", fontSize: "sm", fontWeight: "semibold", whiteSpace: "nowrap",
+  borderWidth: "1px", borderColor: "[rgb(255 255 255 / 0.16)]", boxShadow: "[0 12px 32px rgb(29 31 27 / 0.22)]", animation: "[avisoSalvo 0.35s cubic-bezier(0.22, 1, 0.36, 1)]",
+});
 const sucesso = css({ p: "3", borderRadius: "md", bg: "sucessoSuave", fontSize: "sm", lineHeight: "texto", color: "sucesso" });

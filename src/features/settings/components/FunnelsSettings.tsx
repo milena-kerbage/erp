@@ -23,7 +23,7 @@ import { VisuallyHidden } from "@/components/ui/VisuallyHidden";
 import { transientOptions } from "@/lib/emotion/transient";
 import { staggerChildren } from "@/styles/animations";
 import type { Tone } from "@/styles/theme";
-import { funnelIcons, type Funnel, type FunnelStage } from "@/features/leads/funnels";
+import { funnelIcons, stageIcon, stageIconName, type Funnel, type FunnelStage } from "@/features/leads/funnels";
 import {erpRequest} from "@/features/erp/client";
 import { useWorkspace } from "../store";
 import { AppearancePicker } from "./pickers";
@@ -185,17 +185,25 @@ const Position = styled.span`
 `;
 
 /** Bolinha da cor da etapa: abre a troca de cor. */
+/** Ícone da etapa na cor dela: abre a escolha de cor e de ícone. */
 const ToneDot = styled("button", transientOptions)<{ $tone: Tone }>`
+  display: inline-flex;
   flex-shrink: 0;
-  width: 1.125rem;
-  height: 1.125rem;
-  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: ${({ theme }) => theme.radii.md};
   background-color: ${({ theme, $tone }) => theme.tones[$tone].soft};
-  box-shadow: inset 0 0 0 2px ${({ theme, $tone }) => theme.tones[$tone].fg};
-  transition: transform ${({ theme }) => theme.transitions.fast};
+  color: ${({ theme, $tone }) => theme.tones[$tone].fg};
+  transition: transform ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.fast};
 
-  &:hover {
-    transform: scale(1.12);
+  &:hover,
+  &[aria-expanded="true"] {
+    box-shadow: inset 0 0 0 1.5px ${({ theme, $tone }) => theme.tones[$tone].fg};
+  }
+  &:active {
+    transform: scale(0.94);
   }
 `;
 
@@ -425,12 +433,19 @@ function FunnelEditor({ funnel, index, total, counts, onAskRemove, onBlockedStag
               </Handle>
               <Position aria-hidden>{position + 1}</Position>
               <AppearancePicker
-                label={`Cor de ${stage.label}`}
+                label={`Cor e ícone de ${stage.label}`}
                 tone={stage.tone}
                 onToneChange={(tone) => updateStage(funnel.id, stage.id, { tone })}
-                trigger={({ open: _open, ...props }) => (
-                  <ToneDot type="button" {...props} $tone={stage.tone} aria-label={`Cor de ${stage.label}`} />
-                )}
+                stageIcon={stageIconName(stage)}
+                onStageIconChange={(icon) => updateStage(funnel.id, stage.id, { icon })}
+                trigger={({ open: _open, ...props }) => {
+                  const Icone = stageIcon(stage);
+                  return (
+                    <ToneDot type="button" {...props} $tone={stage.tone} aria-label={`Cor e ícone de ${stage.label}`} title="Trocar a cor e o ícone">
+                      <Icone size={16} weight="bold" aria-hidden />
+                    </ToneDot>
+                  );
+                }}
               />
               <StageName>
                 <EditableText

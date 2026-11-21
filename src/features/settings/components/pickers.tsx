@@ -8,7 +8,7 @@ import { GroupLabel, Surface } from "@/components/ui/Popover/styles";
 import { usePopover, type PopoverTriggerProps } from "@/components/ui/Popover/usePopover";
 import { transientOptions } from "@/lib/emotion/transient";
 import type { Tone } from "@/styles/theme";
-import { funnelIcons, funnelTones } from "@/features/leads/funnels";
+import { funnelIcons, funnelTones, stageIcons } from "@/features/leads/funnels";
 
 const iconGroups = [...new Set(funnelIcons.map((option) => option.group))];
 
@@ -71,11 +71,14 @@ type PickerProps = {
   /** Com ícone: escolhe também o ícone (funis). */
   icon?: Icon;
   onIconChange?: (icon: Icon) => void;
+  /** Etapas: escolhe o ícone da etapa pelo nome (stageIcons). */
+  stageIcon?: string;
+  onStageIconChange?: (name: string) => void;
   trigger: (props: PopoverTriggerProps & { open: boolean }) => ReactNode;
 };
 
 /** Escolha de cor (e ícone, nos funis) num dropdown compacto. */
-export function AppearancePicker({ label, tone, onToneChange, icon, onIconChange, trigger }: PickerProps) {
+export function AppearancePicker({ label, tone, onToneChange, icon, onIconChange, stageIcon, onStageIconChange, trigger }: PickerProps) {
   const popover = usePopover({ side: "bottom", align: "start", offset: 6, role: "dialog" });
   const { open, position, contentRef } = popover;
 
@@ -111,6 +114,27 @@ export function AppearancePicker({ label, tone, onToneChange, icon, onIconChange
                 />
               ))}
             </Grid>
+            {onStageIconChange && (
+              <>
+                <GroupLabel>Ícone da etapa</GroupLabel>
+                <Grid $columns={8} role="radiogroup" aria-label="Ícone da etapa">
+                  {stageIcons.map((option) => (
+                    <IconChoice
+                      key={option.name}
+                      type="button"
+                      role="radio"
+                      aria-checked={option.name === stageIcon}
+                      aria-label={option.name}
+                      title={option.name}
+                      $selected={option.name === stageIcon}
+                      onClick={() => onStageIconChange(option.name)}
+                    >
+                      <option.icon size={18} />
+                    </IconChoice>
+                  ))}
+                </Grid>
+              </>
+            )}
             {icon && onIconChange &&
               iconGroups.map((group) => (
               <Fragment key={group}>
