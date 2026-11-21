@@ -50,7 +50,7 @@ const Columns = styled.ul`
     align-items: center;
     gap: ${({ theme }) => theme.spacing(1)};
     height: 100%;
-    padding: ${({ theme }) => theme.spacing(4, 3)};
+    padding: ${({ theme }) => theme.spacing(3.5, 1.5)};
     text-align: center;
     cursor: default;
     transition: background-color 0.2s ease;
@@ -92,9 +92,13 @@ const Badge = styled("span", transientOptions)<{ $color: string }>`
 const Name = styled.span`
   display: inline-flex;
   align-items: baseline;
-  gap: ${({ theme }) => theme.spacing(1.5)};
+  gap: ${({ theme }) => theme.spacing(1)};
+  max-width: 100%;
+  overflow: hidden;
   font-size: ${({ theme }) => theme.fontSizes.xs};
   color: ${({ theme }) => theme.colors.text.secondary};
+  white-space: nowrap;
+  text-overflow: ellipsis;
 
   strong {
     font-weight: ${({ theme }) => theme.fontWeights.semibold};
@@ -124,6 +128,9 @@ const Dica = styled.div`
   dd { margin: 0; font-weight: ${({ theme }) => theme.fontWeights.semibold}; text-align: right; }
 `;
 
+/** Valor curto para caber sem quebrar: 31.239 → "R$ 31K"; abaixo de mil, o valor inteiro. */
+const valorCurto = (valor: number) => (valor >= 1000 ? `R$ ${Math.round(valor / 1000).toLocaleString("pt-BR")}K` : formatMoney(Math.round(valor)));
+
 type Part = { id: string; label: string; count: number; value: number; color: string; other: boolean };
 
 /* ---------- Componente ---------- */
@@ -137,8 +144,15 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
   const theme = useTheme();
   const total = rows.reduce((sum, row) => sum + row.value, 0);
 
-  // Até três canais com cor própria (pelo valor); o resto vira "Outras"
-  const ranked = [...rows].sort((a, b) => b.value - a.value);
+  // "Loja online" e "Site" são o mesmo canal para quem lê o Painel: entram juntos como "Site".
+  const juntos = new Map<string, SourceRow>();
+  for (const row of rows) {
+    const nome = row.source === "Loja online" ? "Site" : row.source;
+    const atual = juntos.get(nome);
+    juntos.set(nome, atual ? { ...atual, count: atual.count + row.count, value: atual.value + row.value, converted: atual.converted + row.converted } : { ...row, source: nome });
+  }
+  // Até três canais com cor própria (pelo valor); o resto vira "Outros"
+  const ranked = [...juntos.values()].sort((a, b) => b.value - a.value);
   const main = ranked.slice(0, MAX_SLICES);
   const rest = ranked.slice(MAX_SLICES);
   const parts: Part[] = [
@@ -154,7 +168,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
       ? [
           {
             id: "__other__",
-            label: rest.length === 1 ? rest[0].source : "Outras",
+            label: rest.length === 1 ? rest[0].source : "Outros",
             count: rest.reduce((sum, row) => sum + row.count, 0),
             value: rest.reduce((sum, row) => sum + row.value, 0),
             color: otherColor(theme.mode),
@@ -224,7 +238,7 @@ export function SourcesCard({ rows }: { rows: SourceRow[] }) {
                         {part.label}
                         <strong>{parte}%</strong>
                       </Name>
-                      <Value>{formatMoney(part.value)}</Value>
+                      <Value>{valorCurto(part.value)}</Value>
                     </div>
                   </Tooltip>
                 </li>

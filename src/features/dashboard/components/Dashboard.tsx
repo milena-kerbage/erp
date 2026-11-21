@@ -183,7 +183,7 @@ const HeroTop = styled.div`
 `;
 
 const HeroFigure = styled.strong`
-  font-size: clamp(2rem, 8vw, 3rem);
+  font-size: clamp(1.625rem, 6vw, 2.125rem);
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   line-height: 1;
   letter-spacing: -0.035em;
@@ -256,34 +256,29 @@ const Metrics = styled.div`
 `;
 
 const MetricRoot = styled(Card)`
-  gap: ${({ theme }) => theme.spacing(3)};
-  padding: ${({ theme }) => theme.spacing(4, 4, 4, 5)};
+  gap: ${({ theme }) => theme.spacing(1.5)};
+  height: 7rem;
+  padding: ${({ theme }) => theme.spacing(3.5, 4, 0)};
+  overflow: hidden;
 `;
 
-const MetricHead = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing(2)};
-
-  > span {
-    display: inline-flex;
-    flex-wrap: wrap;
-    min-width: 0;
-    align-items: center;
-    gap: ${({ theme }) => theme.spacing(1.5)};
-    padding-top: ${({ theme }) => theme.spacing(1.5)};
-    font-size: 0.8125rem;
-    color: ${({ theme }) => theme.colors.text.secondary};
-  }
+const MetricTitle = styled.span`
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  white-space: nowrap;
+  text-overflow: ellipsis;
 `;
 
-const MetricBottom = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing(2.5)};
+/** Gráfico do indicador: encosta nas duas bordas e no pé do cartão (100% da largura). */
+const MetricChart = styled.div`
+  margin: auto -${({ theme }) => theme.spacing(4)} 0;
+`;
+
+/** Barra de progresso do indicador, no pé do cartão. */
+const MetricBar = styled.div`
   margin-top: auto;
-  padding-top: ${({ theme }) => theme.spacing(2)};
+  padding-bottom: ${({ theme }) => theme.spacing(3.5)};
 `;
 
 /** Linhas pequenas com barra (ticket por origem). */
@@ -330,16 +325,29 @@ const Bottom = styled.div`
   }
 `;
 
-/** Gráfico do mês dentro do cartão principal: uma barra por dia. */
-const HeroChart = styled.div`
-  padding: ${({ theme }) => theme.spacing(0, 6, 4)};
+/** Cartão principal numa faixa só: o valor do mês à esquerda e os quatro números de apoio à direita. */
+const HeroLinha = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing(3, 8)};
+  padding: ${({ theme }) => theme.spacing(4, 5)};
 
-  > small {
-    display: flex;
-    justify-content: space-between;
-    margin-top: ${({ theme }) => theme.spacing(1.5)};
-    font-size: 0.6875rem;
-    color: ${({ theme }) => theme.colors.text.muted};
+  .principal { display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(1)}; min-width: 0; }
+  .principal > span { display: flex; flex-wrap: wrap; align-items: center; gap: ${({ theme }) => theme.spacing(1, 3)}; }
+
+  dl { display: flex; flex-wrap: wrap; gap: ${({ theme }) => theme.spacing(2, 0)}; margin: 0; }
+  dl > div { display: flex; flex-direction: column; gap: 2px; padding: 0 ${({ theme }) => theme.spacing(5)}; }
+  dl > div + div { border-left: 1px solid ${({ theme }) => theme.colors.border.subtle}; }
+  dl > div:last-of-type { padding-right: 0; }
+  dt { font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; white-space: nowrap; }
+  dd { margin: 0; font-size: 0.9375rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary}; white-space: nowrap; }
+
+  @media (max-width: 760px) {
+    dl { width: 100%; }
+    dl > div { flex: 1 1 40%; padding: 0 ${({ theme }) => theme.spacing(3)}; }
+    dl > div:nth-of-type(odd) { padding-left: 0; border-left: 0; }
   }
 `;
 
@@ -358,9 +366,10 @@ const BigFigure = styled.strong`
   align-items: baseline;
   gap: ${({ theme }) => theme.spacing(0, 2)};
   min-width: 0;
-  font-size: clamp(1.375rem, 11cqi, 1.75rem);
+  font-size: clamp(1.25rem, 10cqi, 1.625rem);
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   line-height: 1.1;
+  white-space: nowrap;
   letter-spacing: -0.03em;
   color: ${({ theme }) => theme.colors.text.primary};
 
@@ -374,52 +383,37 @@ const BigFigure = styled.strong`
 
 /* ---------- Partes ---------- */
 
+/**
+ * Indicador objetivo, sempre da mesma altura: o nome, o número (com o crescimento ao lado, quando compara) e UMA
+ * leitura visual embaixo: a linha de tendência, de ponta a ponta do cartão, ou a barra de progresso.
+ */
 function MetricCard({
   title,
-  help,
-  icon,
   tone,
   value,
   unit,
-  note,
   ratio,
-  ratioLabel,
-  footer,
   delta,
   deltaVersus,
   upIsGood,
   series,
-  children,
 }: {
   title: string;
-  help: string;
-  icon: Icon;
   tone: Tone;
   value: ReactNode;
   unit?: string;
-  note: ReactNode;
   ratio?: number;
-  ratioLabel?: string;
-  footer?: ReactNode;
   /** Variação contra o mesmo trecho do mês passado (undefined = este indicador não compara). */
   delta?: number | null;
   deltaVersus?: string;
   upIsGood?: boolean;
   /** Um ponto por dia do mês: vira a linha de tendência no lugar da barra. */
   series?: (number | null)[];
-  /** Conteúdo no lugar da barra (ex.: linhas por origem). */
-  children?: ReactNode;
 }) {
   const theme = useTheme();
   return (
     <MetricRoot aria-label={title}>
-      <MetricHead>
-        <span>
-          {title}
-          <Help>{help}</Help>
-        </span>
-        <IconBadge icon={icon} tone={tone} />
-      </MetricHead>
+      <MetricTitle>{title}</MetricTitle>
       <FigureRow>
         <BigFigure>
           {value}
@@ -428,18 +422,15 @@ function MetricCard({
         {/* Crescimento ao lado do número (o período comparado fica na dica) */}
         {delta !== undefined && delta !== null && <span title={deltaVersus}><Delta value={delta} upIsGood={upIsGood} /></span>}
       </FigureRow>
-      <MetricBottom>
-        <Note>{note}</Note>
-        {children ??
-          (series ? (
-            <Sparkline values={series} color={theme.tones[tone].fg} label={`${title} por dia no mês`} />
-          ) : (
-            ratio !== undefined && (
-              <Segments ratio={ratio} color={theme.tones[tone].fg} label={ratioLabel ?? `${Math.round(ratio * 100)}%`} />
-            )
-          ))}
-        {footer && <Note>{footer}</Note>}
-      </MetricBottom>
+      {series ? (
+        <MetricChart>
+          <Sparkline values={series} color={theme.tones[tone].fg} label={`${title} por dia no mês`} height={34} />
+        </MetricChart>
+      ) : (
+        <MetricBar>
+          <Segments ratio={ratio ?? 0} color={theme.tones[tone].fg} label={`${Math.round((ratio ?? 0) * 100)}%`} />
+        </MetricBar>
+      )}
     </MetricRoot>
   );
 }
@@ -458,8 +449,8 @@ function DashboardSkeleton() {
   return (
     <Layout aria-busy="true" aria-label="Carregando o painel">
       <Column>
-        {card("9rem", "hero")}
-        <Metrics>{Array.from({ length: 8 }, (_, index) => card("5.5rem", `m${index}`))}</Metrics>
+        {card("3rem", "hero")}
+        <Metrics>{Array.from({ length: 8 }, (_, index) => card("3.5rem", `m${index}`))}</Metrics>
       </Column>
       <Column>
         {card("12rem", "a")}
@@ -541,170 +532,55 @@ export function Dashboard() {
         <Layout>
           <Column>
             <Hero aria-label="Entrada no funil no mês">
-              <HeroTop>
-                <div>
+              <HeroLinha>
+                <div className="principal">
                   <Eyebrow>Entrada no funil em {formatMonthName(now)}</Eyebrow>
-                  <HeroFigure>{formatMoney(data.monthTotal)}</HeroFigure>
+                  <span>
+                    <HeroFigure>{formatMoney(data.monthTotal)}</HeroFigure>
+                    <Delta
+                      value={change(data.monthTotal, data.previous.value || null)}
+                      versus={`vs 1 a ${formatMonthDay(data.previous.until)}`}
+                      empty={`sem base em ${formatMonthName(data.previous.until)}`}
+                    />
+                  </span>
                 </div>
-                <Delta
-                  value={change(data.monthTotal, data.previous.value || null)}
-                  versus={`vs 1 a ${formatMonthDay(data.previous.until)}`}
-                  empty={`sem base em ${formatMonthName(data.previous.until)}`}
-                />
-              </HeroTop>
-              <HeroChart>
-                <MonthBars days={data.month} color={theme.colors.primary.main} format={formatMoney} label={`Valor que entrou por dia em ${formatMonthName(now)}`} />
-                <small>
-                  <span>dia 1</span>
-                  <span>{plural(data.fresh, "lead", "leads")} no mês · melhor dia {formatMoney(Math.max(...data.month.map((day) => day.value)))}</span>
-                  <span>dia {data.month.length}</span>
-                </small>
-              </HeroChart>
-              <Strip>
-                <div>
-                  <dt>Ritmo atual</dt>
-                  <dd>{formatMoney(Math.round(data.pace))}</dd>
-                  <small>por dia no mês</small>
-                </div>
-                <div>
-                  <dt>Em negociação</dt>
-                  <dd>{formatMoney(data.pipeline)}</dd>
-                  <small>em orçamentos abertos</small>
-                </div>
-                <div>
-                  <dt>Projeção do mês</dt>
-                  <dd>{formatMoney(Math.round(data.projection))}</dd>
-                  <small>se o ritmo continuar</small>
-                </div>
-                <div>
-                  <dt>Dias do mês</dt>
-                  <dd>
-                    {now.getDate()} de {data.month.length}
-                  </dd>
-                  <small>
-                    {data.month.length - now.getDate() === 0
-                      ? "último dia"
-                      : `faltam ${plural(data.month.length - now.getDate(), "dia", "dias")}`}
-                  </small>
-                </div>
-              </Strip>
+                <dl>
+                  <div>
+                    <dt>Ritmo por dia</dt>
+                    <dd>{formatMoney(Math.round(data.pace))}</dd>
+                  </div>
+                  <div>
+                    <dt>Em negociação</dt>
+                    <dd>{formatMoney(data.pipeline)}</dd>
+                  </div>
+                  <div>
+                    <dt>Projeção do mês</dt>
+                    <dd>{formatMoney(Math.round(data.projection))}</dd>
+                  </div>
+                  <div>
+                    <dt>Dia do mês</dt>
+                    <dd>
+                      {now.getDate()} de {data.month.length}
+                    </dd>
+                  </div>
+                </dl>
+              </HeroLinha>
             </Hero>
 
             <Metrics>
-              <MetricCard
-                title="Leads novos"
-                help="Leads que chegaram neste mês, de qualquer origem."
-                icon={UserPlusIcon}
-                tone="green"
-                value={data.fresh}
-                delta={change(data.fresh, data.previous.count || null)}
-                deltaVersus={versus}
-                note={`${(data.fresh / data.days).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} por dia`}
-                series={data.month.map((day) => (day.future ? null : day.count))}
-                footer={data.fresh ? `${data.attended} de ${data.fresh} já em atendimento` : "nenhum lead novo ainda"}
-              />
-              <MetricCard
-                title="Ticket médio"
-                help="Orçamento médio dos leads do mês, e os dois canais com ticket mais alto."
-                icon={ReceiptIcon}
-                tone="blue"
-                value={formatMoney(Math.round(data.ticket))}
-                delta={change(data.ticket, data.previous.count ? data.previous.value / data.previous.count : null)}
-                deltaVersus={versus}
-                note="orçamento médio por lead"
-              >
-                <MiniRows>
-                  {data.ticketBySource.length === 0 ? (
-                    <Note>sem leads para calcular</Note>
-                  ) : (
-                    data.ticketBySource.map((row) => {
-                      const max = Math.max(...data.ticketBySource.map((item) => item.average), 1);
-                      return (
-                        <div key={row.source}>
-                          <span>{row.source}</span>
-                          <strong>{formatMoneyShort(row.average)}</strong>
-                          <Segments
-                            ratio={row.average / max}
-                            color={theme.tones.blue.fg}
-                            label={`${row.source}: ${formatMoney(Math.round(row.average))}`}
-                          />
-                        </div>
-                      );
-                    })
-                  )}
-                </MiniRows>
-              </MetricCard>
-              <MetricCard
-                title="Conversão"
-                help="Leads do mês que já viraram cliente (funil Clientes ou etapa final de vendas)."
-                icon={PercentIcon}
-                tone="rose"
-                value={percent(data.fresh ? (data.won / data.fresh) * 100 : 0)}
-                delta={change(data.fresh ? data.won / data.fresh : 0, data.previous.count ? data.previousWon / data.previous.count : null)}
-                deltaVersus={versus}
-                note="leads que viraram cliente"
-                ratio={data.fresh ? data.won / data.fresh : 0}
-                footer={data.fresh ? `${data.won} de ${data.fresh} leads` : "sem leads no mês"}
-              />
-              <MetricCard
-                title="Bebês chegando"
-                help="Fichas com nascimento previsto para os próximos 30 dias: é o prazo de verdade de cada enxoval."
-                icon={BabyIcon}
-                tone="rose"
-                value={data.births.d30}
-                unit="nos próximos 30 dias"
-                note={`${data.births.d60} em 60 dias · ${data.births.d90} em 90 dias`}
-                ratio={data.births.d90 ? data.births.d30 / data.births.d90 : 0}
-                ratioLabel={`${data.births.d30} de ${data.births.d90} nascem em até 30 dias`}
-                footer={data.births.d30 ? "confira se o enxoval está em produção" : "nenhum prazo apertado agora"}
-              />
-              <MetricCard
-                title="Atendimento"
-                help="Conversas do WhatsApp esperando resposta da equipe agora (a última mensagem é da cliente) e as que têm mensagem não lida."
-                icon={ChatsCircleIcon}
-                tone="teal"
-                value={data.atendimento?.aguardando ?? 0}
-                unit="esperando resposta"
-                note={plural(data.atendimento?.naoLidas ?? 0, "conversa com mensagem não lida", "conversas com mensagem não lida")}
-                ratio={data.atendimento && data.atendimento.aguardando + data.atendimento.naoLidas > 0 ? data.atendimento.aguardando / Math.max(data.atendimento.aguardando, data.atendimento.naoLidas) : 0}
-                footer={<Link href="/conversas">Abrir o WhatsApp</Link>}
-              />
-              <MetricCard
-                title="Orçamentos"
-                help="Leads de vendas nas etapas de orçamento e negociação, agora."
-                icon={FileTextIcon}
-                tone="peach"
-                value={data.proposals}
-                unit={formatMoney(data.proposalsValue)}
-                note="aguardando a cliente"
-                ratio={data.salesLeads ? data.proposals / data.salesLeads : 0}
-                footer={`${data.proposals} de ${plural(data.salesLeads, "lead", "leads")} em vendas`}
-              />
-              <MetricCard
-                title="Fechados"
-                help="Valor dos leads que chegaram neste mês e já viraram cliente."
-                icon={HandCoinsIcon}
-                tone="yellow"
-                value={formatMoney(data.wonValue)}
-                delta={change(data.wonValue, data.previousWonValue || null)}
-                deltaVersus={versus}
-                note={
-                  data.won ? plural(data.won, "lead virou cliente", "leads viraram cliente") : "nenhum fechado ainda"
-                }
-                ratio={data.monthTotal ? data.wonValue / data.monthTotal : 0}
-                footer={`${data.monthTotal ? Math.round((data.wonValue / data.monthTotal) * 100) : 0}% do valor que entrou`}
-              />
-              <MetricCard
-                title="Sem contato"
-                help="Leads (que ainda não são clientes) sem contato há uma semana ou mais."
-                icon={ClockCounterClockwiseIcon}
-                tone="neutral"
-                value={data.staleCount}
-                unit={`de ${data.active}`}
-                note="há 7 dias ou mais"
-                ratio={data.active ? data.staleCount / data.active : 0}
-                footer={data.stale.length ? "retome antes que esfriem" : "nenhum lead esquecido"}
-              />
+              <MetricCard title="Leads novos" tone="green" value={data.fresh} delta={change(data.fresh, data.previous.count || null)} deltaVersus={versus}
+                series={data.month.map((day) => (day.future ? null : day.count))} />
+              <MetricCard title="Ticket médio" tone="blue" value={formatMoney(Math.round(data.ticket))} delta={change(data.ticket, data.previous.count ? data.previous.value / data.previous.count : null)} deltaVersus={versus}
+                series={data.month.map((day) => (day.future ? null : day.count ? day.value / day.count : 0))} />
+              <MetricCard title="Conversão" tone="rose" value={percent(data.fresh ? (data.won / data.fresh) * 100 : 0)} unit={`${data.won} de ${data.fresh}`}
+                delta={change(data.fresh ? data.won / data.fresh : 0, data.previous.count ? data.previousWon / data.previous.count : null)} deltaVersus={versus} ratio={data.fresh ? data.won / data.fresh : 0} />
+              <MetricCard title="Fechados" tone="yellow" value={formatMoney(data.wonValue)} delta={change(data.wonValue, data.previousWonValue || null)} deltaVersus={versus}
+                ratio={data.monthTotal ? data.wonValue / data.monthTotal : 0} />
+              <MetricCard title="Orçamentos abertos" tone="peach" value={data.proposals} unit={formatMoney(data.proposalsValue)} ratio={data.salesLeads ? data.proposals / data.salesLeads : 0} />
+              <MetricCard title="Esperando resposta" tone="teal" value={data.atendimento?.aguardando ?? 0} unit={`${data.atendimento?.naoLidas ?? 0} não lidas`}
+                ratio={data.atendimento && data.atendimento.aguardando + data.atendimento.naoLidas > 0 ? data.atendimento.aguardando / Math.max(data.atendimento.aguardando, data.atendimento.naoLidas) : 0} />
+              <MetricCard title="Bebês em 30 dias" tone="lavender" value={data.births.d30} unit={`${data.births.d90} em 90 dias`} ratio={data.births.d90 ? data.births.d30 / data.births.d90 : 0} />
+              <MetricCard title="Sem contato há 7 dias" tone="neutral" value={data.staleCount} unit={`de ${data.active}`} ratio={data.active ? data.staleCount / data.active : 0} />
             </Metrics>
 
             <Bottom>

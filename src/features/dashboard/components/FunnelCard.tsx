@@ -14,23 +14,18 @@ import { Card, CardHead, EmptyNote } from "./ui";
 /* ---------- Estilos ---------- */
 
 // Altura de cada etapa: a mesma nas três colunas (números | funil | taxas), para tudo se alinhar.
-const ALTURA = 3.5; // rem
+const ALTURA = 3.75; // rem
 
-/** Três colunas: os números de cada etapa, o funil desenhado e as taxas de conversão entre as etapas. */
+/** Duas colunas: os números de cada etapa e, ao lado, o funil desenhado. */
 const Grade = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 11.5rem 9.5rem;
-  gap: ${({ theme }) => theme.spacing(4)};
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, 0.9fr);
+  gap: ${({ theme }) => theme.spacing(5)};
   align-items: start;
 
-  @container (max-width: 560px) {
-    grid-template-columns: minmax(0, 1fr) 9rem 8.5rem;
-    gap: ${({ theme }) => theme.spacing(2.5)};
-  }
-  /* Bem estreito (celular): só os números e o funil */
   @container (max-width: 460px) {
-    grid-template-columns: minmax(0, 1fr) 8rem;
-    > [data-taxas] { display: none; }
+    grid-template-columns: minmax(0, 1fr) 8.5rem;
+    gap: ${({ theme }) => theme.spacing(3)};
   }
 `;
 
@@ -83,11 +78,11 @@ const Etapa = styled("div", transientOptions)<{ $cor: string; $dim: boolean }>`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   height: ${ALTURA}rem;
-  padding: 0 22%;
+  padding: 0 20%;
   color: ${({ $cor }) => $cor};
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   line-height: 1.15;
   text-align: center;
@@ -95,29 +90,6 @@ const Etapa = styled("div", transientOptions)<{ $cor: string; $dim: boolean }>`
   transition: opacity 200ms;
 
   span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-`;
-
-/** Taxas de conversão: uma seta curva de uma etapa para a seguinte, com a taxa ao lado. */
-const Taxas = styled.div`
-  position: relative;
-`;
-
-const Passo = styled("div", transientOptions)<{ $topo: number; $cor: string; $dim: boolean }>`
-  position: absolute;
-  top: ${({ $topo }) => $topo}rem;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing(2)};
-  height: ${ALTURA}rem;
-  opacity: ${({ $dim }) => ($dim ? 0.4 : 1)};
-  transition: opacity 200ms;
-
-  > svg { flex-shrink: 0; width: 1.375rem; height: 100%; overflow: visible; color: ${({ $cor }) => $cor}; }
-  > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.2; }
-  small { overflow: hidden; font-size: 0.625rem; color: ${({ theme }) => theme.colors.text.muted}; white-space: nowrap; text-overflow: ellipsis; }
-  strong { font-size: 0.9375rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; letter-spacing: -0.01em; color: ${({ $cor }) => $cor}; }
 `;
 
 const Trigger = styled.button`
@@ -151,9 +123,8 @@ const Trigger = styled.button`
 const porcento = (parte: number, todo: number) => (todo > 0 ? `${Math.round((parte / todo) * 100)}%` : "–");
 
 /**
- * Funil desenhado: à esquerda os números de cada etapa (leads, valor e quantos chegaram até ali), no meio o funil
- * com o ícone e o nome de cada etapa em tons pastel, e à direita a taxa de conversão de uma etapa para a seguinte.
- * Um lead "chegou" a uma etapa quando está nela ou em alguma depois: é sobre isso que as taxas são calculadas.
+ * Funil desenhado: à esquerda os números de cada etapa (leads e valor) e, ao lado, o funil em gavetas: a cor da etapa,
+ * o ícone e o nome em branco, e a aba que encaixa na gaveta de baixo.
  */
 export function FunnelCard({
   funnel,
@@ -172,10 +143,13 @@ export function FunnelCard({
   const count = stages.reduce((sum, stage) => sum + stage.count, 0);
   const etapa = (id: string) => funnel?.stages.find((stage) => stage.id === id);
   const tom = (id: string) => theme.tones[etapa(id)?.tone ?? "neutral"];
-  // Quantos chegaram até cada etapa (estão nela ou em alguma depois).
-  const chegaram = stages.map((_, indice) => stages.slice(indice).reduce((sum, stage) => sum + stage.count, 0));
-  // Desenho do funil: 100 de largura; cada etapa ocupa 100 de altura, com uma fresta entre elas. Termina com 56%.
-  const n = Math.max(stages.length, 1), FRESTA = 5, recuo = 22 / n;
+  // Gaveta do funil: a cor da etapa, cheia mas suave (o tom misturado com branco), com o texto por cima em branco.
+  // No tema escuro os tons já são claros: a gaveta usa o tom direto e o texto vai no fundo escuro do mesmo tom.
+  const cheia = (id: string) => (theme.mode === "dark" ? tom(id).fg : `color-mix(in srgb, ${tom(id).fg} 78%, white)`);
+  const sobre = (id: string) => (theme.mode === "dark" ? tom(id).bg : "#fff");
+  // Desenho: 100 de largura; cada etapa ocupa 100 de altura. O funil termina com 60% da largura e cada gaveta
+  // tem uma aba em triângulo que encaixa na de baixo.
+  const n = Math.max(stages.length, 1), recuo = 20 / n, ABA = { meia: 4.5, altura: 13 };
 
   return (
     <Card aria-label={`Funil ${funnel?.name ?? ""}`}>
@@ -229,40 +203,25 @@ export function FunnelCard({
           <Funil role="img" aria-label={`Funil ${funnel.name}: ${stages.map((stage) => `${stage.label}, ${stage.count}`).join("; ")}`}>
             <svg viewBox={`0 0 100 ${n * 100}`} preserveAspectRatio="none" aria-hidden>
               {stages.map((stage, indice) => {
-                const cima = indice * recuo, baixo = (indice + 1) * recuo, y0 = indice * 100 + FRESTA, y1 = (indice + 1) * 100 - FRESTA;
-                // O contorno na mesma cor, com as junções arredondadas, é o que arredonda os cantos do trapézio.
-                return (
-                  <path key={stage.id} d={`M${cima + 2} ${y0} L${100 - cima - 2} ${y0} L${100 - baixo - 2} ${y1} L${baixo + 2} ${y1} Z`} fill={tom(stage.id).soft} stroke={tom(stage.id).soft} strokeWidth="9" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
-                    opacity={hover !== null && hover !== stage.id ? 0.45 : 1} />
-                );
+                const cima = indice * recuo, baixo = (indice + 1) * recuo, y0 = indice * 100, y1 = (indice + 1) * 100;
+                return <path key={stage.id} d={`M${cima} ${y0} L${100 - cima} ${y0} L${100 - baixo} ${y1} L${baixo} ${y1} Z`} fill={cheia(stage.id)} stroke={theme.palette.neutral[0]} strokeWidth="1.5" vectorEffect="non-scaling-stroke" opacity={hover !== null && hover !== stage.id ? 0.5 : 1} />;
+              })}
+              {/* As abas por cima: o triângulo de cada gaveta entra na seguinte */}
+              {stages.slice(0, -1).map((stage, indice) => {
+                const y = (indice + 1) * 100;
+                return <path key={stage.id} d={`M${50 - ABA.meia} ${y - 0.5} L${50 + ABA.meia} ${y - 0.5} L50 ${y + ABA.altura} Z`} fill={cheia(stage.id)} opacity={hover !== null && hover !== stage.id ? 0.5 : 1} />;
               })}
             </svg>
             {stages.map((stage) => {
               const Icone = stageIcon(etapa(stage.id) ?? { label: stage.label });
               return (
-                <Etapa key={stage.id} $cor={tom(stage.id).fg} $dim={hover !== null && hover !== stage.id} onPointerEnter={() => setHover(stage.id)}>
-                  <Icone size={15} weight="duotone" aria-hidden />
+                <Etapa key={stage.id} $cor={sobre(stage.id)} $dim={hover !== null && hover !== stage.id} onPointerEnter={() => setHover(stage.id)}>
+                  <Icone size={17} weight="fill" aria-hidden />
                   <span>{stage.label}</span>
                 </Etapa>
               );
             })}
           </Funil>
-
-          <Taxas data-taxas style={{ height: `${stages.length * ALTURA}rem` }} aria-label="Taxas de conversão entre as etapas">
-            {stages.slice(1).map((stage, indice) => (
-              <Passo key={stage.id} $topo={indice * ALTURA + ALTURA / 2} $cor={tom(stage.id).fg} $dim={hover !== null && hover !== stage.id && hover !== stages[indice].id}>
-                {/* Seta curva: sai do meio de uma etapa, contorna e chega no meio da seguinte */}
-                <svg viewBox="0 0 28 72" preserveAspectRatio="none" fill="none" aria-hidden>
-                  <path d="M1 2 H12 C20 2 24 8 24 16 V56 C24 64 20 70 12 70 H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.55" vectorEffect="non-scaling-stroke" />
-                  <path d="M9 65.5 L4 70 L9 74.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                </svg>
-                <div>
-                  <small title={`${stages[indice].label} → ${stage.label}`}>{stages[indice].label} → {stage.label}</small>
-                  <strong>{porcento(chegaram[indice + 1], chegaram[indice])}</strong>
-                </div>
-              </Passo>
-            ))}
-          </Taxas>
         </Grade>
       )}
     </Card>
