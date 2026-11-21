@@ -4,13 +4,13 @@ import styled from "@emotion/styled";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useState, type CSSProperties, type ReactNode } from "react";
-import { SquaresFourIcon, type Icon } from "@phosphor-icons/react";
+import { ListIcon, type Icon } from "@phosphor-icons/react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { navigation, type NavModule } from "@/config/navigation";
 import { isPathActive } from "@/lib/navigation";
 import { useUnreadConversations } from "@/features/leads/store";
 import { useInstagramUnread } from "@/features/whatsapp/unread";
-import { ModulosEmProducao } from "./ModulosEmProducao";
+import { MenuLateral } from "./MenuLateral";
 
 type Canal = "whatsapp" | "instagram";
 
@@ -30,12 +30,13 @@ const INICIO = new Set(["/", "/leads"]);
 /**
  * Menu principal no centro do header (no lugar da antiga barra lateral): ícones agrupados — início, atendimento,
  * módulos e configurações —, com o nome em dica embaixo. O item da página atual mostra o nome ao lado do ícone, e os
- * canais mostram quantas conversas estão sem ler. Os módulos em produção ficam juntos numa opção que abre a lista.
+ * canais mostram quantas conversas estão sem ler. O ícone de menu abre o painel lateral com tudo: os módulos e as
+ * seções de cada um, os que ainda estão em produção e as configurações.
  */
 export function NavPrincipal() {
   const pathname = usePathname();
   const naoLidas: Record<Canal, number> = { whatsapp: useUnreadConversations(), instagram: useInstagramUnread() };
-  const [producaoAberta, setProducaoAberta] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
 
   const liberados = navigation.main.filter((item) => !("soon" in item));
   const emProducao: readonly NavModule[] = navigation.main.filter((item) => "soon" in item);
@@ -49,15 +50,13 @@ export function NavPrincipal() {
     liberados.filter((modulo) => CANAL[modulo.href]).map(item),
     [
       ...liberados.filter((modulo) => !INICIO.has(modulo.href) && !CANAL[modulo.href]).map(item),
-      emProducao.length > 0 && (
-        <ItemMenu
-          key="em-producao"
-          modulo={{ label: `Em produção (${emProducao.length})`, href: "", icon: SquaresFourIcon }}
-          ativo={emProducao.some((modulo) => isPathActive(pathname, modulo.href))}
-          rotuloAtivo="Em produção"
-          onClick={() => setProducaoAberta(true)}
-        />
-      ),
+      <ItemMenu
+        key="menu-completo"
+        modulo={{ label: "Menu completo", href: "", icon: ListIcon }}
+        ativo={emProducao.some((modulo) => isPathActive(pathname, modulo.href))}
+        rotuloAtivo="Em produção"
+        onClick={() => setMenuAberto(true)}
+      />,
     ],
     navigation.secondary.map(item),
   ].filter((grupo) => grupo.some(Boolean));
@@ -70,7 +69,7 @@ export function NavPrincipal() {
           {grupo}
         </Fragment>
       ))}
-      <ModulosEmProducao modulos={emProducao} aberto={producaoAberta} onClose={() => setProducaoAberta(false)} />
+      <MenuLateral aberto={menuAberto} onClose={() => setMenuAberto(false)} naoLidas={{ "/conversas": naoLidas.whatsapp, "/instagram": naoLidas.instagram }} />
     </Nav>
   );
 }

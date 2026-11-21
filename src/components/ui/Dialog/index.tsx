@@ -22,6 +22,11 @@ type DialogProps = {
   /** Botões do rodapé (Cancelar, Salvar...). */
   footer?: ReactNode;
   width?: string;
+  /**
+   * Painel lateral: no desktop a janela encosta num lado e ocupa a altura toda, deslizando para dentro (menu,
+   * filtros). No celular continua a folha de baixo.
+   */
+  side?: "left" | "right";
   /** Altura fixa da janela (ex.: fichas com abas, para não "pular" ao trocar de aba). */
   height?: string;
   /**
@@ -53,6 +58,16 @@ const riseOut = keyframes`
   to { opacity: 0; transform: translateY(6px) scale(0.985); }
 `;
 
+const slideIn = keyframes`
+  from { opacity: 0.6; transform: translateX(var(--painel-de, -1.5rem)); }
+  to { opacity: 1; transform: none; }
+`;
+
+const slideOut = keyframes`
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(var(--painel-de, -1.5rem)); }
+`;
+
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
@@ -68,10 +83,23 @@ const Backdrop = styled.div`
     ${backdropExit};
   }
 
+  /* Painel lateral: encostado no lado, da altura da tela */
+  &[data-side] {
+    align-items: stretch;
+    padding: ${({ theme }) => theme.spacing(2)};
+  }
+  &[data-side="left"] { justify-content: flex-start; }
+  &[data-side="right"] { justify-content: flex-end; --painel-de: 1.5rem; }
+
   ${({ theme }) => theme.media.md} {
     bottom: var(--keyboard-inset, 0px);
     align-items: flex-end;
     padding: 0;
+
+    &[data-side] {
+      align-items: flex-end;
+      padding: 0;
+    }
   }
 `;
 
@@ -90,6 +118,20 @@ const Panel = styled("div", transientOptions)<{ $width: string; $height?: string
 
   [data-closing] > & {
     animation: ${riseOut} 160ms ease-in forwards;
+  }
+
+  /* Painel lateral (desktop): altura toda e entrada deslizando do lado */
+  @media (min-width: 1025px) {
+    [data-side] > & {
+      height: auto;
+      max-height: none;
+      border-radius: ${({ theme }) => theme.radii.xl};
+      box-shadow: ${({ theme }) => theme.shadows.lg};
+      animation: ${slideIn} 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    [data-side][data-closing] > & {
+      animation: ${slideOut} 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+    }
   }
 
   /* Celular: folha de baixo; o fim fica livre para o dock */
@@ -201,6 +243,7 @@ export function Dialog({
   children,
   footer,
   width = "28rem",
+  side,
   height,
   scroll = "body",
   floatingFooter = false,
@@ -252,6 +295,7 @@ export function Dialog({
   return createPortal(
     <Backdrop
       data-closing={closing ? "" : undefined}
+      data-side={side}
       onPointerDown={(event) => {
         if (!closing && event.target === event.currentTarget) onClose();
       }}
