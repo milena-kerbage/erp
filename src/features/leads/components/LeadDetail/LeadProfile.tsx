@@ -1,5 +1,6 @@
 "use client";
 
+import { babySexes, BabyNeutralIcon, jaNasceu, quandoNasce } from "@/features/leads/bebe";
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTheme } from "@emotion/react";
 import {
@@ -61,7 +62,6 @@ import type { Funnel } from "../../funnels";
 import { useFunnels } from "@/features/settings/store";
 import {
   defaultTags,
-  eventTypes,
   findChoice,
   leadSources,
   parseBudget,
@@ -498,19 +498,27 @@ export function DetailsTab({
         </DataItem>
       </DataGroup>
 
-      <DataGroup title="Evento">
-        <DataItem label="Tipo de evento" icon={SparkleIcon}>
-          <ChoiceField
-            label="Tipo de evento"
-            heading="Qual é o evento"
-            value={details.eventType}
-            options={eventTypes}
-            onChange={(eventType) => onUpdateDetails({ eventType })}
+      <DataGroup title="Bebê">
+        <DataItem label="Nome do bebê" icon={BabyNeutralIcon}>
+          <EditableText
+            label="Nome do bebê"
+            placeholder="Ainda não escolheram"
+            value={details.babyName ?? ""}
+            onSave={(babyName) => onUpdateDetails({ babyName: babyName.trim() || undefined })}
           />
         </DataItem>
-        <DataItem label="Data do evento" icon={CalendarBlankIcon}>
+        <DataItem label="Menina ou menino" icon={SparkleIcon}>
+          <ChoiceField
+            label="Menina ou menino"
+            heading="É menina ou menino?"
+            value={details.babySex}
+            options={babySexes}
+            onChange={(babySex) => onUpdateDetails({ babySex })}
+          />
+        </DataItem>
+        <DataItem label={eventDate && jaNasceu(details.eventDate!) ? "Nasceu em" : "Previsão de nascimento"} icon={CalendarBlankIcon}>
           <DatePicker
-            label="Data do evento"
+            label="Nascimento do bebê"
             value={details.eventDate}
             onChange={(value) => onUpdateDetails({ eventDate: value })}
             trigger={({ open: _open, ...props }) =>
@@ -518,15 +526,15 @@ export function DetailsTab({
                 <FieldTrigger
                   type="button"
                   {...props}
-                  aria-label={`Data do evento, ${formatLongDate(eventDate)}, trocar`}
+                  aria-label={`Nascimento do bebê, ${formatLongDate(eventDate)}, trocar`}
                 >
                   {formatLongDate(eventDate)}
-                  <Badge tone={dueTone(eventDate)} icon={CalendarBlankIcon}>
-                    {formatRelativeDays(eventDate)}
+                  <Badge tone={jaNasceu(details.eventDate!) ? "teal" : dueTone(eventDate)} icon={BabyNeutralIcon}>
+                    {quandoNasce(details.eventDate!)}
                   </Badge>
                 </FieldTrigger>
               ) : (
-                <FieldTrigger type="button" {...props} $empty aria-label="Data do evento: vazio. Escolher">
+                <FieldTrigger type="button" {...props} $empty aria-label="Nascimento do bebê: vazio. Escolher">
                   Vazio
                 </FieldTrigger>
               )

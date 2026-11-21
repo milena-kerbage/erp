@@ -3,6 +3,7 @@
 // Um balão da conversa, no desenho do ERP da Le Ange (message-bubble.tsx). O contato fala à esquerda; a equipe e os modelos
 // saem à direita, cada um no seu tom. A nota interna é amarela, com cadeado, e só a equipe vê. O evento do sistema é uma
 // pílula no meio. A hora e os ticks moram na última linha; a que falhou diz isso em texto, com o "Tentar de novo".
+import { numeroDoPedidoDoSite, PedidoDoSite } from "./PedidoDoSite";
 import { Fragment, memo, useRef, type ReactNode } from "react";
 import {
   ArrowBendUpLeftIcon, CameraIcon, CheckIcon, ChecksIcon, ClockIcon, DotsThreeIcon, FileTextIcon, FolderSimplePlusIcon, ImageIcon, LockSimpleIcon, MicrophoneIcon, VideoCameraIcon, WarningCircleIcon, XIcon,
@@ -103,6 +104,8 @@ export const Bolha = memo(function Bolha({ mensagem, album, primeira, nomeContat
   const visual = mensagem.type === "image" || mensagem.type === "sticker" || mensagem.type === "video";
   const bruto = textoDaMensagem(mensagem);
   const texto = visual || mensagem.type === "audio" || mensagem.type === "document" ? (/^(Foto|Vídeo|Figurinha|Áudio|Documento|Mensagem)$/.test(bruto) || bruto === mensagem.filename ? "" : bruto) : bruto || rotuloDoTipo(mensagem.type) || "Mensagem";
+  // Pedido feito no site: a mensagem pronta da loja vira um cartão com as peças, os valores e o bebê.
+  const pedidoSite = !saida && mensagem.type === "text" ? numeroDoPedidoDoSite(bruto) : null;
   const reacoes = mensagem.reactions ?? [];
   const minha = reacoes.find((r) => r.from === "me")?.emoji;
   const acoes = !local && !nota;
@@ -115,7 +118,7 @@ export const Bolha = memo(function Bolha({ mensagem, album, primeira, nomeContat
       onDoubleClick={() => acoes && aoResponder(mensagem)}
       onTouchStart={() => { window.clearTimeout(toque.current); toque.current = window.setTimeout(abrirAcoes, 550); }} onTouchEnd={() => window.clearTimeout(toque.current)} onTouchMove={() => window.clearTimeout(toque.current)}>
       <div className="passThrough">
-        <div className="bubble" data-tone={tom} data-first={primeira || undefined} data-media={(visual && Boolean(src || pendente)) || undefined} data-reacted={reacoes.length ? "" : undefined} data-pending={pendente || undefined} aria-busy={pendente || undefined}>
+        <div className="bubble" data-tone={tom} data-first={primeira || undefined} data-media={(visual && Boolean(src || pendente)) || undefined} data-reacted={reacoes.length ? "" : undefined} data-pedido={pedidoSite ? "" : undefined} data-pending={pendente || undefined} aria-busy={pendente || undefined}>
           {primeira && saida && (nota || modelo || autor) && (
             <span className="bubbleAuthor">
               {nota ? <><LockSimpleIcon weight="fill" aria-hidden /> Nota interna{autor ? ` / ${doisNomes(autor)}` : ""}</> : modelo ? <>Modelo{autor ? ` / ${doisNomes(autor)}` : ""}</> : doisNomes(autor)}
@@ -150,7 +153,8 @@ export const Bolha = memo(function Bolha({ mensagem, album, primeira, nomeContat
               </span>
             </a>
           )}
-          {texto && <p className="text"><FormatoWhatsApp texto={texto} /><span className="spacer" aria-hidden /></p>}
+          {pedidoSite ? <PedidoDoSite numero={pedidoSite} original={<p className="text"><FormatoWhatsApp texto={texto} /></p>} />
+            : texto && <p className="text"><FormatoWhatsApp texto={texto} /><span className="spacer" aria-hidden /></p>}
           <span className="meta" data-overlay={visual && Boolean(src) && !texto ? "" : undefined}>
             {horaDaMensagem(mensagem.createdAt)}
             {saida && !nota && <Ticks status={mensagem.status} />}

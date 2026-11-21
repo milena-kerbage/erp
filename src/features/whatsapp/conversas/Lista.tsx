@@ -3,6 +3,7 @@
 // A lista de conversas no desenho do ERP da Le Ange (conversation-list.tsx): busca com o botão de filtros, os recortes em
 // chips (todas, não lidas, aguardando e, no chip da seta, minhas, favoritas, fixadas e resolvidas) e, no topo, o grupo de
 // quem espera a equipe, do mais recente para o mais antigo. Recolhida, vira um trilho só com as fotos.
+import { numeroDoPedidoDoSite } from "./PedidoDoSite";
 import { TrocaCanal } from "@/features/canais/TrocaCanal";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
@@ -52,7 +53,8 @@ function Previa({ c }: { c: WhatsAppConversation }) {
   if (!c.lastMessage && !c.lastType) return <span>Sem mensagens</span>;
   const nota = c.lastType === "note", saida = c.lastDirection === "outbound";
   const Icone = ICONE_TIPO[c.lastType ?? ""];
-  const texto = textoSimples((c.lastMessage ?? "").replace(/^\[Template: [^\]]+\]\s*/, "")).replace(/^\[[a-z_]+\]$/, "") || rotuloDoTipo(c.lastType ?? "") || "Mensagem";
+  const pedidoSite = !saida && c.lastMessage ? numeroDoPedidoDoSite(c.lastMessage) : null;
+  const texto = pedidoSite ? `🛍️ Pedido do site ${pedidoSite}` : textoSimples((c.lastMessage ?? "").replace(/^\[Template: [^\]]+\]\s*/, "")).replace(/^\[[a-z_]+\]$/, "") || rotuloDoTipo(c.lastType ?? "") || "Mensagem";
   const ticks = !saida || nota ? null
     : c.lastStatus === "failed" ? <WarningCircleIcon weight="fill" data-failed="" aria-label="Não enviada" />
     : c.lastStatus === "read" ? <ChecksIcon data-read="" aria-label="Lida" />

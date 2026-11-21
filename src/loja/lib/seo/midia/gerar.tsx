@@ -1,6 +1,9 @@
 import "server-only";
+import { readFile } from "node:fs/promises";
+import { join, normalize } from "node:path";
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
+import { arquivoDaImagem } from "@/lib/loja/gestao/imagens";
 import { type DadosMidia, FORMATOS, type Formato, renderizarMidia } from "./modelos";
 
 // JPEG: as redes aceitam com segurança e fica ~5x menor que o PNG do ImageResponse.
@@ -36,5 +39,32 @@ export async function imagemParaModelo(url: string, ladoMaximo = 900): Promise<s
     return `data:image/png;base64,${png.toString("base64")}`;
   } catch {
     return undefined; // sem foto o modelo ainda funciona; não derruba o compartilhamento
+  }
+}
+
+const paraDataUri = async (conteudo: Buffer, lado: number) =>
+  `data:image/jpeg;base64,${(await sharp(conteudo).rotate().resize(lado, lado, { fit: "cover", position: "attention" }).jpeg({ quality: 88 }).toBuffer()).toString("base64")}`;
+
+/**
+ * Foto de um produto pronta para o modelo: quadrada, cortada no ponto de interesse (sharp "attention").
+ * As fotos do cadastro do ERP (/api/catalogo/imagem/{id}) vêm direto do armazenamento, sem uma volta pela
+ * internet; as demais (arquivos do deploy ou a origem de mídia) são buscadas pela URL. Sem foto, o modelo
+ * sai só com o texto: nunca derruba o compartilhamento.
+ */
+export async function fotoParaModelo(src: string | undefined, origem: string, lado = 900): Promise<string | undefined> {
+  if (!src) return undefined;
+  try {
+    const cadastro = /^\/api\/catalogo\/imagem\/([A-Za-z0-9_-]{1,80})(?:\?|$)/.exec(src);
+    if (cadastro) return await paraDataUri((await arquivoDaImagem(cadastro[1], "grande", true)).conteudo, lado);
+    // Arquivos do deploy (/vitrine/**): direto do disco quando existir (desenvolvimento); na Vercel, pela URL.
+    if (src.startsWith("/vitrine/") && !src.includes("..")) {
+      const arquivo = await readFile(join(/* turbopackIgnore: true */ process.cwd(), "public", normalize(src.split("?")[0]))).catch(() => null);
+      if (arquivo) return await paraDataUri(arquivo, lado);
+    }
+    const resposta = await fetch(new URL(src, origem), { signal: AbortSignal.timeout(4000) });
+    if (!resposta.ok) return undefined;
+    return await paraDataUri(Buffer.from(await resposta.arrayBuffer()), lado);
+  } catch {
+    return undefined;
   }
 }

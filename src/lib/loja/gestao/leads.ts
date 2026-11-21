@@ -1,4 +1,4 @@
-import { addNote, createLead } from '../../erp/core.ts';
+import { addNote, createLead, getLead, updateLead } from '../../erp/core.ts';
 import type { Actor } from '../../erp/access.ts';
 import type { LeadVinculado } from './tipos.ts';
 import { escaparLike, gestaoDb, json, type Linha, texto } from './esquema.ts';
@@ -11,6 +11,8 @@ import { escaparLike, gestaoDb, json, type Linha, texto } from './esquema.ts';
 export const ORIGEM_LOJA = 'Loja online';
 const ATOR_LOJA: Actor = { id: 'loja', name: ORIGEM_LOJA, email: '', permission: 'admin' };
 type ClienteLead = { id: string; nome: string; email: string; whatsapp: string };
+/** O que a cliente contou na conta da loja e que serve à ficha do lead (bebê e cidade). */
+export type DadosDaConta = { bebeNome?: string; bebeData?: string; cidade?: string; uf?: string };
 
 const digitos = (valor: string) => valor.replace(/\D/g, '');
 /** WhatsApp da conta (10 ou 11 dígitos, com DDD) no formato do lead (com DDI 55). */
@@ -44,9 +46,34 @@ export async function vincularLeadDaCliente(cliente: ClienteLead, agora = Date.n
 
 const reais = (centavos: number) => `R$ ${(centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-/** Nota no lead com o pedido feito na loja (o "atividade" do CRM). */
-export async function registrarPedidoNoLead(cliente: ClienteLead, pedido: { numero: string; quantidade: number; totalCentavos: number; itens: Array<{ nome: string; quantidade: number }>; cupom: { codigo: string } | null }) {
+/**
+ * Completa a ficha do lead com o que a cliente informou na conta da loja: nome e nascimento do bebê e a cidade.
+ * Só preenche o que está vazio (nunca troca o que a equipe digitou) e a origem vira "Loja online" se não houver.
+ */
+export async function completarLeadComConta(leadId: string, dados: DadosDaConta) {
+  const { lead, details } = await getLead(leadId);
+  const patch: Record<string, string> = {};
+  if (dados.bebeNome?.trim() && !details.babyName) patch.babyName = dados.bebeNome.trim().slice(0, 60);
+  if (dados.bebeData && /^\d{4}-\d{2}-\d{2}$/.test(dados.bebeData) && !details.eventDate) patch.eventDate = dados.bebeData;
+  const cidade = [dados.cidade?.trim(), dados.uf?.trim().toUpperCase()].filter(Boolean).join(', ');
+  if (cidade && !details.city) patch.city = cidade.slice(0, 150);
+  if (!details.source) patch.source = ORIGEM_LOJA;
+  if (!Object.keys(patch).length) return false;
+  await updateLead(leadId, { revision: lead.revision, details: patch }, ATOR_LOJA);
+  return true;
+}
+
+/** Conta da loja atualizada (Minha conta): leva o bebê e a cidade para o lead ligado. */
+export async function sincronizarContaNoLead(cliente: ClienteLead, dados: DadosDaConta) {
   const leadId = await vincularLeadDaCliente(cliente);
+  await completarLeadComConta(leadId, dados);
+  return leadId;
+}
+
+/** Nota no lead com o pedido feito na loja (o "atividade" do CRM). */
+export async function registrarPedidoNoLead(cliente: ClienteLead, pedido: { numero: string; quantidade: number; totalCentavos: number; itens: Array<{ nome: string; quantidade: number }>; cupom: { codigo: string } | null }, dados: DadosDaConta = {}) {
+  const leadId = await vincularLeadDaCliente(cliente);
+  await completarLeadComConta(leadId, dados).catch((erro) => console.error('Lead da loja: não foi possível completar a ficha.', erro));
   const pecas = pedido.itens.map((item) => `${item.quantidade}× ${item.nome}`).join('; ');
   const texto = `Pedido ${pedido.numero} feito na loja online e enviado pelo WhatsApp: ${pedido.quantidade} ${pedido.quantidade === 1 ? 'peça' : 'peças'}, a partir de ${reais(pedido.totalCentavos)}${pedido.cupom ? ` (cupom ${pedido.cupom.codigo})` : ''}. ${pecas}`.slice(0, 10_000);
   await addNote(leadId, { text: texto }, ATOR_LOJA);

@@ -73,9 +73,14 @@ export type LeadDetails = {
   email?: string;
   instagram?: string;
   city?: string;
+  /** Legado (vestidos de festa); não aparece mais na ficha. */
   eventType?: string;
-  /** Data do evento (AAAA-MM-DD). */
+  /** Nascimento do bebê (AAAA-MM-DD): previsto enquanto está no futuro. */
   eventDate?: string;
+  /** Nome do bebê do enxoval. */
+  babyName?: string;
+  /** "Menina", "Menino" ou "Surpresa". */
+  babySex?: string;
   owner: Person;
   source: string;
   lastContactAt?: string;

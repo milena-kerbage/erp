@@ -1,14 +1,10 @@
 import {
-  BabyIcon,
-  ConfettiIcon,
-  CrownSimpleIcon,
   DotsThreeCircleIcon,
   GlobeIcon,
   GoogleLogoIcon,
-  GraduationCapIcon,
   HandshakeIcon,
-  HeartIcon,
   InstagramLogoIcon,
+  StorefrontIcon,
   TicketIcon,
   WhatsappLogoIcon,
   type Icon,
@@ -23,18 +19,10 @@ export type ChoiceOption = {
   tone: Tone;
 };
 
-export const eventTypes: ChoiceOption[] = [
-  { value: "Casamento", icon: HeartIcon, tone: "rose" },
-  { value: "Festa", icon: ConfettiIcon, tone: "peach" },
-  { value: "Festa de 15 anos", icon: CrownSimpleIcon, tone: "lavender" },
-  { value: "Formatura", icon: GraduationCapIcon, tone: "blue" },
-  { value: "Batizado", icon: BabyIcon, tone: "teal" },
-  { value: "Outro", icon: DotsThreeCircleIcon, tone: "neutral" },
-];
-
 export const leadSources: ChoiceOption[] = [
   { value: "Instagram", icon: InstagramLogoIcon, tone: "rose" },
   { value: "Indicação", icon: HandshakeIcon, tone: "green" },
+  { value: "Loja online", icon: StorefrontIcon, tone: "peach" },
   { value: "Site", icon: GlobeIcon, tone: "blue" },
   { value: "Google", icon: GoogleLogoIcon, tone: "yellow" },
   { value: "WhatsApp", icon: WhatsappLogoIcon, tone: "green" },
@@ -55,15 +43,15 @@ export function findChoice(options: readonly ChoiceOption[], value: string | und
 }
 
 export const defaultTags = [
-  "Noiva",
-  "Madrinha",
-  "Mãe da noiva",
-  "Debutante",
-  "Formatura",
-  "Sob medida",
-  "Aluguel",
-  "Ajuste",
-  "Véu",
+  "Gestante",
+  "Presente",
+  "Chá de bebê",
+  "Kit berço",
+  "Kit maternidade",
+  "Kit paninhos",
+  "Kit cama kids",
+  "Quartinho completo",
+  "Personalizado",
   "Instagram",
   "Indicação",
 ];

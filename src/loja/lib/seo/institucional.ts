@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { BreadcrumbList, FAQPage, WithContext } from "schema-dts";
+import { compartilhamento } from "./compartilhar";
 import { ORIGEM } from "./config";
 
 // SEO das páginas institucionais (ajuda, políticas, sobre, indique) e da conta neste aparelho.
@@ -23,7 +24,7 @@ export function metadataPagina({
     title: titulo,
     description: descricao,
     alternates: { canonical: caminho },
-    openGraph: { title: titulo, description: descricao, url: caminho, type: "website" },
+    ...compartilhamento({ titulo, descricao, caminho }),
     robots: indexar ? { index: true, follow: true } : { index: false, follow: false },
   };
 }

@@ -13,6 +13,7 @@ import { JsonLd } from "@/loja/componentes/seo/JsonLd";
 import { indiceDaLoja } from "@/lib/loja/catalogo";
 import { condicoesDePagamento, PRONTA_ENTREGA, type Produto } from "@/loja/lib/catalogo/exemplos";
 import { fotoPrincipal } from "@/loja/lib/catalogo/fotos";
+import { comVersao, compartilhamento, robotsDoCatalogo, semMarca, SITE } from "@/loja/lib/seo/compartilhar";
 import { schemaProduto, schemaTrilha } from "@/loja/lib/seo/produto";
 import { avaliacoesIniciais } from "@/loja/lib/avaliacoes/servidor";
 
@@ -35,14 +36,20 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps<"/loja/produto/[slug]">): Promise<Metadata> {
-  const produto = (await indiceDaLoja()).buscarProduto((await params).slug);
+  const { buscarProduto, catalogo } = await indiceDaLoja();
+  const produto = buscarProduto((await params).slug);
   if (!produto) return {};
+  const titulo = semMarca(produto.seo?.titulo ?? produto.nome);
+  const descricao = produto.seo?.descricao ?? `${produto.resumo} Do Ateliê Milena Kerbage, em Fortaleza: pode ser personalizado e tem entrega para todo o Brasil.`;
+  const caminho = `/produto/${produto.slug}`;
   return {
-    title: produto.seo?.titulo ?? produto.nome,
-    description: produto.seo?.descricao ?? `${produto.resumo} Enxoval feito à mão no Ateliê Milena Kerbage, com entrega para todo o Brasil.`,
-    alternates: { canonical: `/produto/${produto.slug}` },
-    // Catálogo de exemplo (preços fictícios): fora do índice até a API de catálogo existir.
-    robots: { index: false, follow: true },
+    title: titulo,
+    description: descricao,
+    alternates: { canonical: caminho },
+    // Foto, nome e "a partir de" na prévia do link (WhatsApp, Instagram, Facebook): /og/produto/{slug}.
+    ...compartilhamento({ titulo: `${titulo} | ${SITE}`, descricao, caminho, imagem: comVersao(`/og/produto/${produto.slug}`, catalogo.versao), alt: fotoPrincipal(produto)?.alt ?? produto.nome }),
+    // Catálogo real (cadastro do ERP) indexado; o de exemplo (preços fictícios), nunca.
+    robots: robotsDoCatalogo(catalogo.origem),
   };
 }
 

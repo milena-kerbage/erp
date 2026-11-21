@@ -8,6 +8,7 @@ import { ResultadoNaUrl } from "@/loja/componentes/listagem/ResultadoNaUrl";
 import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { blocosDaCategoria, LINHA_BLOCOS_CATEGORIA } from "@/loja/lib/catalogo/edicoes";
 import { filtrar, noCaminho, paraListagem } from "@/loja/lib/catalogo/listagem";
+import { comVersao, compartilhamento, robotsDoCatalogo, SITE } from "@/loja/lib/seo/compartilhar";
 import { REGRAS_SEO } from "@/loja/lib/seo/config";
 import { interpretarUrlListagem, ORDEM_PADRAO } from "@/loja/lib/seo/urls";
 
@@ -53,12 +54,15 @@ async function resolver(segmentos: string[]) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const dados = await resolver((await params).categoria);
   if (!dados) return {};
+  const descricao = `${dados.titulo} do Ateliê Milena Kerbage, em Fortaleza: ${dados.total} ${dados.total === 1 ? "peça" : "peças"} de enxoval em percal 230 fios ou 400 fios egípcios. Tudo pode ser personalizado, com entrega para todo o Brasil.`;
+  const { origem, versao } = await catalogoDaLoja();
   return {
     title: dados.titulo,
-    description: `${dados.titulo} do Ateliê Milena Kerbage: ${dados.total} peças de enxoval feitas à mão em Fortaleza, com entrega para todo o Brasil.`,
+    description: descricao,
     alternates: { canonical: dados.canonical },
-    // Catálogo de exemplo (preços fictícios): fora do índice até a API de catálogo existir.
-    robots: { index: false, follow: true },
+    ...compartilhamento({ titulo: `${dados.titulo} | ${SITE}`, descricao, caminho: dados.canonical, imagem: comVersao(`/og/categoria${dados.canonical}`, versao), alt: `${dados.titulo} do Ateliê Milena Kerbage` }),
+    // Catálogo real (cadastro do ERP) indexado; o de exemplo (preços fictícios), nunca. Listagem vazia fica de fora.
+    robots: dados.total > 0 ? robotsDoCatalogo(origem) : { index: false, follow: true },
   };
 }
 

@@ -15,7 +15,9 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const host = (await headers()).get("host");
   if (!ehHostDaLoja(host)) return { rules: { userAgent: "*", allow: PAGINAS_PUBLICAS_ERP, disallow: "/" } };
   return {
-    rules: [{ userAgent: "*", allow: "/", disallow: [...regrasRobots(REGRAS_SEO), "/api/", "/dev/", "/loja/"] }],
+    // As fotos dos produtos saem de /api/catalogo/imagem/ e as imagens de compartilhamento de /og/: liberadas
+    // (a regra mais específica vence o bloqueio de /api/), senão o Google não indexa as fotos nem as redes buscam a prévia.
+    rules: [{ userAgent: "*", allow: ["/", "/api/catalogo/imagem/", "/og/"], disallow: [...regrasRobots(REGRAS_SEO), "/api/", "/dev/", "/loja/"] }],
     sitemap: `${ORIGEM}/sitemap.xml`,
     host: ORIGEM,
   };

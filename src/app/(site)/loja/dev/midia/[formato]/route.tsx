@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import type { NextRequest } from "next/server";
-import { gerarMidia, respostaMidia } from "@/loja/lib/seo/midia/gerar";
+import { fotoParaModelo, gerarMidia, respostaMidia } from "@/loja/lib/seo/midia/gerar";
 import { type DadosMidia, FORMATOS, type Formato } from "@/loja/lib/seo/midia/modelos";
 
-// Pré-visualização dos modelos para design/marketing: /dev/midia/og?modelo=produto
+// Pré-visualização dos modelos para design/marketing: /dev/midia/og?modelo=produto&foto=1
 // Só em desenvolvimento. Em produção não existe rota que aceite texto livre (viraria gerador de
 // imagem com a marca do ateliê para golpes); a imagem real sai do opengraph-image de cada página.
 const EXEMPLOS: Record<string, DadosMidia> = {
@@ -12,7 +12,8 @@ const EXEMPLOS: Record<string, DadosMidia> = {
     nome: "Kit berço Jardim rosê 9 peças",
     categoria: "Kit berço · Kits completos",
     preco: "R$ 1.490,00",
-    complemento: "ou 10x de R$ 149,00 · R$ 1.415,50 no Pix",
+    antesDoPreco: "a partir de",
+    complemento: "5% OFF no Pix",
     selo: "Pronta entrega",
   },
   categoria: {
@@ -34,5 +35,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/loja/dev/mid
   const { formato } = await ctx.params;
   const modelo = request.nextUrl.searchParams.get("modelo") ?? "produto";
   if (!(formato in FORMATOS) || !(modelo in EXEMPLOS)) notFound();
-  return respostaMidia(await gerarMidia(EXEMPLOS[modelo], formato as Formato));
+  // &foto=1: com uma foto do ateliê (public/vitrine/fotos), para ver o modelo como sai com o catálogo real.
+  const imagem = request.nextUrl.searchParams.has("foto") ? await fotoParaModelo("/vitrine/fotos/berco-helena.webp", request.nextUrl.origin) : undefined;
+  return respostaMidia(await gerarMidia({ ...EXEMPLOS[modelo], imagem }, formato as Formato));
 }

@@ -1,6 +1,7 @@
 // Modelos de imagem para compartilhamento (Open Graph, WhatsApp, iMessage, redes sociais).
 // Satori: só flexbox e um subconjunto de CSS; todo elemento com mais de um filho precisa de display:flex.
 // Regras e especificações por rede em publicacao.md §5.
+import { LOGO_HORIZONTAL, LOGO_PROPORCAO } from "./logo";
 
 export const FORMATOS = {
   og: { largura: 1200, altura: 630 }, // link compartilhado: Facebook, WhatsApp, LinkedIn, X, iMessage, Discover
@@ -11,17 +12,17 @@ export const FORMATOS = {
 
 export type Formato = keyof typeof FORMATOS;
 
-// Paleta do Ateliê Milena Kerbage (sálvia do ERP, src/styles/theme.ts). Logo nos modelos: pendente.
+// Paleta do Ateliê Milena Kerbage (sálvia do ERP, src/styles/theme.ts).
 export const TEMA = {
   // Cores oficiais (mesmas do panda.config.ts; o Satori não lê tokens do Panda).
-  fundo: "#EEEFE8",
+  fundo: "#F4F3EC",
   cartao: "#FFFFFF",
   texto: "#1D1F1B",
-  textoSuave: "#5F6459",
+  textoSuave: "#6A6F63",
+  linha: "#DAD9CE",
   destaque: "#616D54",
   sobreDestaque: "#FFFFFF",
-  marca: "Milena Kerbage",
-  submarca: "Ateliê",
+  site: "ateliemilenakerbage.com.br",
 } as const;
 
 export type DadosProduto = {
@@ -29,8 +30,9 @@ export type DadosProduto = {
   nome: string;
   categoria: string; // "Kit berço · Kits completos"
   preco: string; // já formatado: "R$ 1.490,00"
+  antesDoPreco?: string; // "a partir de"
   precoDe?: string; // "R$ 1.690,00"
-  complemento?: string; // "ou 10x de R$ 149,00"
+  complemento?: string; // "5% OFF no Pix"
   selo?: string; // "Pronta entrega" | "Entrega para todo o Brasil"
   imagem?: string; // data URI PNG/JPEG (ver gerar.ts)
 };
@@ -47,59 +49,34 @@ export type DadosMidia = DadosProduto | DadosChamada;
 
 const limitar = (texto: string, maximo: number) => (texto.length > maximo ? `${texto.slice(0, maximo - 1).trimEnd()}…` : texto);
 
-function Marca({ escala }: { escala: number }) {
-  return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 12 * escala }}>
-      <div style={{ fontSize: 40 * escala, fontWeight: 800, letterSpacing: -1, color: TEMA.texto }}>{TEMA.marca}</div>
-      <div style={{ fontSize: 22 * escala, color: TEMA.textoSuave }}>{TEMA.submarca}</div>
-    </div>
-  );
+function Logo({ altura }: { altura: number }) {
+  // biome-ignore lint/performance/noImgElement: o Satori (ImageResponse) só renderiza <img>, não next/image
+  return <img src={LOGO_HORIZONTAL} width={Math.round(altura * LOGO_PROPORCAO)} height={altura} alt="" />;
 }
 
-function Foto({ src, lado }: { src?: string; lado: number }) {
+/** Foto que preenche a área toda (corte central), como nas vitrines. */
+function Foto({ src, largura, altura, raio = 0 }: { src?: string; largura: number; altura: number; raio?: number }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        width: lado,
-        height: lado,
-        borderRadius: 28,
-        background: TEMA.cartao,
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ display: "flex", width: largura, height: altura, borderRadius: raio, background: "#E7E6DC", overflow: "hidden", flexShrink: 0 }}>
       {/* biome-ignore lint/performance/noImgElement: o Satori (ImageResponse) só renderiza <img>, não next/image */}
-      {src ? <img src={src} width={lado - 48} height={lado - 48} style={{ objectFit: "contain" }} alt="" /> : null}
+      {src ? <img src={src} width={largura} height={altura} style={{ objectFit: "cover" }} alt="" /> : null}
     </div>
   );
 }
 
-function BlocoPreco({ dados, escala }: { dados: DadosProduto; escala: number }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 * escala }}>
-      {dados.precoDe ? (
-        <div style={{ fontSize: 26 * escala, color: TEMA.textoSuave, textDecoration: "line-through" }}>{dados.precoDe}</div>
-      ) : null}
-      <div style={{ fontSize: 64 * escala, fontWeight: 800, color: TEMA.texto, letterSpacing: -1 }}>{dados.preco}</div>
-      {dados.complemento ? <div style={{ fontSize: 26 * escala, color: TEMA.textoSuave }}>{dados.complemento}</div> : null}
-    </div>
-  );
-}
-
-function Selo({ texto, escala }: { texto: string; escala: number }) {
+function Etiqueta({ texto, escala, cheia = false }: { texto: string; escala: number; cheia?: boolean }) {
   return (
     <div
       style={{
         display: "flex",
         alignSelf: "flex-start",
-        padding: `${10 * escala}px ${22 * escala}px`,
+        padding: `${8 * escala}px ${18 * escala}px`,
         borderRadius: 999,
-        background: TEMA.destaque,
-        color: TEMA.sobreDestaque,
-        fontSize: 24 * escala,
-        fontWeight: 700,
+        border: `${Math.max(1, Math.round(1.5 * escala))}px solid ${TEMA.destaque}`,
+        background: cheia ? TEMA.destaque : "transparent",
+        color: cheia ? TEMA.sobreDestaque : TEMA.destaque,
+        fontSize: 19 * escala,
+        letterSpacing: 0.4 * escala,
       }}
     >
       {texto}
@@ -107,73 +84,84 @@ function Selo({ texto, escala }: { texto: string; escala: number }) {
   );
 }
 
+function Sobrelinha({ texto, escala }: { texto: string; escala: number }) {
+  return <div style={{ fontSize: 17 * escala, color: TEMA.textoSuave, textTransform: "uppercase", letterSpacing: 3 * escala }}>{texto}</div>;
+}
+
+function Rodape({ escala, complemento }: { escala: number; complemento?: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 18 * escala, borderTop: `1px solid ${TEMA.linha}`, fontSize: 18 * escala, color: TEMA.textoSuave }}>
+      <div>{TEMA.site}</div>
+      {complemento ? <div>{complemento}</div> : null}
+    </div>
+  );
+}
+
+function TextoProduto({ dados, escala, tituloPx }: { dados: DadosProduto; escala: number; tituloPx: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: 20 * escala }}>
+      <Logo altura={Math.round(46 * escala)} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 * escala }}>
+        <Sobrelinha texto={limitar(dados.categoria, 40)} escala={escala} />
+        <div style={{ fontSize: tituloPx, color: TEMA.texto, lineHeight: 1.12, letterSpacing: -1.2 * escala }}>{limitar(dados.nome, 64)}</div>
+        <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: 10 * escala, marginTop: 6 * escala }}>
+          {dados.antesDoPreco ? <div style={{ fontSize: 20 * escala, color: TEMA.textoSuave }}>{dados.antesDoPreco}</div> : null}
+          <div style={{ fontSize: 44 * escala, color: TEMA.texto, letterSpacing: -1 * escala }}>{dados.preco}</div>
+          {dados.precoDe ? <div style={{ fontSize: 22 * escala, color: TEMA.textoSuave, textDecoration: "line-through" }}>{dados.precoDe}</div> : null}
+        </div>
+        {dados.selo ? <Etiqueta texto={limitar(dados.selo, 32)} escala={escala} /> : null}
+      </div>
+      <Rodape escala={escala} complemento={dados.complemento} />
+    </div>
+  );
+}
+
+function TextoChamada({ dados, escala, tituloPx }: { dados: DadosChamada; escala: number; tituloPx: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: 20 * escala }}>
+      <Logo altura={Math.round(50 * escala)} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 * escala }}>
+        {dados.etiqueta ? <Sobrelinha texto={limitar(dados.etiqueta, 32)} escala={escala} /> : null}
+        <div style={{ fontSize: tituloPx, color: TEMA.texto, lineHeight: 1.08, letterSpacing: -1.6 * escala }}>{limitar(dados.titulo, 70)}</div>
+        {dados.subtitulo ? <div style={{ fontSize: 23 * escala, color: TEMA.textoSuave, lineHeight: 1.38 }}>{limitar(dados.subtitulo, 130)}</div> : null}
+      </div>
+      <Rodape escala={escala} complemento={dados.imagem && escala === 1 ? "Fortaleza, CE" : "Enxoval e quarto de bebê · Fortaleza"} />
+    </div>
+  );
+}
+
 export function renderizarMidia(dados: DadosMidia, formato: Formato) {
   const { largura, altura } = FORMATOS[formato];
   const horizontal = largura > altura;
-  const escala = horizontal ? 1 : largura / 1000;
-  const margem = Math.round(56 * escala);
+  const escala = horizontal ? 1 : largura / 820;
+  const margem = Math.round(52 * escala);
+  const base = { display: "flex", width: "100%", height: "100%", background: TEMA.fundo, fontFamily: "sans-serif" } as const;
 
-  if (dados.tipo === "produto") {
-    // O produto ocupa o centro: o WhatsApp recorta a miniatura em quadrado nas prévias pequenas.
-    // Vertical: a foto fica com o espaço que sobra depois do bloco de texto (~500 px na escala 1).
-    const ladoFoto = horizontal ? altura - margem * 2 : Math.min(largura - margem * 2, altura - margem * 3 - Math.round(500 * escala));
+  // Horizontal (link compartilhado): a foto ocupa a esquerda inteira, de cima a baixo. O WhatsApp e o iMessage
+  // recortam a miniatura no centro, por isso o texto fica do meio para a direita, sem encostar nas bordas.
+  if (horizontal) {
+    const comFoto = Boolean(dados.imagem);
+    const ladoFoto = altura; // quadrada, sangrando até a borda
+    const texto = dados.tipo === "produto"
+      ? <TextoProduto dados={dados} escala={1} tituloPx={dados.nome.length > 34 ? 44 : 52} />
+      : <TextoChamada dados={dados} escala={1} tituloPx={comFoto ? (dados.titulo.length > 30 ? 48 : 56) : dados.titulo.length > 34 ? 62 : 74} />;
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: horizontal ? "row" : "column",
-          width: "100%",
-          height: "100%",
-          background: TEMA.fundo,
-          padding: margem,
-          gap: margem,
-          fontFamily: "sans-serif",
-        }}
-      >
-        <Foto src={dados.imagem} lado={ladoFoto} />
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: 24 * escala }}>
-          <Marca escala={escala} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 * escala }}>
-            <div style={{ fontSize: 24 * escala, color: TEMA.textoSuave, textTransform: "uppercase", letterSpacing: 1 }}>
-              {limitar(dados.categoria, 48)}
-            </div>
-            <div style={{ fontSize: (horizontal ? 46 : 56) * escala, fontWeight: 700, color: TEMA.texto, lineHeight: 1.15 }}>
-              {limitar(dados.nome, 90)}
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 * escala }}>
-            <BlocoPreco dados={dados} escala={escala} />
-            {dados.selo ? <Selo texto={limitar(dados.selo, 32)} escala={escala} /> : null}
-          </div>
-        </div>
+      <div style={{ ...base, flexDirection: "row" }}>
+        {comFoto ? <Foto src={dados.imagem} largura={ladoFoto} altura={ladoFoto} /> : null}
+        <div style={{ display: "flex", flex: 1, padding: `${margem}px ${margem + 4}px ${margem - 8}px`, ...(comFoto ? {} : { paddingLeft: margem + 28, paddingRight: margem + 28 }) }}>{texto}</div>
       </div>
     );
   }
 
+  // Vertical e quadrado (feed, stories, pin): a foto em cima, com cantos arredondados, e o texto embaixo.
+  const alturaTexto = Math.round((dados.tipo === "produto" ? 400 : 370) * escala);
+  const alturaFoto = Math.max(0, altura - margem * 3 - alturaTexto);
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        width: "100%",
-        height: "100%",
-        background: TEMA.fundo,
-        padding: margem,
-        fontFamily: "sans-serif",
-      }}
-    >
-      <Marca escala={escala} />
-      {dados.imagem && !horizontal ? <Foto src={dados.imagem} lado={largura - margem * 2} /> : null}
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 * escala }}>
-        {dados.etiqueta ? <Selo texto={limitar(dados.etiqueta, 24)} escala={escala} /> : null}
-        <div style={{ fontSize: (horizontal ? 64 : 76) * escala, fontWeight: 800, color: TEMA.texto, lineHeight: 1.1, letterSpacing: -1 }}>
-          {limitar(dados.titulo, 80)}
-        </div>
-        {dados.subtitulo ? (
-          <div style={{ fontSize: 30 * escala, color: TEMA.textoSuave, lineHeight: 1.3 }}>{limitar(dados.subtitulo, 140)}</div>
-        ) : null}
-      </div>
+    <div style={{ ...base, flexDirection: "column", padding: margem, gap: margem }}>
+      {dados.imagem ? <Foto src={dados.imagem} largura={largura - margem * 2} altura={alturaFoto} raio={Math.round(28 * escala)} /> : null}
+      {dados.tipo === "produto"
+        ? <TextoProduto dados={dados} escala={escala} tituloPx={Math.round(48 * escala)} />
+        : <TextoChamada dados={dados} escala={escala} tituloPx={Math.round((dados.imagem ? 54 : 70) * escala)} />}
     </div>
   );
 }

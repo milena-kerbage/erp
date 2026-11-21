@@ -20,7 +20,8 @@ export function schemaProduto(produto: Produto, relacionados: Produto[], avaliac
     sku: produto.sku,
     brand: { "@type": "Brand", name: produto.marca },
     category: produto.trilha.map((item) => item.rotulo).join(" > "),
-    image: [`${ORIGEM}/opengraph-image`], // trocar pelas fotos reais (≥ 1200 px) quando chegarem
+    // Fotos reais do produto (até 6); sem foto, a imagem de compartilhamento dele.
+    image: produto.imagens?.length ? produto.imagens.slice(0, 6).map((imagem) => new URL(imagem.src, ORIGEM).href) : [`${ORIGEM}/og/produto/${produto.slug}`],
     additionalProperty: produto.ficha.flatMap((grupo) =>
       grupo.itens.map(([name, value]) => ({ "@type": "PropertyValue" as const, name, value })),
     ),

@@ -45,7 +45,8 @@ import type { Funnel, FunnelStage } from "@/features/leads/funnels";
 import { useFunnels, useTeam, useWorkspace } from "@/features/settings/store";
 import { NewLeadForm } from "@/features/leads/components/NewLeadForm";
 import { LeadModal } from "../LeadModal";
-import { eventTypes, findChoice, leadSources } from "@/features/leads/options";
+import { findChoice, leadSources } from "@/features/leads/options";
+import { babySexes, BabyNeutralIcon, jaNasceu, resumoDoBebe } from "@/features/leads/bebe";
 import { useLeads } from "@/features/leads/store";
 import type { Lead, LeadDetails } from "@/features/leads/types";
 import {
@@ -112,7 +113,7 @@ type EventFilter = "any" | "30" | "90" | "none";
 
 const sortLabels: Record<SortKey, string> = {
   name: "Nome",
-  event: "Data do evento",
+  event: "Nascimento do bebê",
   stage: "Etapa",
   budget: "Orçamento",
   contact: "Último contato",
@@ -371,14 +372,14 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
     {
       kind: "single",
       id: "event",
-      label: "Data do evento",
+      label: "Nascimento do bebê",
       value: eventFilter,
       defaultValue: "any",
       onChange: (value) => setEventFilter(value as EventFilter),
       options: [
-        { value: "30", label: "Nos próximos 30 dias", leading: <CalendarDotsIcon size={16} /> },
-        { value: "90", label: "Nos próximos 90 dias", leading: <CalendarDotsIcon size={16} /> },
-        { value: "none", label: "Sem data definida", leading: <CalendarBlankIcon size={16} /> },
+        { value: "30", label: "Nasce nos próximos 30 dias", leading: <CalendarDotsIcon size={16} /> },
+        { value: "90", label: "Nasce nos próximos 90 dias", leading: <CalendarDotsIcon size={16} /> },
+        { value: "none", label: "Sem previsão", leading: <CalendarBlankIcon size={16} /> },
         { value: "any", label: "Qualquer data", leading: <CalendarBlankIcon size={16} /> },
       ],
     },
@@ -455,8 +456,9 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
         "Categoria",
         "Telefone",
         "E-mail",
-        "Evento",
-        "Data do evento",
+        "Bebê",
+        "Menina ou menino",
+        "Nascimento",
         "Funil",
         "Etapa",
         "Orçamento",
@@ -471,7 +473,8 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
         ROTULO_CATEGORIA[categoriaDo(lead)],
         formatPhone(lead.phone),
         info.email,
-        info.eventType,
+        info.babyName,
+        info.babySex,
         info.eventDate && parseDateOnly(info.eventDate).toLocaleDateString("pt-BR"),
         funnel.name,
         stage?.label,
@@ -631,7 +634,8 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
               {visible.map((row) => {
                 const { lead, details: info, funnel } = row;
                 const isSelected = selected.has(lead.id);
-                const event = findChoice(eventTypes, info.eventType);
+                const bebe = resumoDoBebe(info);
+                const sexo = findChoice(babySexes, info.babySex);
                 const source = findChoice(leadSources, info.source);
                 const extraTags = lead.tags.length - MAX_TAGS;
                 return (
@@ -667,14 +671,14 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
                     </CardLine>
 
                     <CardLine>
-                      {event ? (
+                      {bebe ? (
                         <Inline>
-                          <event.icon size={15} color={theme.tones[event.tone].fg} aria-hidden />
-                          {event.value}
-                          {info.eventDate && <Muted>{formatDate(parseDateOnly(info.eventDate).toISOString())}</Muted>}
+                          {sexo ? <sexo.icon size={15} color={theme.tones[sexo.tone].fg} aria-hidden /> : <BabyNeutralIcon size={15} aria-hidden />}
+                          {bebe}
+                          {info.eventDate && <Muted>{jaNasceu(info.eventDate) ? "nasceu " : "prev. "}{formatDate(parseDateOnly(info.eventDate).toISOString())}</Muted>}
                         </Inline>
                       ) : (
-                        <Muted>Evento não informado</Muted>
+                        <Muted>Bebê não informado</Muted>
                       )}
                     </CardLine>
 
@@ -733,7 +737,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
                 {header("name", "Nome")}
                 <Th>Categoria</Th>
                 <Th>Telefone</Th>
-                {header("event", "Evento")}
+                {header("event", "Bebê")}
                 {header("stage", "Funil e etapa")}
                 {header("budget", "Orçamento", "right")}
                 {header("owner", "Responsável")}
@@ -766,7 +770,8 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
               {visible.map((row) => {
                 const { lead, details: info, funnel } = row;
                 const isSelected = selected.has(lead.id);
-                const event = findChoice(eventTypes, info.eventType);
+                const bebe = resumoDoBebe(info);
+                const sexo = findChoice(babySexes, info.babySex);
                 const source = findChoice(leadSources, info.source);
                 const extraTags = lead.tags.length - MAX_TAGS;
 
@@ -802,11 +807,11 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoria
                       </Inline>
                     </Td>
                     <Td>
-                      {event ? (
+                      {bebe ? (
                         <Inline>
-                          <event.icon size={15} color={theme.tones[event.tone].fg} aria-hidden />
-                          {event.value}
-                          {info.eventDate && <Muted>{formatDate(parseDateOnly(info.eventDate).toISOString())}</Muted>}
+                          {sexo ? <sexo.icon size={15} color={theme.tones[sexo.tone].fg} aria-hidden /> : <BabyNeutralIcon size={15} aria-hidden />}
+                          {bebe}
+                          {info.eventDate && <Muted>{jaNasceu(info.eventDate) ? "nasceu " : "prev. "}{formatDate(parseDateOnly(info.eventDate).toISOString())}</Muted>}
                         </Inline>
                       ) : (
                         <Muted>Não informado</Muted>

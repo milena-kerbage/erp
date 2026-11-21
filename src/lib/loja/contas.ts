@@ -15,7 +15,7 @@ import { type LinhaPedido, montarMensagemPedido } from '../../loja/lib/checkout/
 import { gerarNumeroPedido } from '../../loja/lib/pedidos/historico.ts';
 import { campanhasParaPedido, conferirLimitesCupom, registrarUsoCupom } from './gestao/cupons.ts';
 import { marcarCarrinhoConvertido } from './gestao/carrinhos.ts';
-import { leadsDasClientes, registrarPedidoNoLead, vincularLeadDaCliente } from './gestao/leads.ts';
+import { leadsDasClientes, registrarPedidoNoLead, sincronizarContaNoLead, vincularLeadDaCliente } from './gestao/leads.ts';
 import type { LeadVinculado } from './gestao/tipos.ts';
 
 // Contas de CLIENTE da loja (www.), separadas das contas da EQUIPE do ERP (erp_auth.users):
@@ -274,7 +274,13 @@ export async function atualizarPerfil(clienteId: string, entrada: Record<string,
     if (!await linhaCliente(clienteId)) throw new ErroConta(401, 'Entre na sua conta para continuar.', 'SESSAO_ENCERRADA');
     throw new ErroConta(409, 'Seus dados mudaram em outro aparelho. Atualize a página e confira.', 'REVISION_CONFLICT');
   }
-  return dadosDaConta(clienteId);
+  const resposta = await dadosDaConta(clienteId);
+  // Bebê e cidade novos na conta seguem para a ficha do lead (só o que estiver vazio lá).
+  if (pares.some(([chave]) => ['bebeNome', 'bebeData', 'cidade', 'uf'].includes(chave))) {
+    const { cliente } = resposta;
+    await emSegundoPlano('conta no lead', () => sincronizarContaNoLead({ id: cliente.id, nome: cliente.nome, email: cliente.email, whatsapp: cliente.whatsapp }, { bebeNome: cliente.perfil.bebeNome, bebeData: cliente.perfil.bebeData, cidade: cliente.perfil.cidade, uf: cliente.perfil.uf }));
+  }
+  return resposta;
 }
 
 /**
@@ -426,7 +432,7 @@ export async function criarPedido(clienteId: string, entrada: EntradaPedido, opc
   // Depois do pedido gravado: o carrinho sincronizado vira "convertido" e o lead do CRM ganha a nota.
   const { pedido, conta } = resultado;
   await emSegundoPlano('carrinho convertido', () => marcarCarrinhoConvertido(clienteId, pedido.numero, agora));
-  await emSegundoPlano('nota no lead', () => registrarPedidoNoLead({ id: clienteId, nome: conta.nome, email: conta.email, whatsapp: conta.whatsapp }, pedido));
+  await emSegundoPlano('nota no lead', () => registrarPedidoNoLead({ id: clienteId, nome: conta.nome, email: conta.email, whatsapp: conta.whatsapp }, pedido, { bebeNome: conta.perfil.bebeNome, bebeData: conta.perfil.bebeData, cidade: conta.perfil.cidade, uf: conta.perfil.uf }));
   return { pedido };
 }
 
@@ -445,6 +451,35 @@ export async function pedidoDaCliente(clienteId: string, numero: string): Promis
 }
 
 // ---------------------------------------------------------------- ERP (equipe: admin e gestão)
+
+/** Número do pedido do site ("MK-251121-7Q3F") na mensagem que a loja abre no WhatsApp. */
+export const NUMERO_PEDIDO_SITE = /^MK-\d{6}-[2-9A-HJ-NP-Z]{4}$/;
+
+export type PedidoNaConversa = {
+  pedido: Omit<PedidoLoja, 'mensagem'>;
+  cliente: { nome: string; cidade: string; bebe: { nome: string; data: string; tipo: '' | 'prevista' | 'nascimento' } | null } | null;
+};
+
+/**
+ * Pedido do site para o cartão da conversa do WhatsApp (equipe): as peças com as escolhas, os valores
+ * "a partir de", a entrega e o que a cliente contou do bebê na conta. Sem a mensagem bruta.
+ */
+export async function pedidoParaConversa(numero: string): Promise<PedidoNaConversa> {
+  const alvo = typeof numero === 'string' ? numero.trim().toUpperCase() : '';
+  const linha = NUMERO_PEDIDO_SITE.test(alvo) ? await contasDb().prepare('SELECT * FROM loja_pedidos WHERE numero = ?').get(alvo) : undefined;
+  if (!linha) throw new ApiError(404, 'Pedido do site não encontrado.', 'NOT_FOUND');
+  const { mensagem: _mensagem, ...pedido } = pedidoDe(linha);
+  const conta = linha.cliente_id ? await linhaCliente(texto(linha.cliente_id)) : undefined;
+  const perfil = conta ? perfilDe(conta) : null;
+  return {
+    pedido,
+    cliente: Number(linha.anonimizado) === 1 ? null : {
+      nome: texto(linha.nome),
+      cidade: perfil ? [perfil.cidade, perfil.uf].filter(Boolean).join(', ') : '',
+      bebe: perfil && (perfil.bebeNome || perfil.bebeData) ? { nome: perfil.bebeNome, data: perfil.bebeData, tipo: perfil.bebeDataTipo || '' } : null,
+    },
+  };
+}
 
 function paginacao(url: URL, padrao = 20) {
   const limite = Number(url.searchParams.get('limit') ?? padrao), offset = Number(url.searchParams.get('offset') ?? 0);

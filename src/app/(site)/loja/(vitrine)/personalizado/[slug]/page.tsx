@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE } from "@/loja/lib/seo/compartilhar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -84,7 +85,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${projeto.nome}: quarto de bebê ${resumoProjeto(projeto).toLowerCase().replace(" · ", ", ")}`,
       description: `${projeto.nome}: ${projeto.descricao[0]} A partir de ${formatarPreco(projeto.precoAPartirDe)}, produção em ${prazoDoProjeto(projeto)} e entrega para todo o Brasil.`,
       alternates: { canonical: `/personalizado/${projeto.slug}` },
-      ...(capa ? { openGraph: { images: [{ url: capa.src, alt: capa.alt }] } } : {}),
+      ...(capa ? { openGraph: { siteName: SITE, locale: "pt_BR", type: "website" as const, url: `/personalizado/${projeto.slug}`, images: [{ url: capa.src, alt: capa.alt }] }, twitter: { card: "summary_large_image" as const, images: [{ url: capa.src, alt: capa.alt }] } } : {}),
       robots,
     };
   }

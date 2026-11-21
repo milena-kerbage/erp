@@ -254,11 +254,12 @@ function validateLead(input: Json, current?: Lead) {
 }
 function owner(value: unknown): Person { const input = jsonObject(value,'Responsável'); whitelist(input,['name','seed','avatarUrl']); const person: Person = {name:text(input.name,'Nome do responsável',150,true),seed:identifier(input.seed,'Responsável')}; if (input.avatarUrl) person.avatarUrl=typeof input.avatarUrl==='string' && /^\/api\/erp\/profile\/photo\?userId=[A-Za-z0-9_-]+$/.test(input.avatarUrl) ? input.avatarUrl : url(input.avatarUrl,'Foto do responsável'); return person; }
 function validateDetails(input: Json, current: LeadDetails): LeadDetails {
-  whitelist(input,['email','instagram','city','eventType','eventDate','owner','source','links','campaign']);
+  whitelist(input,['email','instagram','city','eventType','eventDate','babyName','babySex','owner','source','links','campaign']);
   const result = {...current};
   for (const [key,value] of Object.entries(input)) {
     if (key === 'owner') result.owner = owner(value);
-    else if (key === 'eventDate') result.eventDate = date(value,'Data do evento');
+    else if (key === 'eventDate') result.eventDate = date(value,'Nascimento do bebê');
+    else if (key === 'babySex') { const sexo = value === undefined || value === null || value === '' ? undefined : text(value,'Bebê',20); if (sexo && !['Menina','Menino','Surpresa'].includes(sexo)) throw new ERPError(400,'Use Menina, Menino ou Surpresa.','INVALID_INPUT'); result.babySex = sexo; }
     else if (key === 'links') {
       if (!Array.isArray(value) || value.length > 20) throw new ERPError(400,'Informe até 20 links.','INVALID_INPUT');
       result.links = value.map(item => { const link=jsonObject(item); whitelist(link,['label','url']); return {label:text(link.label,'Nome do link',100,true),url:url(link.url,'Link')}; });

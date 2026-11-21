@@ -518,7 +518,7 @@ function useSearchData(query: string,open:boolean) {
         group: "leads",
         title: lead.name,
         subtitle: [formatPhone(lead.phone), info?.email, funnel.name].filter(Boolean).join(" / "),
-        keywords: `${lead.phone} ${lead.tags.join(" ")} ${info?.city ?? ""} ${info?.instagram ?? ""} ${info?.source ?? ""} ${info?.eventType ?? ""} ${stage?.label ?? ""}`,
+        keywords: `${lead.phone} ${lead.tags.join(" ")} ${info?.city ?? ""} ${info?.instagram ?? ""} ${info?.source ?? ""} ${info?.babyName ?? ""} ${stage?.label ?? ""}`,
         href: `/leads/${lead.id}`,
         leading: <Avatar name={lead.name} src={lead.photoUrl} seed={lead.id} size="sm" shape="circle" />,
         meta: (
