@@ -15,7 +15,6 @@ import {
   ToggleLeftIcon,
   UserFocusIcon,
   UsersIcon,
-  UsersThreeIcon,
   WalletIcon,
 } from "@phosphor-icons/react/ssr";
 import type { Icon } from "@phosphor-icons/react";
@@ -45,10 +44,10 @@ export type NavModule = {
 };
 
 /**
- * Fonte única do menu: a sidebar lista os módulos e o header mostra as
- * seções (`tabs`) do módulo atual.
+ * Fonte única do menu: o header lista os módulos (e o dock, no celular) e
+ * mostra as seções (`tabs`) do módulo atual.
  *
- * Liberados (2026-11-19, a pedido): Painel, Leads (funil), Conversas, Clientes e E-commerce, além das Configurações
+ * Liberados (2026-11-19, a pedido): Painel, Leads e clientes, WhatsApp, Instagram e E-commerce, além das Configurações
  * (sem elas não há como conectar o WhatsApp, editar funis nem cuidar da equipe). Os demais módulos estão com `soon`:
  * aparecem com o selo "Produção" e a tela deles fica bloqueada (AppShell + LockedModule), mesmo já tendo página
  * pronta. Para liberar um módulo, basta tirar o `soon` dele.
@@ -63,15 +62,11 @@ export const navigation = {
       href: "/",
       icon: SquaresFourIcon,
     },
-    { label: "Leads", href: "/leads", icon: UserFocusIcon },
+    // Leads e clientes na mesma tabela (a categoria vem do funil); /clientes redireciona para cá.
+    { label: "Leads e clientes", href: "/leads", icon: UserFocusIcon },
     // Atendimento: cada canal com a própria tela e a logo colorida; uma troca no topo das listas liga os dois.
     { label: "WhatsApp", href: "/conversas", icon: IconeWhatsApp },
     { label: "Instagram", href: "/instagram", icon: IconeInstagram },
-    {
-      label: "Clientes",
-      href: "/clientes",
-      icon: UsersThreeIcon,
-    },
     {
       label: "Agenda",
       href: "/agenda",

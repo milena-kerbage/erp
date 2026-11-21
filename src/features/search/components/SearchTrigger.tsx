@@ -94,6 +94,7 @@ export function SearchTrigger() {
     <>
       <Trigger
         type="button"
+        data-busca
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {

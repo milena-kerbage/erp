@@ -22,7 +22,7 @@ import type { WhatsAppConversation, WhatsAppMessage, WhatsAppSituacao } from "..
 import { Bolha, interna, REACOES_RAPIDAS, urlDaMidia } from "./Bolha";
 import { Compositor } from "./Compositor";
 import { AcoesMensagem, ColunaConversa } from "./estilos";
-import { janelaAberta, mesmoDia, nomeDaConversa, rotuloDoDia, telefoneFormatado, textoDaMensagem } from "./formato";
+import { janelaAberta, mesmoDia, nomeDaConversa, rotuloDoDia, rotuloDoTipo, telefoneFormatado, textoDaMensagem } from "./formato";
 import { ROTULO_SITUACAO } from "./Lista";
 import { ModeloDialog } from "./ModeloDialog";
 import type { Fio, useConversas } from "./useConversas";
@@ -287,24 +287,38 @@ export function Conversa({ estado, phone, conversa, fio, equipe, eu, lead, funil
         aoAbrirModelo={() => setModelo(true)} aoMedir={setAltura} />
 
       {/* As opções da mensagem (os três pontos, o botão direito ou o toque longo), como a janela "Mensagem" da Le Ange. */}
-      <Dialog open={Boolean(acoes)} onClose={() => setAcoes(null)} title={acoes?.type === "note" ? "Nota interna" : "Mensagem"} width="22rem">
-        {acoes && (
-          <AcoesMensagem>
-            {!interna(acoes) && (
-              <div className="quickReactions" aria-label="Reagir à mensagem">
-                {REACOES_RAPIDAS.map((emoji) => <button key={emoji} type="button" aria-label={`Reagir com ${emoji}`} data-on={acoes.reactions?.some((r) => r.from === "me" && r.emoji === emoji) || undefined} onClick={() => { void reagir(phone, acoes, emoji); setAcoes(null); }}>{emoji}</button>)}
+      <Dialog open={Boolean(acoes)} onClose={() => setAcoes(null)} title={acoes?.type === "note" ? "Nota interna" : "Mensagem"} width="23rem">
+        {acoes && (() => {
+          const minha = acoes.reactions?.find((r) => r.from === "me")?.emoji;
+          const resumo = textoDaMensagem(acoes) || rotuloDoTipo(acoes.type) || "Mensagem";
+          return (
+            <AcoesMensagem>
+              {/* A mensagem em destaque, para saber em qual se está agindo. */}
+              <div className="previa" data-out={acoes.direction === "outbound" || undefined} data-note={acoes.type === "note" || undefined}>
+                <span className="previaQuem">{acoes.type === "note" ? "Nota interna" : acoes.direction === "outbound" ? "Você" : nome}</span>
+                <span className="previaTexto">{resumo}</span>
+                <time className="previaHora">{new Date(acoes.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</time>
               </div>
-            )}
-            {!interna(acoes) && <button type="button" className="acao" onClick={() => { setRespondendo(acoes); setAcoes(null); }}><ArrowBendUpLeftIcon size={18} /> Responder</button>}
-            {textoDaMensagem(acoes) && <button type="button" className="acao" onClick={() => { void copiar(acoes); setAcoes(null); }}><CopyIcon size={18} /> Copiar texto</button>}
-            {acoesMidia && lead && <button type="button" className="acao" onClick={() => { void salvar(acoes); setAcoes(null); }}><FolderSimplePlusIcon size={18} /> Salvar na ficha</button>}
-            {acoesMidia && <a className="acao" href={urlDaMidia(acoes, true)} onClick={() => setAcoes(null)}><DownloadSimpleIcon size={18} /> Baixar arquivo</a>}
-            {acoes.type === "note" && <button type="button" className="acao" onClick={() => { setTextoEditado(acoes.text); setEditando(acoes); setAcoes(null); }}><PencilSimpleIcon size={18} /> Editar nota</button>}
-            {acoes.type === "note"
-              ? <button type="button" className="acao" data-perigo="" onClick={() => { void descartarFalha(phone, acoes.id); setAcoes(null); }}><TrashIcon size={18} /> Apagar nota</button>
-              : <button type="button" className="acao" data-perigo="" onClick={() => { setApagando(acoes); setAcoes(null); }}><TrashIcon size={18} /> Apagar do ERP</button>}
-          </AcoesMensagem>
-        )}
+              {!interna(acoes) && (
+                <div className="quickReactions" role="group" aria-label="Reagir à mensagem">
+                  {REACOES_RAPIDAS.map((emoji) => <button key={emoji} type="button" aria-label={minha === emoji ? `Tirar a reação ${emoji}` : `Reagir com ${emoji}`} aria-pressed={minha === emoji} data-on={minha === emoji || undefined} onClick={() => { void reagir(phone, acoes, emoji); setAcoes(null); }}>{emoji}</button>)}
+                </div>
+              )}
+              <div className="grupo">
+                {!interna(acoes) && <button type="button" className="acao" onClick={() => { setRespondendo(acoes); setAcoes(null); }}><span className="acaoIcone"><ArrowBendUpLeftIcon size={16} weight="bold" /></span>Responder</button>}
+                {textoDaMensagem(acoes) && <button type="button" className="acao" onClick={() => { void copiar(acoes); setAcoes(null); }}><span className="acaoIcone"><CopyIcon size={16} weight="bold" /></span>Copiar texto</button>}
+                {acoesMidia && lead && <button type="button" className="acao" onClick={() => { void salvar(acoes); setAcoes(null); }}><span className="acaoIcone"><FolderSimplePlusIcon size={16} weight="bold" /></span>Salvar na ficha</button>}
+                {acoesMidia && <a className="acao" href={urlDaMidia(acoes, true)} onClick={() => setAcoes(null)}><span className="acaoIcone"><DownloadSimpleIcon size={16} weight="bold" /></span>Baixar arquivo</a>}
+                {acoes.type === "note" && <button type="button" className="acao" onClick={() => { setTextoEditado(acoes.text); setEditando(acoes); setAcoes(null); }}><span className="acaoIcone"><PencilSimpleIcon size={16} weight="bold" /></span>Editar nota</button>}
+              </div>
+              <div className="grupo" data-perigo="">
+                {acoes.type === "note"
+                  ? <button type="button" className="acao" data-perigo="" onClick={() => { void descartarFalha(phone, acoes.id); setAcoes(null); }}><span className="acaoIcone"><TrashIcon size={16} weight="bold" /></span>Apagar nota</button>
+                  : <button type="button" className="acao" data-perigo="" onClick={() => { setApagando(acoes); setAcoes(null); }}><span className="acaoIcone"><TrashIcon size={16} weight="bold" /></span><span className="acaoTexto">Apagar do ERP<small>No WhatsApp do cliente ela continua</small></span></button>}
+              </div>
+            </AcoesMensagem>
+          );
+        })()}
       </Dialog>
       <Dialog open={Boolean(editando)} onClose={() => setEditando(null)} title="Editar nota interna" width="28rem"
         footer={<><Button variant="ghost" onClick={() => setEditando(null)}>Cancelar</Button><Button disabled={!textoEditado.trim() || textoEditado.trim() === editando?.text} onClick={() => { if (editando) void editarNota(phone, editando.id, textoEditado.trim()); setEditando(null); }}>Salvar</Button></>}>

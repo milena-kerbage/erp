@@ -23,7 +23,8 @@ const request=(path,init={})=>fetch(origin+path,{...init,headers:{cookie,origin:
 try{
  let ready=false;for(let attempt=0;attempt<80;attempt++){if(child.exitCode!==null)throw new Error('Servidor de teste não iniciou.');try{const response=await fetch(origin+'/login');if(response.ok){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,250));}assert.ok(ready,'servidor precisa iniciar');
  const anonymous=await fetch(origin+'/api/erp/media');assert.equal(anonymous.status,401);
- for(const page of ['/','/clientes','/leads','/relatorios','/configuracoes/midia'])assert.equal((await request(page)).status,200,page);
+ for(const page of ['/','/leads','/leads?visao=tabela&categoria=cliente','/relatorios','/configuracoes/midia'])assert.equal((await request(page)).status,200,page);
+ {const antiga=await request('/clientes');assert.equal(antiga.status,307,'/clientes vai para a tabela de leads e clientes');assert.match(antiga.headers.get('location'),/\/leads\?visao=tabela&categoria=cliente$/);}
  const first=await request('/api/erp/leads?summary=1&limit=50');assert.equal(first.status,200);assert.match(first.headers.get('cache-control'),/private|no-store/);const page=await first.json();assert.equal(page.leads.length,50);assert.equal(page.pagination.total,125);
  const next=await(await request('/api/erp/leads?summary=1&limit=50&totals=0&cursor='+encodeURIComponent(page.pagination.nextCursor))).json();assert.equal(next.leads[0].id,'http-0050');assert.equal(next.pagination.total,null);
  const search=await(await request('/api/erp/leads?summary=1&filter='+encodeURIComponent(JSON.stringify({q:'distante'})))).json();assert.equal(search.leads[0].id,'http-0120');

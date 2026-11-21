@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
-import { ClientsTable } from "@/features/clients/components/ClientsTable";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Clientes",
-};
-
+/** Clientes agora fica junto dos leads, na mesma tabela (filtro "Categoria"). */
 export default function ClientsPage() {
-  return <ClientsTable />;
+  redirect("/leads?visao=tabela&categoria=cliente");
 }

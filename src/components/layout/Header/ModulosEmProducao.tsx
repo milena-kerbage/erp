@@ -2,44 +2,37 @@
 
 import styled from "@emotion/styled";
 import Link from "next/link";
-import { CheckIcon, HourglassMediumIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { CheckIcon } from "@phosphor-icons/react";
 import { Dialog } from "@/components/ui/Dialog";
 import type { NavModule } from "@/config/navigation";
-import { SidebarItem } from "./SidebarItem";
 
 /**
- * Os módulos ainda em produção ficam numa opção só do menu ("Em produção"); ao clicar, uma janela lista todos com o
- * que cada um vai trazer. Libere um módulo tirando o `soon` dele em src/config/navigation.ts.
+ * Janela com os módulos ainda em produção (aberta pelo item "Em produção" do menu), com o que cada um vai trazer.
+ * Libere um módulo tirando o `soon` dele em src/config/navigation.ts.
  */
-export function ModulosEmProducao({ modulos, expanded, ativo }: { modulos: readonly NavModule[]; expanded: boolean; ativo: boolean }) {
-  const [aberto, setAberto] = useState(false);
-  if (!modulos.length) return null;
+export function ModulosEmProducao({ modulos, aberto, onClose }: { modulos: readonly NavModule[]; aberto: boolean; onClose: () => void }) {
   return (
-    <>
-      <SidebarItem label={`Em produção (${modulos.length})`} icon={HourglassMediumIcon} expanded={expanded} active={ativo} onClick={() => setAberto(true)} />
-      <Dialog open={aberto} onClose={() => setAberto(false)} title="Módulos em produção" description="Estes módulos estão sendo preparados para o ateliê e serão liberados aos poucos." width="44rem">
-        <Grade>
-          {modulos.map((modulo) => {
-            const Icone = modulo.icon;
-            return (
-              <li key={modulo.href}>
-                <Link href={modulo.href} onClick={() => setAberto(false)}>
-                  <span className="icone"><Icone size={20} aria-hidden /></span>
-                  <span className="corpo">
-                    <strong>{modulo.label}</strong>
-                    {modulo.soon && <span className="descricao">{modulo.soon.description}</span>}
-                    {modulo.soon?.features.length ? (
-                      <ul className="recursos">{modulo.soon.features.map((recurso) => <li key={recurso}><CheckIcon size={12} weight="bold" aria-hidden />{recurso}</li>)}</ul>
-                    ) : null}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </Grade>
-      </Dialog>
-    </>
+    <Dialog open={aberto} onClose={onClose} title="Módulos em produção" description="Estes módulos estão sendo preparados para o ateliê e serão liberados aos poucos." width="44rem">
+      <Grade>
+        {modulos.map((modulo) => {
+          const Icone = modulo.icon;
+          return (
+            <li key={modulo.href}>
+              <Link href={modulo.href} onClick={onClose}>
+                <span className="icone"><Icone size={20} aria-hidden /></span>
+                <span className="corpo">
+                  <strong>{modulo.label}</strong>
+                  {modulo.soon && <span className="descricao">{modulo.soon.description}</span>}
+                  {modulo.soon?.features.length ? (
+                    <ul className="recursos">{modulo.soon.features.map((recurso) => <li key={recurso}><CheckIcon size={12} weight="bold" aria-hidden />{recurso}</li>)}</ul>
+                  ) : null}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </Grade>
+    </Dialog>
   );
 }
 

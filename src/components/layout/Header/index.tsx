@@ -2,86 +2,57 @@
 
 import { usePathname } from "next/navigation";
 import { useTheme } from "@emotion/react";
-import { SidebarSimpleIcon } from "@phosphor-icons/react";
-import { SIDEBAR_NAV_ID, useSidebar } from "@/components/layout/Sidebar/SidebarContext";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { IconButton } from "@/components/ui/IconButton";
 import { Logo } from "@/components/ui/Logo";
 import { SearchTrigger } from "@/features/search/components/SearchTrigger";
 import { firstAvailableHref, getBreadcrumbs } from "@/lib/navigation";
 import { NotificationsMenu } from "@/features/notifications/components/NotificationsMenu";
-import { useHeaderActionsTarget, useHeaderTitle } from "./HeaderActions";
-import { Avatar } from "@/components/ui/Avatar";
 import { useCurrentUser } from "@/features/settings/store";
-import { Brand, DesktopOnly, Divider, MobileLead, PageActions, Root, Start, Title, Tools } from "./styles";
+import { useHeaderActionsTarget, useHeaderTitle } from "./HeaderActions";
+import { MenuConta } from "./MenuConta";
+import { NavPrincipal } from "./NavPrincipal";
+import { Center, Divider, End, PageActions, Root, Start } from "./styles";
+
+const contaPadrao = { name: "Conta", role: "", email: "", seed: "account", avatarUrl: null };
 
 /**
- * Esquerda: menu, logo e trilha.
- * Centro (do espaço livre): nome da página.
- * Direita: busca, notificações e as ações da página (via <HeaderActions>).
+ * Topo do sistema (desktop), no lugar da antiga barra lateral:
+ * esquerda — logo e trilha da página; centro — o menu principal; direita — ações da página (via <HeaderActions>),
+ * busca, notificações e a conta. No celular o header some e o menu fica no dock de baixo (MobileNav).
  */
 export function Header() {
   const pathname = usePathname();
   const theme = useTheme();
-  const { expanded, toggle } = useSidebar();
   const setActionsTarget = useHeaderActionsTarget();
-  const user = useCurrentUser();
-
+  const user = useCurrentUser() ?? contaPadrao;
   const pageTitle = useHeaderTitle();
 
   // Páginas de detalhe (ex.: um lead) acrescentam o próprio nome à trilha.
   const crumbs = getBreadcrumbs(pathname);
   if (pageTitle) crumbs.push({ label: pageTitle, href: pathname });
-  const current = crumbs[crumbs.length - 1];
 
   return (
     <Root>
       <Start>
-        <Brand>
-          <DesktopOnly>
-            <IconButton
-              icon={SidebarSimpleIcon}
-              label={expanded ? "Recolher menu" : "Expandir menu"}
-              variant="ghost"
-              tooltip="bottom"
-              aria-expanded={expanded}
-              aria-controls={SIDEBAR_NAV_ID}
-              onClick={toggle}
-            />
-          </DesktopOnly>
-          <DesktopOnly>
-            <Logo size={30} tone={theme.mode === "dark" ? "white" : "black"} href={firstAvailableHref} />
-          </DesktopOnly>
-        </Brand>
-        <MobileLead>
-          {pathname === "/" && user ? (
-            <>
-              <Avatar name={user.name} seed={user.seed} src={user.avatarUrl} size="md" shape="circle" />
-              <strong>{user.name}</strong>
-            </>
-          ) : (
-            current && <h1>{current.label}</h1>
-          )}
-        </MobileLead>
-        <Divider aria-hidden />
-        <DesktopOnly>
-          <Breadcrumbs items={crumbs} />
-        </DesktopOnly>
+        <Logo size={28} tone={theme.mode === "dark" ? "white" : "black"} href={firstAvailableHref} />
+        {crumbs.length > 0 && (
+          <>
+            <Divider aria-hidden />
+            <Breadcrumbs items={crumbs} />
+          </>
+        )}
       </Start>
 
-      {current ? (
-        <Title>{current.label}</Title>
-      ) : (
-        <span />
-      )}
+      <Center>
+        <NavPrincipal />
+      </Center>
 
-      <Tools>
-        <SearchTrigger />
-        <DesktopOnly>
-          <NotificationsMenu />
-        </DesktopOnly>
+      <End>
         <PageActions ref={setActionsTarget} />
-      </Tools>
+        <SearchTrigger />
+        <NotificationsMenu />
+        <MenuConta name={user.name} role={user.role} email={user.email} seed={user.seed} avatarUrl={user.avatarUrl} />
+      </End>
     </Root>
   );
 }

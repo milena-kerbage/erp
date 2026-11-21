@@ -38,6 +38,7 @@ import { useViewMode, ViewSwitch } from "@/components/ui/ViewSwitch";
 import { useIsMobile } from "@/lib/useMediaQuery";
 import { WideOnly } from "@/styles/responsive";
 import { downloadCsv } from "@/lib/csv";
+import { categoriaDo, funisDaCategoria, ROTULO_CATEGORIA, type FiltroCategoria } from "@/features/leads/categoria";
 import { formatDate, formatDateTime, formatRelativeTime, parseDateOnly } from "@/lib/format";
 import { formatBudget, formatPhone } from "@/features/leads/format";
 import type { Funnel, FunnelStage } from "@/features/leads/funnels";
@@ -176,10 +177,12 @@ type ClientsTableProps = {
   embedded?: boolean;
   /** Controles da tela que embute a tabela, no fim da barra (ex.: visão e "novo" em Leads). */
   toolbarEnd?: ReactNode;
+  /** Categoria inicial (Leads e clientes numa tabela só): "cliente", "lead" ou "todas". */
+  categoriaInicial?: FiltroCategoria;
 };
 
 /** Todos os leads do sistema em tabela ou cards: ordenação, filtros, seleção e exportação. */
-export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: ClientsTableProps = {}) {
+export function ClientsTable({ funnelId, embedded = false, toolbarEnd, categoriaInicial = "todas" }: ClientsTableProps = {}) {
   const theme = useTheme();
   const router = useRouter();
 
@@ -193,6 +196,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
 
   const [query, setQuery] = useState("");
   const [funnelFilter, setFunnelFilter] = useState<string[]>([]);
+  const [categoria, setCategoria] = useState<FiltroCategoria>(categoriaInicial);
   /** Etapas como "funil:etapa" (só quando há um funil em foco). */
   const [stageFilter, setStageFilter] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
@@ -208,7 +212,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
   const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const {leads,details,unread,moveLead,loading,error,refresh,pagination}=useLeadList({q:query,funnels:funnelId?[funnelId]:funnelFilter,stages:stageFilter,sources:sourceFilter,owners:ownerFilter,createdDays:createdFilter==='any'?undefined:Number(createdFilter),eventDays:eventFilter==='any'?undefined:eventFilter==='none'?'none':Number(eventFilter),unread:unreadOnly,stale:staleOnly,sort:sort.key,direction:sort.direction});
+  const {leads,details,unread,moveLead,loading,error,refresh,pagination}=useLeadList({q:query,funnels:funnelId?[funnelId]:funisDaCategoria(categoria,funnels.map((f)=>f.id),funnelFilter),stages:stageFilter,sources:sourceFilter,owners:ownerFilter,createdDays:createdFilter==='any'?undefined:Number(createdFilter),eventDays:eventFilter==='any'?undefined:eventFilter==='none'?'none':Number(eventFilter),unread:unreadOnly,stale:staleOnly,sort:sort.key,direction:sort.direction});
   const onScroll = (event: UIEvent<HTMLDivElement>) => {
     const next = event.currentTarget.scrollLeft > 0;
     if (next !== scrolled) setScrolled(next);
@@ -265,6 +269,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
   const clearFilters = () => {
     setQuery("");
     setFunnelFilter([]);
+    setCategoria("todas");
     setStageFilter([]);
     setSourceFilter([]);
     setOwnerFilter([]);
@@ -283,6 +288,23 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
   const countBy = (match: (row: Row) => boolean) => rows.filter(match).length;
 
   const filterSections: FilterSection[] = [
+    ...(!funnelId
+      ? [
+          {
+            kind: "single" as const,
+            id: "categoria",
+            label: "Categoria",
+            value: categoria,
+            defaultValue: "todas",
+            onChange: (next: string) => setCategoria(next as FiltroCategoria),
+            options: [
+              { value: "todas", label: "Leads e clientes" },
+              { value: "lead", label: "Só leads" },
+              { value: "cliente", label: "Só clientes" },
+            ],
+          },
+        ]
+      : []),
     ...(!funnelId
       ? [
           {
@@ -430,6 +452,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
     downloadCsv(`clientes-${new Date().toISOString().slice(0, 10)}.csv`, [
       [
         "Nome",
+        "Categoria",
         "Telefone",
         "E-mail",
         "Evento",
@@ -445,6 +468,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
       ],
       ...list.map(({ lead, details: info, funnel, stage }) => [
         lead.name,
+        ROTULO_CATEGORIA[categoriaDo(lead)],
         formatPhone(lead.phone),
         info.email,
         info.eventType,
@@ -706,7 +730,8 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
                     onChange={toggleAll}
                   />
                 </Th>
-                {header("name", "Cliente")}
+                {header("name", "Nome")}
+                <Th>Categoria</Th>
                 <Th>Telefone</Th>
                 {header("event", "Evento")}
                 {header("stage", "Funil e etapa")}
@@ -721,7 +746,7 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
             <tbody>
               {visible.length === 0 && (
                 <tr>
-                  <EmptyRow colSpan={11}>
+                  <EmptyRow colSpan={12}>
                     <EmptyState icon={<UsersThreeIcon size={24} />} title={emptyState.title} description={emptyState.description}>
                       {emptyState.retry && (
                         <Button variant="secondary" size="sm" onClick={() => void refresh()}>
@@ -766,6 +791,9 @@ export function ClientsTable({ funnelId, embedded = false, toolbarEnd }: Clients
                           {lead.name}
                         </NameLink>
                       </Inline>
+                    </Td>
+                    <Td>
+                      <Tag tone={categoriaDo(lead) === "cliente" ? "green" : "blue"}>{ROTULO_CATEGORIA[categoriaDo(lead)]}</Tag>
                     </Td>
                     <Td $muted>
                       <Inline>

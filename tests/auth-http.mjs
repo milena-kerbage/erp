@@ -18,7 +18,7 @@ async function login() {
 }
 try {
   await createUser(email,'Teste temporário',await hashPassword(password),id);
-  for (const path of ['/','/leads','/clientes','/conversas','/configuracoes/perfil','/leads/lead-001']) {
+  for (const path of ['/','/leads','/conversas','/instagram','/configuracoes/perfil','/leads/lead-001']) {
     const response=await fetch(origin+path,{redirect:'manual'});
     assert.equal(response.status,307,`${path} precisa bloquear acesso anônimo`);
     assert.ok(response.headers.get('location').endsWith('/login'));

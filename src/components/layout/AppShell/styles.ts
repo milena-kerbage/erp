@@ -2,16 +2,15 @@ import styled from "@emotion/styled";
 import { DOCK_SPACE } from "@/styles/sheet";
 
 /**
- * Header em cima (100% da largura), sidebar à esquerda e painel à direita.
- * A página não rola: só o painel tem scroll, então header e sidebar
- * ficam sempre visíveis.
+ * Header em cima (100% da largura, com o menu principal) e o painel embaixo.
+ * A página não rola: só o painel tem scroll, então o header fica sempre visível.
  */
 export const Root = styled.div`
   display: grid;
   grid-template-areas:
-    "header header"
-    "sidebar panel";
-  grid-template-columns: auto minmax(0, 1fr);
+    "header"
+    "panel";
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: ${({ theme }) => theme.layout.headerHeight} minmax(0, 1fr);
   height: 100vh;
   height: var(--app-height, 100dvh);
@@ -21,7 +20,7 @@ export const Root = styled.div`
   background: ${({ theme }) => theme.colors.background.gradient};
 
   /*
-   * Celular: sem sidebar (o menu fica no dock de baixo) e quem rola é a
+   * Celular: sem header (o menu fica no dock de baixo) e quem rola é a
    * própria página (rolagem nativa: a barra do navegador recolhe e o gesto
    * não arrasta a estrutura). O topo fica grudado.
    */
@@ -60,7 +59,7 @@ export const Panel = styled.div`
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  margin: 0 ${({ theme }) => theme.layout.panelGap} ${({ theme }) => theme.layout.panelGap} 0;
+  margin: 0 ${({ theme }) => theme.layout.panelGap} ${({ theme }) => theme.layout.panelGap};
   overflow-y: auto;
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: ${({ theme }) => theme.layout.panelRadius};

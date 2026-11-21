@@ -749,15 +749,52 @@ export const ColunaFicha = styled.aside`
 export const AcoesMensagem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing(1)};
+  gap: ${({ theme }) => theme.spacing(3)};
 
-  .quickReactions { display: flex; justify-content: space-between; gap: 0.25rem; padding-bottom: ${({ theme }) => theme.spacing(2)}; }
-  .quickReactions button { display: grid; flex: 1; place-items: center; height: 2.5rem; font-size: 1.375rem; cursor: pointer; background: none; border: 0; border-radius: ${({ theme }) => theme.radii.md}; }
-  .quickReactions button:hover, .quickReactions button[data-on] { background-color: ${({ theme }) => theme.colors.interactive.pressed}; }
-  .acao { display: flex; gap: ${({ theme }) => theme.spacing(2.5)}; align-items: center; width: 100%; min-height: 2.5rem; padding: ${({ theme }) => theme.spacing(0, 3)}; font: inherit; font-size: 0.875rem; font-weight: 500; color: ${({ theme }) => theme.colors.text.primary}; text-align: start; text-decoration: none; cursor: pointer; background: none; border: 0; border-radius: ${({ theme }) => theme.radii.md}; }
-  .acao:hover { background-color: ${({ theme }) => theme.colors.interactive.hover}; }
+  /* A mensagem em destaque, em formato de bolha. */
+  .previa {
+    position: relative; display: grid; gap: 2px; padding: ${({ theme }) => theme.spacing(2.5, 3)}; max-height: 7.5rem; overflow: hidden;
+    border-radius: ${({ theme }) => theme.radii.lg}; border-start-start-radius: 4px;
+    background: ${({ theme }) => theme.colors.background.elevated}; box-shadow: inset 0 0 0 1px ${({ theme }) => theme.colors.border.subtle};
+  }
+  .previa[data-out] { border-start-start-radius: ${({ theme }) => theme.radii.lg}; border-start-end-radius: 4px; background: ${({ theme }) => theme.colors.chat.outgoing}; box-shadow: none; }
+  .previa[data-note] { background: ${({ theme }) => theme.tones.yellow.soft}; box-shadow: none; }
+  .previa::after { content: ""; position: absolute; inset-inline: 0; bottom: 0; height: 1.5rem; background: linear-gradient(transparent, ${({ theme }) => theme.colors.background.elevated}); opacity: 0; }
+  .previaQuem { font-size: 0.75rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.primary.main}; }
+  .previa[data-out] .previaQuem { color: ${({ theme }) => theme.tones.blue.fg}; }
+  .previa[data-note] .previaQuem { color: ${({ theme }) => theme.tones.yellow.fg}; }
+  .previaTexto { font-size: 0.875rem; line-height: 1.45; color: ${({ theme }) => theme.colors.text.primary}; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .previaHora { justify-self: end; font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; }
+
+  /* Reações: uma pílula com os emojis, que crescem ao passar o mouse; a sua reação fica marcada. */
+  .quickReactions {
+    display: flex; justify-content: space-between; gap: 2px; padding: 4px;
+    border-radius: ${({ theme }) => theme.radii.full}; background: ${({ theme }) => theme.palette.neutral[100]};
+  }
+  .quickReactions button {
+    display: grid; place-items: center; width: 2.5rem; height: 2.5rem; font-size: 1.375rem; line-height: 1; cursor: pointer; background: none; border: 0; border-radius: 50%;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+  }
+  .quickReactions button:hover { transform: translateY(-2px) scale(1.15); background-color: ${({ theme }) => theme.palette.neutral[0]}; }
+  .quickReactions button[data-on] { background-color: ${({ theme }) => theme.palette.neutral[0]}; box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary.main}; }
+
+  .grupo { display: flex; flex-direction: column; gap: 2px; }
+  .grupo[data-perigo] { padding-top: ${({ theme }) => theme.spacing(2)}; border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }
+  .acao {
+    display: flex; gap: ${({ theme }) => theme.spacing(3)}; align-items: center; width: 100%; min-height: 2.75rem; padding: ${({ theme }) => theme.spacing(1.5, 2)};
+    font: inherit; font-size: 0.875rem; font-weight: 500; color: ${({ theme }) => theme.colors.text.primary}; text-align: start; text-decoration: none; cursor: pointer;
+    background: none; border: 0; border-radius: ${({ theme }) => theme.radii.md}; transition: background-color 0.12s ease;
+  }
+  .acao:hover, .acao:focus-visible { background-color: ${({ theme }) => theme.colors.interactive.hover}; outline: none; }
+  .acaoIcone {
+    display: grid; flex-shrink: 0; place-items: center; width: 2rem; height: 2rem; border-radius: 50%;
+    background: ${({ theme }) => theme.palette.neutral[100]}; color: ${({ theme }) => theme.colors.text.secondary};
+  }
+  .acao:hover .acaoIcone { background: ${({ theme }) => theme.palette.neutral[0]}; color: ${({ theme }) => theme.colors.text.primary}; box-shadow: 0 0 0 1px ${({ theme }) => theme.colors.border.subtle}; }
   .acao[data-perigo] { color: ${({ theme }) => theme.colors.danger}; }
-  .acao svg { flex-shrink: 0; }
+  .acao[data-perigo] .acaoIcone { background: ${({ theme }) => theme.tones.rose.bg}; color: ${({ theme }) => theme.colors.danger}; }
+  .acaoTexto { display: grid; gap: 1px; }
+  .acaoTexto small { font-size: 0.75rem; font-weight: 400; color: ${({ theme }) => theme.colors.text.muted}; }
 `;
 
 /** Menu no ponto do clique (botão direito / toque longo), em portal: fora da raiz, usa o tema direto. */

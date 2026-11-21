@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { FiltroCategoria } from "../../categoria";
 import { ArchivedLeads } from "../ArchivedLeads";
 import { NewLeadForm } from "../NewLeadForm";
 import styled from "@emotion/styled";
@@ -27,14 +28,16 @@ const Screen = styled.div`
 `;
 
 /**
- * Leads do funil em kanban (padrão) ou em tabela. O funil fica no header; a
- * barra do topo (busca, filtros, visão e "novo lead") trata o resto, nas duas
- * visões, como a tela de tarefas do web-specular.
+ * Leads e clientes numa tela só. Kanban: o funil escolhido no header. Tabela (padrão): todos os funis, com a coluna e o
+ * filtro "Categoria" (Cliente = funil Clientes; Lead = os demais). A barra do topo (busca, filtros, visão e "novo")
+ * trata o resto, nas duas visões.
  */
-export function LeadsView({ funnelId }: { funnelId?: string }) {
+export function LeadsView({ funnelId, categoriaInicial, visaoInicial }: { funnelId?: string; categoriaInicial?: FiltroCategoria; visaoInicial?: View }) {
   const [showArchived, setShowArchived] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [view, setView] = useViewMode<View>("leads", "kanban", VIEWS, "kanban");
+  const [view, setView] = useViewMode<View>("leads", "table", VIEWS, "kanban");
+  // Link direto (ex.: /clientes → tabela só de clientes) vale sobre a última visão usada.
+  useEffect(() => { if (visaoInicial) setView(visaoInicial); }, [visaoInicial, setView]);
   // Sem ?funil= na URL vale o primeiro funil, igual ao kanban
   const funnel = useFunnels().findFunnel(funnelId);
 
@@ -67,16 +70,18 @@ export function LeadsView({ funnelId }: { funnelId?: string }) {
     <>
       {showArchived && <ArchivedLeads open onClose={() => setShowArchived(false)} />}
       {creating && <NewLeadForm open onClose={() => setCreating(false)} funnelId={funnel.id} />}
-      <HeaderActions>
-        <FunnelSelect funnelId={funnelId} />
-      </HeaderActions>
+      {view === "kanban" && (
+        <HeaderActions>
+          <FunnelSelect funnelId={funnelId} />
+        </HeaderActions>
+      )}
 
       {view === "kanban" ? (
         <Screen data-fill>
           <LeadsBoard funnelId={funnelId} toolbarEnd={controls} />
         </Screen>
       ) : (
-        <ClientsTable funnelId={funnel.id} embedded toolbarEnd={controls} />
+        <ClientsTable embedded toolbarEnd={controls} categoriaInicial={categoriaInicial} />
       )}
     </>
   );
