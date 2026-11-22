@@ -44,7 +44,8 @@ export const otherColor = (mode: ThemeMode) => colors[mode].other;
  * fundo e a cor do texto que fica legível por cima. Canais sem marca própria não entram (quem chama usa o tom neutro).
  */
 const identidade: Record<string, { fundo: string; texto: string }> = {
-  Instagram: { fundo: "linear-gradient(90deg, #f9b445 0%, #ee3f6c 52%, #a03fc0 100%)", texto: "#ffffff" },
+  // Sempre uma cor só por canal, sem degradê: o rosa do Instagram.
+  Instagram: { fundo: "#e1306c", texto: "#ffffff" },
   WhatsApp: { fundo: "#25d366", texto: "#06381a" },
   Google: { fundo: "#4285f4", texto: "#ffffff" },
   Facebook: { fundo: "#1877f2", texto: "#ffffff" },
