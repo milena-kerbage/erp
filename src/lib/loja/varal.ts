@@ -71,7 +71,7 @@ async function jogadaDe(chave: string, telefone: string): Promise<Jogada | null>
   const cupom = await database.prepare('SELECT * FROM loja_cupons_campanha WHERE id = ?').get(PREFIXO_ID_CUPOM_VARAL + chave);
   if (!cupom) return null;
   const tipo = texto(cupom.tipo) === 'valor' ? 'valor' : 'percentual', valor = Number(cupom.valor), criado = Number(cupom.criado), fim = Number(cupom.fim ?? criado);
-  return { telefone, peca: 'fralda', premio: textoDoPremio({ tipo, valor }), tipo, valor, codigo: texto(cupom.codigo), validoAte: fim, minimoCentavos: Number(cupom.minimo_centavos), validadeDias: Math.max(1, Math.round((fim - criado) / DIA)), consentimento: true, em: criado };
+  return { telefone, peca: 'vestido', premio: textoDoPremio({ tipo, valor }), tipo, valor, codigo: texto(cupom.codigo), validoAte: fim, minimoCentavos: Number(cupom.minimo_centavos), validadeDias: Math.max(1, Math.round((fim - criado) / DIA)), consentimento: true, em: criado };
 }
 
 /**

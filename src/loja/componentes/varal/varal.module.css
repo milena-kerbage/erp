@@ -263,7 +263,7 @@
 /* ---------- A etiqueta do prêmio ---------- */
 
 /* 4. O mistério: a etiqueta desce da corda bem devagar, fechada, com um "?" que respira. 5. Depois vira, lenta,
-      para mostrar o prêmio. Na cor da marca. */
+      para mostrar o prêmio. No mesmo marrom da corda. */
 .etiqueta {
   position: absolute;
   top: calc(var(--y) * 1px);
@@ -308,11 +308,12 @@
   place-items: center;
   min-height: 52px;
   padding: 14px 16px 11px;
-  border: 1.5px solid #4d5743;
+  /* O mesmo marrom da corda do varal */
+  border: 1.5px solid #9c8b6c;
   border-radius: 10px;
-  background: var(--v-marca);
-  box-shadow: 0 10px 18px rgb(60 68 53 / 0.2);
-  color: #fff;
+  background: linear-gradient(180deg, #c6b79b, var(--v-corda));
+  box-shadow: 0 10px 18px rgb(88 74 48 / 0.22);
+  color: #3f3424;
   font-size: clamp(14px, 3.8cqi, 18px);
   font-weight: 700;
   line-height: 1.2;
@@ -331,10 +332,10 @@
   height: 6px;
   margin-left: -3px;
   border-radius: 50%;
-  background: #f3efe6;
-  box-shadow: inset 0 0 0 1.5px #4d5743;
+  background: #f6f1e7;
+  box-shadow: inset 0 0 0 1.5px #9c8b6c;
 }
-.face[data-lado="frente"] { position: absolute; inset: 0; background: #788569; font-size: 26px; font-weight: 600; }
+.face[data-lado="frente"] { position: absolute; inset: 0; background: linear-gradient(180deg, #b9a98c, #a99878); font-size: 26px; font-weight: 600; }
 .face[data-lado="frente"] b { display: block; font-weight: inherit; animation: curiosidade 1500ms ease-in-out 1600ms infinite alternate; }
 .face[data-lado="verso"] { transform: rotateY(180deg); }
 @keyframes curiosidade {
@@ -353,7 +354,8 @@
   to { rotate: 2.5deg; }
 }
 
-/* A festa quando o prêmio aparece: confetes em tons pastel sobem de trás da etiqueta e caem flutuando */
+/* A festa quando o prêmio aparece: um estouro grande de confetes em tons pastel saindo de trás da etiqueta e, logo
+   depois, uma chuva de confete caindo devagar pela cena inteira */
 .estouro { position: absolute; top: 46px; left: var(--eixo, 50%); width: 0; height: 0; pointer-events: none; }
 .estouro i {
   position: absolute;
@@ -363,7 +365,7 @@
   border-radius: 2px;
   background: var(--cor);
   opacity: 0;
-  animation: estourar 2600ms cubic-bezier(0.15, 0.75, 0.3, 1) 800ms both;
+  animation: estourar 3000ms cubic-bezier(0.15, 0.75, 0.3, 1) calc(760ms + var(--atraso, 0ms)) both;
 }
 .estouro i:nth-of-type(3n) { border-radius: 50%; width: 7px; height: 7px; }
 .estouro i:nth-of-type(4n) { width: 5px; height: 11px; }
@@ -372,6 +374,27 @@
   14% { opacity: 1; }
   55% { opacity: 1; transform: rotate(var(--ang)) translateY(calc(var(--dist) * -1)) rotate(140deg) scale(1); }
   100% { opacity: 0; transform: rotate(var(--ang)) translateY(calc(var(--dist) * -0.82)) translateY(26px) rotate(260deg) scale(0.9); }
+}
+
+.chuva { position: absolute; inset: 0; z-index: 4; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.chuva i {
+  position: absolute;
+  top: -16px;
+  left: calc(var(--x) * 1%);
+  width: var(--tam, 8px);
+  height: calc(var(--tam, 8px) * var(--prop, 1));
+  border-radius: 2px;
+  background: var(--cor);
+  opacity: 0;
+  animation: chover var(--dur) cubic-bezier(0.3, 0.1, 0.6, 1) var(--atraso) both;
+}
+.chuva i:nth-of-type(3n) { border-radius: 50%; }
+@keyframes chover {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); }
+  8% { opacity: 1; }
+  50% { transform: translate3d(var(--deriva), 45vh, 0) rotate(calc(var(--giro) * 0.5)); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(calc(var(--deriva) * -0.4), 96vh, 0) rotate(var(--giro)); }
 }
 
 /* ---------- Textos e formulário ---------- */
@@ -437,9 +460,42 @@
 /* ---------- A janela do prêmio ---------- */
 
 .premio { display: grid; gap: 12px; text-align: center; }
+/* Cada parte chega devagar, uma depois da outra */
+.premio > * { animation: chegar 800ms cubic-bezier(0.2, 0.8, 0.2, 1) calc(var(--passo, 0) * 160ms + 200ms) both; }
+.premio > :nth-child(1) { --passo: 0; }
+.premio > :nth-child(2) { --passo: 1; }
+.premio > :nth-child(3) { --passo: 2; }
+.premio > :nth-child(4) { --passo: 3; }
+.premio > :nth-child(5) { --passo: 4; }
+.premio > :nth-child(6) { --passo: 5; }
+@keyframes chegar {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
 .premio p { color: var(--v-suave); font-size: 14px; line-height: 1.5; }
 .premio .ganhou { color: var(--v-suave); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
-.premio .valor { color: var(--v-escuro); font-size: clamp(30px, 8vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
+.premio .valor { margin-top: -6px; color: var(--v-escuro); font-size: clamp(30px, 8vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
+
+/* No topo da janela, a peça que ela escolheu, pendurada num pedacinho de varal */
+.lembranca { position: relative; display: block; width: 100%; height: 96px; margin-bottom: -4px; --peca: 72px; }
+.lembranca .corda { height: 26px; }
+.lembranca .lugar { top: 6px; left: 50%; display: block; --dur: 3.6s; --atraso: 0s; --giro: 3.5deg; }
+.lembranca .brilho { z-index: 0; }
+
+/* As condições, cada uma no seu quadradinho */
+.detalhes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  text-align: left;
+}
+@media (max-width: 420px) { .detalhes { grid-template-columns: minmax(0, 1fr); } }
+.detalhes > div { display: grid; gap: 3px; align-content: start; padding: 10px 12px; border-radius: 12px; background: #f6f1e7; box-shadow: inset 0 0 0 1px rgb(120 133 105 / 0.14); }
+.detalhes dt { display: flex; align-items: center; gap: 6px; color: var(--v-suave); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.detalhes dt svg { flex-shrink: 0; color: #a39274; }
+.detalhes dd { margin: 0; color: var(--v-escuro); font-size: 14px; font-weight: 600; line-height: 1.3; }
+.detalhes dd small { display: block; color: var(--v-suave); font-size: 12px; font-weight: 400; }
 
 /* O cupom como uma etiqueta de pano: trama de linho, pesponto em volta e o código bordado no meio */
 .pano {
@@ -536,6 +592,7 @@
 @media (prefers-reduced-motion: reduce) {
   .lugar, .peca, .brilho, .etiqueta, .convite, .corda, .pregadores, .cartao, .halo, .orbita, .orbita svg, .estouro i { animation: none !important; transition: none !important; }
   .brilho { opacity: 0.6; }
-  .orbita, .halo, .estouro { display: none; }
+  .orbita, .halo, .estouro, .chuva { display: none; }
+  .premio > * { animation: none !important; }
   .lugar[data-estado="caindo"] .peca { visibility: hidden; }
 }

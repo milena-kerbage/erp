@@ -1,7 +1,7 @@
 import type { Peca } from "@/loja/lib/varal/regras";
 
 // As cinco roupinhas do varal, desenhadas à mão em SVG (traço fino, cantos arredondados). Tudo em tons pastel bem
-// clarinhos e delicados: rosa (body), azul (macacão), amarelo (fraldinha de boca), lilás (babador) e verde (meinha),
+// clarinhos e delicados: rosa (body), azul (macacão), amarelo (vestidinho), lilás (babador) e verde (meinha),
 // sem vermelho. Os pregadores são um desenho à parte
 // (<Pregadores>), na mesma caixa de 100 × 124: quando a peça cai, eles ficam na corda. A corda passa na altura 12.
 
@@ -9,7 +9,7 @@ const TRACO = { strokeWidth: 1.8, strokeLinejoin: "round", strokeLinecap: "round
 const COSTURA = { fill: "none", strokeWidth: 1.1, strokeDasharray: "2.4 2.6", strokeLinecap: "round" } as const;
 
 /** Onde ficam os pregadores de cada peça (no eixo x da caixa de 100). */
-const PREGADORES: Record<Peca, number[]> = { body: [33, 67], macacao: [34, 66], fralda: [31, 69], babador: [33, 67], meinha: [50] };
+const PREGADORES: Record<Peca, number[]> = { body: [33, 67], macacao: [34, 66], vestido: [36, 64], babador: [33, 67], meinha: [50] };
 
 /** Pregador de madeira clara, preso na corda. */
 function Pregador({ x, n }: { x: number; n: number }) {
@@ -47,19 +47,21 @@ function Macacao() {
   );
 }
 
-/** Fraldinha de boca (o paninho de limpar a babinha): um pano pendurado pelos dois cantos, com barrado e bordado. */
-function Fralda() {
+/** Vestidinho: corpinho com manguinhas bufantes e gola, lacinho na cintura e a saia rodada com barra ondulada. */
+function Vestido() {
   return (
     <>
-      {/* O pano: a borda de cima cede entre os pregadores e a de baixo termina num barrado ondulado */}
-      <path d="M23 23 Q50 31 77 23 L79 80 Q73 85 67 80 Q61 75 55 80 Q50 84 45 80 Q39 75 33 80 Q27 85 21 80 Z" fill="#FCF1C6" stroke="#E3CB82" {...TRACO} />
-      {/* Dobras suaves do tecido */}
-      <path d="M38 29 Q36 52 38 76 M62 29 Q64 52 62 76" fill="none" stroke="#F3E3AE" strokeWidth={1.2} strokeLinecap="round" />
-      {/* O barrado, com o pesponto */}
-      <path d="M22 68 H78" stroke="#EFDDA3" {...COSTURA} />
-      <path d="M25 30 Q50 37 75 30" stroke="#EFDDA3" {...COSTURA} />
-      {/* O bordado: um coraçãozinho rosa no canto */}
-      <path d="M66 60 C62.6 57.4 62 54.8 63.9 53.7 C65 53.1 65.9 53.9 66 54.7 C66.1 53.9 67 53.1 68.1 53.7 C70 54.8 69.4 57.4 66 60 Z" fill="#FBDDE2" stroke="#E5A9B6" strokeWidth={1.1} strokeLinejoin="round" />
+      {/* A saia rodada */}
+      <path d="M37 50 L20 88 Q26 93 32 89 Q38 85 44 89 Q50 93 56 89 Q62 85 68 89 Q74 93 80 88 L63 50 Z" fill="#FCF1C6" stroke="#E3CB82" {...TRACO} />
+      <path d="M42 56 L34 84 M50 56 V86 M58 56 L66 84" fill="none" stroke="#F3E3AE" strokeWidth={1.2} strokeLinecap="round" />
+      <path d="M24 82 Q50 90 76 82" stroke="#EFDDA3" {...COSTURA} />
+      {/* O corpinho com as manguinhas */}
+      <path d="M41 23 L33 25 Q24 27 22 37 L31 42 L36 38 L37 50 L63 50 L64 38 L69 42 L78 37 Q76 27 67 25 L59 23 Q50 32 41 23 Z" fill="#FDF5D6" stroke="#E3CB82" {...TRACO} />
+      {/* A gola */}
+      <path d="M41 23 Q44 33 50 31 Q56 33 59 23 Q50 31 41 23 Z" fill="#FFFDF2" stroke="#E3CB82" strokeWidth={1.3} strokeLinejoin="round" />
+      {/* O lacinho rosa na cintura */}
+      <path d="M50 50 L43.5 46.5 Q42 50 43.5 53.5 Z M50 50 L56.5 46.5 Q58 50 56.5 53.5 Z" fill="#FBDDE2" stroke="#E5A9B6" strokeWidth={1.1} strokeLinejoin="round" />
+      <circle cx={50} cy={50} r={1.9} fill="#FBDDE2" stroke="#E5A9B6" strokeWidth={1.1} />
     </>
   );
 }
@@ -90,7 +92,7 @@ function Meinha() {
   );
 }
 
-const DESENHO: Record<Peca, () => React.ReactNode> = { body: Body, macacao: Macacao, fralda: Fralda, babador: Babador, meinha: Meinha };
+const DESENHO: Record<Peca, () => React.ReactNode> = { body: Body, macacao: Macacao, vestido: Vestido, babador: Babador, meinha: Meinha };
 
 export function Roupinha({ peca }: { peca: Peca }) {
   const Desenho = DESENHO[peca];

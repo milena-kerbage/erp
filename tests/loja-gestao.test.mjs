@@ -469,14 +469,14 @@ test('varal de roupinhas: sorteio no servidor, um cupom por telefone, fora da li
 
   // O sorteio é do servidor: 0 cai no primeiro prêmio (5%) e 0,99 no último (15%), seja qual for a peça.
   const agora = Date.now();
-  const primeiro = await jogarVaral({ telefone: ' (85) 99999-0001 ', peca: 'fralda', consentimento: true }, agora, () => 0);
-  assert.equal(primeiro.premio, '5% de desconto'); assert.match(primeiro.codigo, /^BEBE5-[A-HJ-NP-Z2-9]{4}$/); assert.equal(primeiro.jaJogou, false); assert.equal(primeiro.peca, 'fralda');
-  const outro = await jogarVaral({ telefone: '85 3333-0002', peca: 'fralda', consentimento: true }, agora, () => 0.99);
+  const primeiro = await jogarVaral({ telefone: ' (85) 99999-0001 ', peca: 'vestido', consentimento: true }, agora, () => 0);
+  assert.equal(primeiro.premio, '5% de desconto'); assert.match(primeiro.codigo, /^BEBE5-[A-HJ-NP-Z2-9]{4}$/); assert.equal(primeiro.jaJogou, false); assert.equal(primeiro.peca, 'vestido');
+  const outro = await jogarVaral({ telefone: '85 3333-0002', peca: 'vestido', consentimento: true }, agora, () => 0.99);
   assert.equal(outro.premio, '15% de desconto'); assert.match(outro.codigo, /^BEBE15-/);
 
   // Uma jogada por telefone (com ou sem o 55, com ou sem máscara): jogar de novo devolve o mesmo cupom.
   const repetido = await jogarVaral({ telefone: '+55 85 99999 0001', peca: 'meinha', consentimento: true }, agora + 1000, () => 0.99);
-  assert.equal(repetido.codigo, primeiro.codigo); assert.equal(repetido.jaJogou, true); assert.equal(repetido.peca, 'fralda');
+  assert.equal(repetido.codigo, primeiro.codigo); assert.equal(repetido.jaJogou, true); assert.equal(repetido.peca, 'vestido');
 
   // Pessoal: não aparece na lista que a loja manda ao navegador nem na tela de Cupons do ERP.
   assert.equal((await cuponsDeCampanha() ?? []).some((cupom) => cupom.codigo.startsWith('BEBE')), false);

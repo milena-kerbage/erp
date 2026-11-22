@@ -3,11 +3,11 @@
 //
 // O jogo é só a embalagem: o prêmio é sempre sorteado no servidor, e a peça escolhida não muda as chances.
 
-export const PECAS = ["body", "macacao", "fralda", "babador", "meinha"] as const;
+export const PECAS = ["body", "macacao", "vestido", "babador", "meinha"] as const;
 export type Peca = (typeof PECAS)[number];
-export const NOME_DA_PECA: Record<Peca, string> = { body: "body", macacao: "macacão", fralda: "fraldinha", babador: "babador", meinha: "meinha" };
-/** A peça guardada numa jogada antiga pode não existir mais no varal (a touca virou fralda): cai na do meio. */
-export const pecaValida = (valor: unknown): Peca => PECAS.find((peca) => peca === valor) ?? "fralda";
+export const NOME_DA_PECA: Record<Peca, string> = { body: "body", macacao: "macacão", vestido: "vestidinho", babador: "babador", meinha: "meinha" };
+/** A peça guardada numa jogada antiga pode não existir mais no varal (a do meio já foi touca e fraldinha): cai no vestidinho. */
+export const pecaValida = (valor: unknown): Peca => PECAS.find((peca) => peca === valor) ?? "vestido";
 
 /** Um prêmio do sorteio: desconto em percentual ou em valor fixo (centavos), a chance (peso) e o prefixo do código. */
 export type PremioVaral = { tipo: "percentual" | "valor"; valor: number; chance: number; prefixo: string };

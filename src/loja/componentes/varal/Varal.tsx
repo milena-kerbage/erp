@@ -6,7 +6,7 @@ import { cx } from "styled-system/css";
 import { Dialogo } from "@/loja/componentes/carrinho/Dialogo";
 import { botaoContorno, botaoEscuro, largo } from "@/loja/componentes/carrinho/estilos";
 import { salvarPreferenciasCompra } from "@/loja/componentes/carrinho/estado";
-import { Check, Copy } from "@/loja/componentes/icones";
+import { Bag, CalendarCheck, Check, Copy, Tag } from "@/loja/componentes/icones";
 import { mascararTelefone, NOME_DA_PECA, normalizarTelefoneVaral, PECAS, pecaValida, type Peca, type ResultadoVaral } from "@/loja/lib/varal/regras";
 import { guardarResultadoVaral, useResultadoVaral, varalVencido } from "./guardado";
 import { Brilho, Pregadores, Roupinha } from "./Roupinhas";
@@ -43,11 +43,25 @@ const BRILHOS: { top: string; left: string; tam: string; dur: string; atraso: st
   { top: "58%", left: "50%", tam: "9px", dur: "5.6s", atraso: "3.4s", tom: "salvia" },
 ];
 
-/** Confetes da revelação: o ângulo, a distância e a cor (tons pastel das roupinhas). */
-const CONFETES = ["#FBDDE2", "#D9EAF6", "#FCF1C6", "#E9DFF7", "#DCEBD3", "#FFFFFF"].flatMap((cor, indice) => [
-  { cor, ang: indice * 60 - 20, dist: 64 + (indice % 3) * 18 },
-  { cor, ang: indice * 60 + 14, dist: 44 + ((indice + 1) % 3) * 16 },
-]);
+/** Sorteio de enfeite (posição dos confetes), sempre igual: nada a ver com o prêmio, que vem do servidor. */
+function enfeite(semente: number) {
+  let valor = semente;
+  return () => (valor = (valor * 1664525 + 1013904223) % 4294967296) / 4294967296;
+}
+const PASTEIS = ["#FBDDE2", "#D9EAF6", "#FCF1C6", "#E9DFF7", "#DCEBD3", "#FFFFFF", "#F1DFC4"];
+/** O estouro de trás da etiqueta: muitos confetes, em todas as direções, uns mais longe que outros. */
+const CONFETES = (() => {
+  const acaso = enfeite(11);
+  return Array.from({ length: 44 }, (_, indice) => ({ cor: PASTEIS[indice % PASTEIS.length], ang: Math.round(acaso() * 360), dist: Math.round(70 + acaso() * 230), atraso: Math.round(acaso() * 260) }));
+})();
+/** A chuva de confete pela cena toda, caindo devagar depois do estouro. */
+const CHUVA = (() => {
+  const acaso = enfeite(29);
+  return Array.from({ length: 64 }, (_, indice) => ({
+    cor: PASTEIS[indice % PASTEIS.length], x: Math.round(acaso() * 100), tam: 6 + Math.round(acaso() * 6), prop: acaso() > 0.6 ? 1.8 : 1,
+    dur: 3200 + Math.round(acaso() * 2600), atraso: 900 + Math.round(acaso() * 2200), deriva: Math.round((acaso() - 0.5) * 120), giro: Math.round((acaso() - 0.5) * 900),
+  }));
+})();
 
 type Fase = "convite" | "escolha" | "foco" | "sorteando" | "caindo" | "misterio" | "etiqueta" | "fechado";
 
@@ -220,7 +234,7 @@ export function Varal() {
               style={{ "--x": lugar.x, "--y": lugar.y } as CSSProperties}>
               {virada && !anterior && (
                 <span className={estilos.estouro} aria-hidden>
-                  {CONFETES.map((confete, ordem) => <i key={ordem} style={{ "--cor": confete.cor, "--ang": `${confete.ang}deg`, "--dist": `${confete.dist}px` } as CSSProperties} />)}
+                  {CONFETES.map((confete, ordem) => <i key={ordem} style={{ "--cor": confete.cor, "--ang": `${confete.ang}deg`, "--dist": `${confete.dist}px`, "--atraso": `${confete.atraso}ms` } as CSSProperties} />)}
                 </span>
               )}
               <span className={estilos.cartao}>
@@ -231,6 +245,15 @@ export function Varal() {
           );
         })()}
       </div>
+
+      {/* A festa: quando a etiqueta vira nesta visita, chove confete pela cena toda */}
+      {resultado && fase === "etiqueta" && (
+        <span className={estilos.chuva} aria-hidden>
+          {CHUVA.map((gota, ordem) => (
+            <i key={ordem} style={{ "--cor": gota.cor, "--x": gota.x, "--tam": `${gota.tam}px`, "--prop": gota.prop, "--dur": `${gota.dur}ms`, "--atraso": `${gota.atraso}ms`, "--deriva": `${gota.deriva}px`, "--giro": `${gota.giro}deg` } as CSSProperties} />
+          ))}
+        </span>
+      )}
 
       <div className={estilos.base}>
         <p role="status" aria-live="polite" className={estilos.regra}>
@@ -272,14 +295,39 @@ export function Varal() {
         </div>}>
         {premiado && (
           <div className={estilos.premio}>
+            {/* A peça que ela escolheu, pendurada num pedacinho de varal */}
+            <span className={estilos.lembranca} aria-hidden>
+              <svg className={estilos.corda} viewBox="0 0 1000 26" preserveAspectRatio="none" focusable="false">
+                <path className={estilos.fio} d="M0 4 Q500 24 1000 4" />
+              </svg>
+              <Brilho className={estilos.brilho} style={{ top: "30%", left: "24%", "--tam": "12px", "--dur": "3.2s" } as CSSProperties} />
+              <Brilho className={estilos.brilho} data-tom="lilas" style={{ top: "58%", left: "72%", "--tam": "10px", "--dur": "4s", "--atraso": "0.8s" } as CSSProperties} />
+              <span className={estilos.lugar}>
+                <Roupinha peca={pecaValida(premiado.peca)} />
+                <Pregadores peca={pecaValida(premiado.peca)} className={estilos.pregadores} />
+              </span>
+            </span>
             <p className={estilos.ganhou}>{premiado.jaJogou ? "Seu mimo continua valendo" : "Você ganhou"}</p>
             <p className={estilos.valor}>{premiado.premio}</p>
             <div className={estilos.pano}>
               <small>seu cupom</small>
               <code ref={codigo} className={estilos.codigo} aria-label={`Código do cupom: ${premiado.codigo}`}>{premiado.codigo}</code>
             </div>
-            <p>{premiado.condicoes} Já está na sua sacola.</p>
-            <p aria-live="polite" style={{ minHeight: "1.4em" }}>{copiado ? "Cupom copiado." : ""}</p>
+            <dl className={estilos.detalhes}>
+              <div>
+                <dt><CalendarCheck size={14} aria-hidden /> Validade</dt>
+                <dd>até {new Date(premiado.validoAte).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "")}</dd>
+              </div>
+              <div>
+                <dt><Tag size={14} aria-hidden /> Pedido mínimo</dt>
+                <dd>{premiado.minimoCentavos > 0 ? `R$ ${(premiado.minimoCentavos / 100).toLocaleString("pt-BR", premiado.minimoCentavos % 100 ? { minimumFractionDigits: 2 } : undefined)}` : "Sem mínimo"}</dd>
+              </div>
+              <div>
+                <dt><Bag size={14} aria-hidden /> Onde usar</dt>
+                <dd>Já está na sua sacola</dd>
+              </div>
+            </dl>
+            <p aria-live="polite" style={{ minHeight: "1.4em" }}>{copiado ? "Cupom copiado." : "Um cupom por pedido, enviado pelo WhatsApp."}</p>
           </div>
         )}
       </Dialogo>
