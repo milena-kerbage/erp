@@ -173,7 +173,7 @@ function DetalhePedido({ pedido, onFechar, onAtualizado }: { pedido: PedidoLoja 
   const whatsapp = pedido && !pedido.anonimizado && pedido.whatsapp ? whatsappHref(pedido.whatsapp, mensagemCliente(pedido)) : null;
 
   const bebe = extra?.cliente?.bebe;
-  return <Dialog open={Boolean(pedido)} onClose={() => { if (!salvando) onFechar(); }} width="66rem" title={pedido ? `Pedido ${pedido.numero}` : "Pedido"} description={pedido ? `Enviado em ${dataHora(pedido.criadoEm)} · ${plural(pedido.quantidade, "peça", "peças")} · a partir de ${dinheiro(pedido.totalCentavos)}` : undefined}
+  return <Dialog open={Boolean(pedido)} onClose={() => { if (!salvando) onFechar(); }} width="66rem" height="56rem" title={pedido ? `Pedido ${pedido.numero}` : "Pedido"} description={pedido ? `Enviado em ${dataHora(pedido.criadoEm)} · ${plural(pedido.quantidade, "peça", "peças")} · a partir de ${dinheiro(pedido.totalCentavos)}` : undefined}
     footer={<Actions>{whatsapp && <Button icon={WhatsappLogoIcon} onClick={() => abrirJanela(whatsapp)}>Conversar no WhatsApp</Button>}<Button variant="ghost" disabled={salvando} onClick={onFechar}>Fechar</Button></Actions>}>
     {pedido && <Corpo>
       {/* À esquerda, o que foi pedido (com a foto de cada peça) e os valores. À direita, o andamento, a cliente e a entrega. */}
@@ -217,7 +217,7 @@ function DetalhePedido({ pedido, onFechar, onAtualizado }: { pedido: PedidoLoja 
 
       <Lateral>
         <Bloco aria-label="Andamento do pedido">
-          <TituloBloco>Andamento <EtapaPill status={pedido.status} curta /></TituloBloco>
+          <TituloBloco>Andamento <Selo data-cancelado={pedido.status === "cancelado" || undefined}>{ETAPA_CURTA[pedido.status]}</Selo></TituloBloco>
           <LinhaDoTempo pedido={pedido} />
           <Select label="Mudar etapa" options={opcoes} value={pedido.status} onChange={(status) => void mudar(status)} hint={salvando ? "Salvando…" : "A cliente vê a etapa em Minha conta."} />
           {erro && <Notice role="alert">{erro}</Notice>}
@@ -271,7 +271,7 @@ function LinhaDoTempo({ pedido }: { pedido: PedidoLoja }) {
     {ETAPAS_AVANCO.map((chave, indice) => {
       const feito = indice < atual, agora = indice === atual;
       const quando = indice === 0 ? dataHora(pedido.criadoEm) : agora ? `desde ${dataHora(pedido.atualizadoEm)}` : feito ? "concluído" : "aguardando";
-      return <Passo key={chave} $tom={TOM_ETAPA[chave]} $estado={feito ? "feito" : agora ? "agora" : "falta"} aria-current={agora ? "step" : undefined}>
+      return <Passo key={chave} $estado={feito ? "feito" : agora ? "agora" : "falta"} aria-current={agora ? "step" : undefined}>
         <i aria-hidden>{feito ? <CheckIcon size={11} weight="bold" /> : agora ? <b /> : null}</i>
         <div><strong>{STATUS_PEDIDO[chave]}</strong><Sub>{quando}</Sub></div>
       </Passo>;
@@ -280,27 +280,40 @@ function LinhaDoTempo({ pedido }: { pedido: PedidoLoja }) {
 }
 
 const SelectCurto = styled.div`&&& { flex: 0 0 13rem; } min-width: 0; ${({ theme }) => theme.media.sm} { &&& { flex: 1 1 100%; } }`;
-/** Duas colunas: o pedido à esquerda e, à direita, o andamento, a cliente e a entrega. No celular, uma embaixo da outra. */
-const Corpo = styled.div`display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(17rem, 1fr); align-items: start; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0; @media (max-width: 860px) { grid-template-columns: minmax(0, 1fr); }`;
-const Principal = styled.div`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0;`;
-const Lateral = styled.aside`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0;`;
+/**
+ * Duas colunas numa grade contínua, como o Painel: os blocos se dividem só pelas linhas, ocupam a altura toda da
+ * janela e as duas colunas fecham juntas (o último bloco de cada uma estica). No celular, uma embaixo da outra.
+ */
+const Corpo = styled.div`
+  display: grid; flex: 1; grid-template-columns: minmax(0, 1.6fr) minmax(17rem, 1fr); align-items: stretch; min-width: 0; min-height: min-content;
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: ${({ theme }) => theme.radii.md}; overflow: hidden;
+  @media (max-width: 860px) { grid-template-columns: minmax(0, 1fr); }
+`;
+const Principal = styled.div`display: flex; flex-direction: column; min-width: 0; > :last-child { flex: 1; }`;
+const Lateral = styled.aside`display: flex; flex-direction: column; min-width: 0; border-left: 1px solid ${({ theme }) => theme.colors.border.subtle}; > :last-child { flex: 1; }
+  @media (max-width: 860px) { border-left: 0; border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }`;
 const Bolinha = styled("span", transientOptions)<{ $tom: Tone }>`display: block; width: 0.625rem; height: 0.625rem; border-radius: 50%; background: ${({ theme, $tom }) => theme.tones[$tom].fg};`;
-/** Cada assunto no seu cartão: borda fina, canto leve e o título em cima. */
-const Bloco = styled.section`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0; padding: ${({ theme }) => theme.spacing(4)}; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.palette.neutral[0]};`;
+/** Cada assunto no seu bloco, com o título em cima; a linha de baixo separa do próximo. */
+const Bloco = styled.section`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0; padding: ${({ theme }) => theme.spacing(4)}; background: ${({ theme }) => theme.palette.neutral[0]};
+  & + & { border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }`;
 const TituloBloco = styled.h3`display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.spacing(2)}; min-height: 1.5rem; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary};
   > em { margin-right: auto; font-style: normal; padding: 0 ${({ theme }) => theme.spacing(1.5)}; border-radius: 999px; background: ${({ theme }) => theme.palette.neutral[100]}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.6875rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; line-height: 1.25rem; }`;
+/** A etapa atual ao lado do título, na sálvia da marca (cancelado em rosa). */
+const Selo = styled.span`padding: 0 ${({ theme }) => theme.spacing(2)}; border-radius: ${({ theme }) => theme.radii.sm}; background: ${({ theme }) => theme.palette.sage[100]}; color: ${({ theme }) => theme.palette.sage[700]}; font-size: 0.75rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; line-height: 1.375rem; white-space: nowrap;
+  &[data-cancelado] { background: ${({ theme }) => theme.tones.rose.soft}; color: ${({ theme }) => theme.tones.rose.fg}; }`;
 
 const Tempo = styled.ol`display: flex; flex-direction: column; list-style: none;`;
-const Passo = styled("li", transientOptions)<{ $tom: Tone; $estado: "feito" | "agora" | "falta" }>`
+/** A linha do tempo na paleta da marca: sálvia cheia nas etapas concluídas, anel sálvia na atual, neutro no que falta. */
+const Passo = styled("li", transientOptions)<{ $estado: "feito" | "agora" | "falta" }>`
   position: relative; display: grid; grid-template-columns: 1.375rem minmax(0, 1fr); gap: ${({ theme }) => theme.spacing(2.5)}; padding-bottom: ${({ theme }) => theme.spacing(3.5)}; font-size: 0.8125rem; line-height: 1.3;
   &:last-of-type { padding-bottom: 0; }
-  /* O fio que liga ao próximo marcador: colorido até a etapa atual */
+  /* O fio que liga ao próximo marcador: sálvia até a etapa atual */
   &:not(:last-of-type)::before { content: ""; position: absolute; top: 1.5rem; bottom: 2px; left: calc(0.6875rem - 1px); width: 2px; border-radius: 2px;
-    background: ${({ theme, $tom, $estado }) => ($estado === "feito" ? theme.tones[$tom].fg : theme.palette.neutral[200])}; }
+    background: ${({ theme, $estado }) => ($estado === "feito" ? theme.palette.sage[400] : theme.palette.neutral[200])}; }
   > i { display: grid; place-items: center; width: 1.375rem; height: 1.375rem; border-radius: 50%; color: ${({ theme }) => theme.palette.neutral[0]};
-    background: ${({ theme, $tom, $estado }) => ($estado === "feito" ? theme.tones[$tom].fg : $estado === "agora" ? theme.tones[$tom].soft : theme.palette.neutral[0])};
-    box-shadow: inset 0 0 0 ${({ $estado }) => ($estado === "falta" ? "1.5px" : $estado === "agora" ? "2px" : "0")} ${({ theme, $tom, $estado }) => ($estado === "agora" ? theme.tones[$tom].fg : theme.palette.neutral[300])}; }
-  > i b { display: block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: ${({ theme, $tom }) => theme.tones[$tom].fg}; }
+    background: ${({ theme, $estado }) => ($estado === "feito" ? theme.palette.sage[500] : $estado === "agora" ? theme.palette.sage[100] : theme.palette.neutral[0])};
+    box-shadow: inset 0 0 0 ${({ $estado }) => ($estado === "falta" ? "1.5px" : $estado === "agora" ? "2px" : "0")} ${({ theme, $estado }) => ($estado === "agora" ? theme.palette.sage[500] : theme.palette.neutral[300])}; }
+  > i b { display: block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: ${({ theme }) => theme.palette.sage[600]}; }
   strong { display: block; padding-top: 2px; font-weight: ${({ theme, $estado }) => ($estado === "agora" ? theme.fontWeights.semibold : theme.fontWeights.medium)}; color: ${({ theme, $estado }) => ($estado === "falta" ? theme.colors.text.muted : theme.colors.text.primary)}; }
 `;
 const Cancelado = styled.p`display: flex; align-items: center; gap: ${({ theme }) => theme.spacing(1.5)}; padding: ${({ theme }) => theme.spacing(2, 3)}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.tones.rose.bg}; color: ${({ theme }) => theme.tones.rose.fg}; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.medium};`;
