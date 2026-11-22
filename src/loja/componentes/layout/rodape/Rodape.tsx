@@ -25,6 +25,8 @@ const ATALHOS: LinkRodape[] = [
   { rotulo: "Minha conta", href: LINKS_UTILITARIOS.conta.href },
   { rotulo: "Nossa história", href: "/sobre" },
   { rotulo: LINKS_UTILITARIOS.indique.rotulo, href: LINKS_UTILITARIOS.indique.href },
+  // O minigame de cupom (módulo Marketing do ERP).
+  { rotulo: "Varal de roupinhas", href: "/varal" },
 // Sem os módulos desligados (src/loja/lib/modulos.ts).
 ].filter((link) => !rotaOculta(link.href));
 

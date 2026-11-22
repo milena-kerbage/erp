@@ -1,0 +1,494 @@
+/* Varal de roupinhas: a cena e as animações. As cores da marca ficam em variáveis aqui em cima (as mesmas do tema da
+   loja); as das roupinhas estão no desenho (Roupinhas.tsx). */
+
+.raiz {
+  --v-marca: #616d54;
+  --v-escuro: #3c4435;
+  --v-texto: #434b3b;
+  --v-suave: #5e6852;
+  --v-linho: #f3efe6;
+  --v-borda: #e3e5dc;
+  --v-corda: #b9a98c;
+  --v-etiqueta: #f9e4a3;
+  --v-etiqueta-borda: #d8b853;
+  position: relative;
+  isolation: isolate;
+  overflow: clip visible;
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / 0.85) 0%, transparent 62%),
+    linear-gradient(180deg, #f6f1e7 0%, #f3efe6 55%, #eef0e6 100%);
+  padding: clamp(20px, 4vw, 40px) clamp(12px, 3vw, 32px) clamp(24px, 4vw, 40px);
+  color: var(--v-texto);
+}
+
+/* ---------- Brilhos (o mistério da cena) ---------- */
+
+.brilho {
+  position: absolute;
+  z-index: -1;
+  width: var(--tam, 14px);
+  height: var(--tam, 14px);
+  color: #e9cf7f;
+  opacity: 0;
+  animation: cintilar var(--dur, 3.6s) ease-in-out var(--atraso, 0s) infinite;
+}
+.brilho[data-tom="lilas"] { color: #cdb8e8; }
+.brilho[data-tom="salvia"] { color: #b7c3a6; }
+
+@keyframes cintilar {
+  0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  45% { opacity: 0.95; transform: scale(1) rotate(20deg); }
+  60% { opacity: 0.6; transform: scale(0.85) rotate(28deg); }
+}
+
+/* ---------- A cena ---------- */
+
+/* O varal vai de ponta a ponta do bloco: a corda nasce num gancho de cada lado */
+.cena {
+  position: relative;
+  margin: 0 calc(clamp(12px, 3vw, 32px) * -1);
+  /* A largura de cada peça: no mínimo 58px (área de toque folgada), no máximo 128px */
+  --peca: clamp(58px, 17cqi, 128px);
+  container-type: inline-size;
+  height: calc(70px + var(--peca) * 1.32);
+}
+
+.corda {
+  position: absolute;
+  inset: 0 0 auto;
+  width: 100%;
+  height: 70px;
+  overflow: visible;
+  pointer-events: none;
+}
+.corda path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.fio { stroke: var(--v-corda); stroke-width: 3; }
+.torcido { stroke: #a39274; stroke-width: 1; stroke-dasharray: 3 5; }
+/* A peça caiu: a corda dá um tranco */
+.cena[data-fase="caindo"] .corda { animation: tranco 620ms cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes tranco {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
+  60% { transform: translateY(3px); }
+  100% { transform: translateY(0); }
+}
+
+/* Os ganchos onde a corda prende, um em cada ponta */
+.gancho {
+  position: absolute;
+  top: -3px;
+  z-index: 1;
+  width: 9px;
+  height: 22px;
+  border: 1.5px solid #a39274;
+  background: #e9dcc3;
+}
+.gancho[data-lado="inicio"] { left: 0; border-left: 0; border-radius: 0 6px 6px 0; }
+.gancho[data-lado="fim"] { right: 0; border-right: 0; border-radius: 6px 0 0 6px; }
+
+/* Cada peça fica pendurada no ponto da corda (--x em %, --y em px) e gira em torno do pregador */
+.lugar {
+  position: absolute;
+  top: calc(var(--y) * 1px - var(--peca) * 0.105);
+  left: calc(var(--x) * 1%);
+  width: var(--peca);
+  margin-left: calc(var(--peca) / -2);
+  transform-origin: 50% 9%;
+  animation: balanco var(--dur) ease-in-out var(--atraso) infinite alternate;
+}
+@keyframes balanco {
+  from { transform: rotate(calc(var(--giro) * -1)); }
+  to { transform: rotate(var(--giro)); }
+}
+/* O tranco da corda sacode as vizinhas */
+.cena[data-fase="caindo"] .lugar:not([data-escolhida]) { animation: sacudir 700ms ease-out; }
+@keyframes sacudir {
+  0% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(-5deg) translateY(-4px); }
+  55% { transform: rotate(4deg) translateY(2px); }
+  100% { transform: rotate(0deg) translateY(0); }
+}
+
+/* Os pregadores ficam na corda (por cima da peça) */
+.pregadores { position: absolute; inset: 0 0 auto; z-index: 1; display: block; pointer-events: none; }
+.lugar[data-estado="caindo"] .pregadores { animation: estalo 420ms cubic-bezier(0.3, 1.8, 0.5, 1); transform-origin: 50% 10%; }
+@keyframes estalo {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18, 0.86) rotate(-6deg); }
+  70% { transform: scale(0.94, 1.08) rotate(4deg); }
+  100% { transform: none; }
+}
+.lugar[data-estado="foi"] .pregadores,
+.lugar[data-estado="misterio"] .pregadores { opacity: 0; transition: opacity 300ms ease; }
+
+.peca {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform-origin: 50% 9%;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 6px 8px rgb(60 68 53 / 0.1));
+  transition: filter 240ms ease, opacity 420ms ease;
+  /* Chegada: as peças são penduradas uma a uma */
+  animation: pendurar 700ms cubic-bezier(0.34, 1.4, 0.64, 1) calc(var(--ordem) * 90ms) backwards;
+}
+.peca svg { display: block; }
+@keyframes pendurar {
+  from { opacity: 0; transform: translateY(-26px) rotate(-10deg) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+.peca:focus-visible { outline: 2px solid var(--v-marca); outline-offset: 4px; border-radius: 12px; }
+
+/* Liberou a escolha: as peças dão um pulinho, uma depois da outra, chamando para o jogo */
+.cena[data-fase="escolha"] .peca { animation: acordar 620ms cubic-bezier(0.34, 1.5, 0.6, 1) calc(var(--ordem) * 110ms) backwards; }
+@keyframes acordar {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-12px) scale(1.06) rotate(-4deg); }
+  70% { transform: translateY(3px) scale(0.98) rotate(3deg); }
+  100% { transform: none; }
+}
+/* Convite a tocar: a peça balança mais rápido e ganha um brilho */
+.cena[data-fase="escolha"] .peca:hover,
+.cena[data-fase="escolha"] .peca:focus-visible {
+  animation: chamar 480ms ease-in-out infinite alternate;
+  filter: drop-shadow(0 12px 16px rgb(60 68 53 / 0.18)) brightness(1.03);
+}
+@keyframes chamar {
+  from { transform: rotate(-6deg) scale(1.05); }
+  to { transform: rotate(6deg) scale(1.05); }
+}
+
+/* Antes do e-mail: o varal aparece, mas ainda não responde */
+.cena[data-fase="convite"] .peca,
+.cena[data-fase="fechado"] .peca { cursor: default; pointer-events: none; }
+.cena[data-fase="fechado"] .peca { opacity: 0.45; filter: grayscale(0.35); }
+
+/* Escolheu: as outras esmaecem e param de responder */
+.cena[data-escolhida] .lugar:not([data-escolhida]) .peca { opacity: 0.3; pointer-events: none; filter: saturate(0.6); }
+.cena[data-escolhida] .lugar:not([data-escolhida]) .pregadores { opacity: 0.45; }
+
+/* Suspense: a escolhida balança cada vez mais, com um halo pulsando atrás e estrelinhas girando em volta */
+.lugar[data-estado="sorteando"] { animation: none; z-index: 2; }
+.lugar[data-estado="sorteando"] .peca { pointer-events: none; animation: suspense 1500ms ease-in-out infinite; filter: drop-shadow(0 12px 18px rgb(97 109 84 / 0.28)) brightness(1.04); }
+@keyframes suspense {
+  0% { transform: rotate(0deg) scale(1.04); }
+  12% { transform: rotate(-5deg) scale(1.05); }
+  26% { transform: rotate(6deg) scale(1.06); }
+  40% { transform: rotate(-8deg) scale(1.07); }
+  54% { transform: rotate(9deg) scale(1.08); }
+  68% { transform: rotate(-10deg) scale(1.08); }
+  82% { transform: rotate(8deg) scale(1.07); }
+  100% { transform: rotate(0deg) scale(1.04); }
+}
+.halo {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  z-index: -1;
+  width: 150%;
+  aspect-ratio: 1;
+  margin-left: -75%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.95), rgb(233 223 247 / 0.55) 55%, transparent 72%);
+  opacity: 0;
+  pointer-events: none;
+}
+.lugar[data-estado="sorteando"] .halo { animation: pulsar 900ms ease-in-out infinite alternate; }
+@keyframes pulsar {
+  from { opacity: 0.35; transform: scale(0.82); }
+  to { opacity: 1; transform: scale(1.06); }
+}
+.orbita {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  margin-left: -75%;
+  pointer-events: none;
+  opacity: 0;
+}
+.lugar[data-estado="sorteando"] .orbita { opacity: 1; animation: orbitar 2.4s linear infinite; transition: opacity 300ms ease; }
+@keyframes orbitar { to { transform: rotate(360deg); } }
+.orbita svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 13px;
+  height: 13px;
+  margin: -6.5px;
+  color: #e9cf7f;
+  transform: rotate(var(--ang)) translateY(calc(var(--peca) * -0.74));
+  animation: piscar 700ms ease-in-out calc(var(--ordem) * 110ms) infinite alternate;
+}
+.orbita svg:nth-of-type(even) { color: #cdb8e8; width: 10px; height: 10px; margin: -5px; }
+@keyframes piscar {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+
+/* O pregador solta: a peça dá um pulinho, rodopia e cai para fora da tela */
+.lugar[data-estado="caindo"] { animation: none; z-index: 2; }
+.lugar[data-estado="caindo"] .peca {
+  pointer-events: none;
+  animation: queda 1100ms cubic-bezier(0.55, 0, 0.9, 0.45) forwards;
+}
+@keyframes queda {
+  0% { transform: translateY(0) rotate(0deg) scale(1.04); opacity: 1; }
+  16% { transform: translateY(-16px) rotate(-12deg) scale(1.08); opacity: 1; }
+  30% { transform: translateY(-4px) rotate(14deg) scale(1.04); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(200deg) scale(0.9); opacity: 0; }
+}
+.lugar[data-estado="foi"] .peca,
+.lugar[data-estado="misterio"] .peca { visibility: hidden; }
+.lugar[data-estado="foi"], .lugar[data-estado="misterio"] { animation: none; }
+
+/* ---------- A etiqueta do prêmio ---------- */
+
+/* Desce da corda fechada, com um "?", e depois vira para mostrar o prêmio. Na cor da marca. */
+.etiqueta {
+  position: absolute;
+  top: calc(var(--y) * 1px);
+  left: calc(var(--x) * 1%);
+  z-index: 3;
+  width: max-content;
+  min-width: 112px;
+  max-width: min(52cqi, 200px);
+  translate: var(--desloc, -50%) 0;
+  transform-origin: var(--eixo, 50%) 0;
+  perspective: 600px;
+  animation: etiqueta-desce 640ms cubic-bezier(0.34, 1.6, 0.5, 1) both, etiqueta-balanca 2.6s ease-in-out 700ms infinite alternate;
+}
+/* Nas pontas, a etiqueta abre para dentro da cena */
+.etiqueta[data-borda="inicio"] { --desloc: -24%; --eixo: 24%; }
+.etiqueta[data-borda="fim"] { --desloc: -76%; --eixo: 76%; }
+.etiqueta[data-quieta] { animation: etiqueta-balanca 2.6s ease-in-out infinite alternate; }
+
+.etiqueta::before {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 18px;
+  margin-left: calc(var(--eixo, 50%) - 1px);
+  background: var(--v-corda);
+}
+
+.cartao { position: relative; display: block; transform-style: preserve-3d; transition: transform 760ms cubic-bezier(0.3, 1.4, 0.5, 1); }
+.etiqueta[data-virada] .cartao { transform: rotateY(180deg); }
+.etiqueta:not([data-virada]) .cartao { animation: curiosidade 520ms ease-in-out 640ms infinite alternate; }
+@keyframes curiosidade {
+  from { transform: rotateY(0deg) rotate(-3deg) scale(1); }
+  to { transform: rotateY(0deg) rotate(3deg) scale(1.06); }
+}
+
+.face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  padding: 14px 16px 11px;
+  border: 1.5px solid #4d5743;
+  border-radius: 10px;
+  background: var(--v-marca);
+  box-shadow: 0 10px 18px rgb(60 68 53 / 0.2);
+  color: #fff;
+  font-size: clamp(14px, 3.8cqi, 18px);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+/* O furinho da etiqueta */
+.face::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #f3efe6;
+  box-shadow: inset 0 0 0 1.5px #4d5743;
+}
+.face[data-lado="frente"] { position: absolute; inset: 0; background: #788569; font-size: 26px; font-weight: 600; }
+.face[data-lado="verso"] { transform: rotateY(180deg); }
+
+@keyframes etiqueta-desce {
+  0% { opacity: 0; transform: translateY(-18px) scale(0.2, 0.05) rotate(-10deg); }
+  60% { opacity: 1; transform: translateY(4px) scale(1.06) rotate(4deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes etiqueta-balanca {
+  from { rotate: -2.5deg; }
+  to { rotate: 2.5deg; }
+}
+
+/* A festa quando o prêmio aparece: confetes em tons pastel saltando de trás da etiqueta */
+.estouro { position: absolute; top: 46px; left: var(--eixo, 50%); width: 0; height: 0; pointer-events: none; }
+.estouro i {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px;
+  border-radius: 2px;
+  background: var(--cor);
+  opacity: 0;
+  animation: estourar 1000ms cubic-bezier(0.15, 0.7, 0.3, 1) 380ms both;
+}
+.estouro i:nth-of-type(3n) { border-radius: 50%; width: 7px; height: 7px; }
+.estouro i:nth-of-type(4n) { width: 5px; height: 11px; }
+@keyframes estourar {
+  0% { opacity: 0; transform: rotate(var(--ang)) translateY(0) scale(0.4); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--ang)) translateY(calc(var(--dist) * -1)) rotate(180deg) scale(1); }
+}
+
+/* ---------- Textos e formulário ---------- */
+
+.topo { max-width: 34rem; margin: 0 auto clamp(18px, 3vw, 28px); text-align: center; }
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.7);
+  box-shadow: inset 0 0 0 1px var(--v-borda);
+  color: var(--v-suave);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.selo img { display: block; width: 13px; height: 13px; opacity: 0.85; }
+.titulo { color: var(--v-escuro); font-size: clamp(26px, 5vw, 40px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; text-wrap: balance; }
+.instrucao { margin-top: 10px; color: var(--v-suave); font-size: clamp(15px, 2.4vw, 18px); line-height: 1.45; text-wrap: balance; }
+
+.base { max-width: 30rem; margin: clamp(14px, 3vw, 24px) auto 0; text-align: center; }
+.regra { color: var(--v-suave); font-size: 13px; }
+.aviso { margin-top: 10px; color: #b03a26; font-size: 14px; }
+
+.convite {
+  display: grid;
+  gap: 12px;
+  padding: clamp(16px, 3vw, 22px);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.86);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 10px 30px rgb(60 68 53 / 0.08);
+  text-align: left;
+  animation: subir 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 260ms both;
+}
+@keyframes subir {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.convite label { color: var(--v-escuro); font-size: 14px; font-weight: 600; }
+.convite input[type="email"] {
+  width: 100%;
+  height: 48px;
+  margin-top: 6px;
+  padding: 0 14px;
+  border: 1px solid #c9cdc0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--v-escuro);
+  font: inherit;
+  font-size: 16px;
+}
+.convite input[type="email"]:focus { outline: 2px solid var(--v-marca); outline-offset: 1px; border-color: transparent; }
+.convite input[aria-invalid="true"] { border-color: #b03a26; }
+.aceite { display: flex; align-items: flex-start; gap: 10px; color: var(--v-suave); font-size: 13px; font-weight: 400 !important; line-height: 1.45; }
+.aceite input { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; accent-color: var(--v-marca); }
+.aceite a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.erro { color: #b03a26; font-size: 13px; }
+
+/* ---------- A janela do prêmio ---------- */
+
+.premio { display: grid; gap: 14px; text-align: center; }
+.premio p { color: var(--v-suave); font-size: 15px; line-height: 1.5; }
+.premio .ganhou { color: var(--v-suave); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.premio .valor { color: var(--v-escuro); font-size: clamp(30px, 8vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
+.codigo {
+  display: block;
+  padding: 16px 12px;
+  border: 2px dashed #b9a98c;
+  border-radius: 12px;
+  background: #fffdf4;
+  color: var(--v-escuro);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(20px, 6vw, 26px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  user-select: all;
+  -webkit-user-select: all;
+  word-break: break-all;
+}
+.acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 420px) { .acoes { grid-template-columns: 1fr; } }
+
+/* ---------- Chamada (home, sacola) ---------- */
+
+/* A chamada vive fora da cena do jogo: leva as mesmas variáveis de cor */
+.raizChamada {
+  --v-marca: #616d54;
+  --v-escuro: #3c4435;
+  --v-texto: #434b3b;
+  --v-suave: #5e6852;
+  --v-corda: #b9a98c;
+}
+
+.chamada {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  overflow: hidden;
+  padding: clamp(16px, 3vw, 22px) clamp(16px, 4vw, 32px);
+  border-radius: 16px;
+  background: linear-gradient(100deg, #f6f1e7 0%, #f1eee2 55%, #eaeedf 100%);
+  color: var(--v-texto);
+  text-decoration: none;
+}
+.chamada strong { display: block; color: var(--v-escuro); font-size: clamp(17px, 2.6vw, 22px); font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+.chamada small { display: block; margin-top: 3px; color: var(--v-suave); font-size: 14px; line-height: 1.4; }
+.chamada .texto { flex: 1 1 14rem; min-width: 0; }
+.miniVaral { position: relative; display: block; flex: 0 0 auto; width: 168px; height: 74px; --peca: 40px; }
+.miniVaral .lugar { display: block; }
+.miniVaral .lugar { top: calc(var(--y) * 1px - 4px); }
+.miniVaral .corda { height: 26px; }
+.botaoChamada {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--v-marca);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+.chamada:hover .botaoChamada { background: #4d5743; transform: translateX(2px); }
+.chamada:hover .lugar { animation-duration: 0.9s; }
+
+/* ---------- Quem prefere menos animação ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .lugar, .peca, .brilho, .etiqueta, .convite, .corda, .pregadores, .cartao, .halo, .orbita, .orbita svg, .estouro i { animation: none !important; transition: none !important; }
+  .brilho { opacity: 0.6; }
+  .orbita, .halo, .estouro { display: none; }
+  .lugar[data-estado="caindo"] .peca { visibility: hidden; }
+}

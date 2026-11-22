@@ -55,7 +55,7 @@ export function PainelEcommerce() {
       <MobileHeaderSlot />
     </Topo>
 
-    {restrito ? <AvisoRestrito area="O painel do e-commerce" /> : erro ? <div role="alert"><p>{erro}</p><Button variant="secondary" onClick={() => void recarregar()}>Tentar novamente</Button></div> : !atual ? <Esqueleto carregando={carregando} /> : vazio ? <Vazio periodo={PERIODOS.find((item) => item.value === periodo)!.dias} /> : <>
+    {restrito ? <AvisoRestrito area="O painel do site" /> : erro ? <div role="alert"><p>{erro}</p><Button variant="secondary" onClick={() => void recarregar()}>Tentar novamente</Button></div> : !atual ? <Esqueleto carregando={carregando} /> : vazio ? <Vazio periodo={PERIODOS.find((item) => item.value === periodo)!.dias} /> : <>
       <Quadro>
       <Indicadores dados={atual} />
       <Grade>

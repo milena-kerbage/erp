@@ -58,6 +58,7 @@ export function schemaPerguntas(perguntas: Array<{ pergunta: string; resposta: s
 export const PAGINAS_INSTITUCIONAIS = [
   "/sobre",
   "/indique",
+  "/varal",
   "/ajuda",
   "/ajuda/como-fazer-pedido",
   "/ajuda/entregas",

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   CaretDownIcon, ChatCircleTextIcon, ClipboardTextIcon, CodeIcon, FolderSimpleIcon, FunnelIcon, ImagesIcon, ListIcon, LockSimpleIcon, PackageIcon, PersonArmsSpreadIcon, PlugsIcon,
-  ShoppingCartIcon, SlidersHorizontalIcon, SquaresFourIcon, StackIcon, StarIcon, TicketIcon, ToggleLeftIcon, UserCircleIcon, UsersIcon, UsersThreeIcon, type Icon,
+  ShoppingCartIcon, SlidersHorizontalIcon, SquaresFourIcon, StackIcon, StarIcon, TicketIcon, TShirtIcon, ToggleLeftIcon, UserCircleIcon, UsersIcon, UsersThreeIcon, type Icon,
 } from "@phosphor-icons/react";
 import { Dialog } from "@/components/ui/Dialog";
 import { navigation, type NavModule } from "@/config/navigation";
@@ -27,6 +27,7 @@ const ICONE_DA_SECAO: Record<string, Icon> = {
   "/ecommerce/clientes": UsersIcon,
   "/ecommerce/carrinhos": ShoppingCartIcon,
   "/ecommerce/avaliacoes": StarIcon,
+  "/marketing/varal": TShirtIcon,
   "/configuracoes/usuarios": UsersThreeIcon,
   "/configuracoes/funis": FunnelIcon,
   "/configuracoes/preferencias": ToggleLeftIcon,

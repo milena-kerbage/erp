@@ -12,6 +12,11 @@ import {
 // confere validade, mínimo, limite total, limite por cliente e "só primeira compra" ao criar o pedido, na
 // mesma transação que grava o uso (loja_cupom_usos).
 
+// Os cupons do Varal de roupinhas (módulo Marketing, src/lib/loja/varal.ts) também moram em loja_cupons_campanha,
+// com o id "varal-<hash>": são pessoais e de uso único. Ficam FORA da lista que a loja manda ao navegador (senão
+// qualquer visitante leria o código das outras clientes) e da tela de Cupons do ERP; no pedido valem como os demais.
+const SEM_VARAL = "id NOT LIKE 'varal-%'";
+
 const decimal = (centavos: number) => `${Math.floor(centavos / 100)}.${String(centavos % 100).padStart(2, '0')}`;
 
 /** Cupom de campanha (linha do banco) no formato da sacola e do recálculo. */
@@ -33,9 +38,9 @@ export function cupomDaLinha(linha: Linha): Cupom {
 /** Cupons de campanha ativos e com saldo (os esgotados saem). null: nenhum cupom cadastrado (usa o fallback). */
 export async function cuponsDeCampanha(): Promise<Cupom[] | null> {
   const database = gestaoDb();
-  const total = Number((await database.prepare('SELECT COUNT(*) AS total FROM loja_cupons_campanha').get())?.total ?? 0);
+  const total = Number((await database.prepare(`SELECT COUNT(*) AS total FROM loja_cupons_campanha WHERE ${SEM_VARAL}`).get())?.total ?? 0);
   if (!total) return null;
-  const linhas = await database.prepare('SELECT c.*, (SELECT COUNT(*) FROM loja_cupom_usos u WHERE u.cupom_id = c.id) AS usos FROM loja_cupons_campanha c WHERE c.ativo = 1 ORDER BY c.codigo').all();
+  const linhas = await database.prepare(`SELECT c.*, (SELECT COUNT(*) FROM loja_cupom_usos u WHERE u.cupom_id = c.id) AS usos FROM loja_cupons_campanha c WHERE c.ativo = 1 AND c.${SEM_VARAL} ORDER BY c.codigo`).all();
   return linhas.filter((linha) => linha.limite_total === null || linha.limite_total === undefined || Number(linha.usos) < Number(linha.limite_total)).map(cupomDaLinha);
 }
 
@@ -50,7 +55,9 @@ export async function campanhasParaPedido(): Promise<CampanhasDoPedido> {
     const linhas = await gestaoDb().prepare('SELECT * FROM loja_cupons_campanha').all();
     if (!linhas.length) return { cupons: CUPONS, porCodigo: new Map() };
     const ativos = linhas.filter((linha) => booleano(linha.ativo));
-    return { cupons: ativos.map(cupomDaLinha), porCodigo: new Map(ativos.map((linha) => [texto(linha.codigo), linha])) };
+    // Só cupons do varal no banco (nenhum de campanha cadastrado): os de código continuam valendo, junto com eles.
+    const soVaral = linhas.every((linha) => texto(linha.id).startsWith('varal-'));
+    return { cupons: [...(soVaral ? CUPONS : []), ...ativos.map(cupomDaLinha)], porCodigo: new Map(ativos.map((linha) => [texto(linha.codigo), linha])) };
   } catch {
     return { cupons: CUPONS, porCodigo: new Map() };
   }
@@ -108,7 +115,7 @@ const SELECT_CUPOM = 'SELECT c.*, (SELECT COUNT(*) FROM loja_cupom_usos u WHERE 
 
 export async function listarCupons(url: URL): Promise<RespostaCupons> {
   const termo = buscaDaUrl(url);
-  const linhas = await gestaoDb().prepare(`${SELECT_CUPOM}${termo ? " WHERE LOWER(c.codigo) LIKE ? ESCAPE '\\' OR LOWER(c.descricao) LIKE ? ESCAPE '\\'" : ''} ORDER BY c.ativo DESC, c.criado DESC`).all(...(termo ? [`%${escaparLike(termo)}%`, `%${escaparLike(termo)}%`] : []));
+  const linhas = await gestaoDb().prepare(`${SELECT_CUPOM} WHERE c.${SEM_VARAL}${termo ? " AND (LOWER(c.codigo) LIKE ? ESCAPE '\\' OR LOWER(c.descricao) LIKE ? ESCAPE '\\')" : ''} ORDER BY c.ativo DESC, c.criado DESC`).all(...(termo ? [`%${escaparLike(termo)}%`, `%${escaparLike(termo)}%`] : []));
   return { cupons: linhas.map(cupomGestao), primeiraCompra: await resumoPrimeiraCompra() };
 }
 

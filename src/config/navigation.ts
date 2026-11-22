@@ -7,6 +7,7 @@ import {
   GearSixIcon,
   InfoIcon,
   KanbanIcon,
+  MegaphoneIcon,
   PackageIcon,
   SealCheckIcon,
   SparkleIcon,
@@ -108,7 +109,8 @@ export const navigation = {
       },
     },
     {
-      label: "E-commerce",
+      // "Site" é como a equipe do ateliê chama a loja online (as rotas seguem em /ecommerce).
+      label: "Site",
       href: "/ecommerce",
       icon: HandbagIcon,
       // "Visão geral" (/ecommerce) entra sozinha antes das seções.
@@ -124,6 +126,14 @@ export const navigation = {
         { label: "Carrinhos abandonados", href: "/ecommerce/carrinhos" },
         { label: "Avaliações", href: "/ecommerce/avaliacoes" },
       ],
+    },
+    // Ações de marketing da loja. Por enquanto uma: o Varal de roupinhas (minigame de cupom).
+    {
+      label: "Marketing",
+      href: "/marketing",
+      icon: MegaphoneIcon,
+      overview: false,
+      tabs: [{ label: "Varal de roupinhas", href: "/marketing/varal" }],
     },
     {
       label: "Produção",

@@ -27,6 +27,8 @@ import { precoOuConsulta } from "@/loja/lib/formatacao/moeda";
 import { CarrosselSacola } from "./CarrosselSacola";
 import { DicaInfo } from "./DicaInfo";
 import { Dialogo } from "./Dialogo";
+import { ChamadaVaral } from "@/loja/componentes/varal/ChamadaVaral";
+import { useCuponsComVaral } from "@/loja/componentes/varal/guardado";
 import {
   adicionarAoCarrinho,
   alterarQuantidade,
@@ -80,7 +82,9 @@ const contagem = (quantidade: number) => `${quantidade} ${quantidade === 1 ? "it
 // A loja é um CATÁLOGO COM PREÇO: valores "a partir de", frete e prazo de entrega combinados pelo
 // WhatsApp e o botão leva ao pedido (/checkout), que abre a conversa com o ateliê. O cupom segue em
 // `usePreferenciasCompra`. Itens no navegador até o carrinho existir na API.
-export function PaginaCarrinho({ catalogo, maisVendidos, cupons }: { catalogo: ProdutoCarrinho[]; maisVendidos: string[]; cupons: Cupom[] }) {
+export function PaginaCarrinho({ catalogo, maisVendidos, cupons: cuponsDaLoja }: { catalogo: ProdutoCarrinho[]; maisVendidos: string[]; cupons: Cupom[] }) {
+  // Mais o cupom que esta cliente ganhou no Varal de roupinhas (pessoal: o servidor não manda na lista da loja).
+  const cupons = useCuponsComVaral(cuponsDaLoja);
   const itens = useItensCarrinho();
   const favoritos = useFavoritos();
   const preferencias = usePreferenciasCompra();
@@ -253,6 +257,9 @@ export function PaginaCarrinho({ catalogo, maisVendidos, cupons }: { catalogo: P
                   />
                 ))}
               </ul>
+
+              {/* Varal de roupinhas: o convite para ganhar um cupom antes de fechar o pedido */}
+              <ChamadaVaral contexto="sacola" className={css({ mt: "8" })} />
 
               <div className={css({ display: "grid", gap: "3", mt: "8" })}>
                 <div className={faixa}>

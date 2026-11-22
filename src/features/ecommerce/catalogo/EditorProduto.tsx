@@ -362,7 +362,7 @@ export function EditorProduto({ id, origemLoja, copia = false, criado = false }:
         </Campo>
       </Secao>
 
-      <Secao id="opcoes" titulo="Opções" icone={SlidersHorizontalIcon} descricao="Grupos reaproveitáveis cadastrados em E-commerce › Opções: o seletor obrigatório (ex.: tamanho do berço) e a personalização (com/sem bordado), com o acréscimo de cada opção.">
+      <Secao id="opcoes" titulo="Opções" icone={SlidersHorizontalIcon} descricao="Grupos reaproveitáveis cadastrados em Site › Opções: o seletor obrigatório (ex.: tamanho do berço) e a personalização (com/sem bordado), com o acréscimo de cada opção.">
         <Atencao>A página do produto mostra <strong>1 grupo de escolha</strong> (seletor) e <strong>1 de personalização</strong> (com/sem bordado). Os demais ficariam sem uso.</Atencao>
         {erros.grupos && <ErroTexto data-erro>{erros.grupos}</ErroTexto>}
         {gruposLigados.length ? <GruposLigados>{gruposLigados.map((grupo, posicao) => <li key={grupo.id}>

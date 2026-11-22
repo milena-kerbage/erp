@@ -10,6 +10,8 @@ import { GradeAbas } from "@/loja/componentes/inicio/GradeAbas";
 import { Hero } from "@/loja/componentes/inicio/Hero";
 import { SecaoInstagram } from "@/loja/componentes/inicio/Instagram";
 import { ParEditorial } from "@/loja/componentes/inicio/ParEditorial";
+import { ChamadaVaral } from "@/loja/componentes/varal/ChamadaVaral";
+import { margens } from "@/loja/componentes/institucional/estilos";
 import { indiceDaLoja } from "@/lib/loja/catalogo";
 import { PRONTA_ENTREGA } from "@/loja/lib/catalogo/constantes";
 import { homeComFotos } from "@/loja/lib/catalogo/apresentacao";
@@ -34,6 +36,8 @@ export default async function PaginaInicial() {
       <Hero slides={home.slides} />
       {/* 2 */}
       <ParEditorial itens={home.editorial} />
+      {/* Varal de roupinhas (Marketing): só aparece com o jogo no ar ou para quem já ganhou o cupom */}
+      <div className={margens}><ChamadaVaral /></div>
       {/* 3 e 4 */}
       {home.novidades.abas.length > 0 && <GradeAbas grade={home.novidades} />}
       {home.porCor.abas.length > 0 && <GradeAbas grade={home.porCor} />}

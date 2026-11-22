@@ -1,5 +1,6 @@
 "use client";
 
+import { useCuponsComVaral } from "@/loja/componentes/varal/guardado";
 import { VITRINE_INICIAL } from "@/loja/lib/modulos";
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -41,7 +42,9 @@ type Enviado = { numero: string; link: string };
 // consumido aí), devolve o número e a mensagem, e o site abre o WhatsApp do ateliê. Uma vendedora
 // confirma valores, bordado, frete e prazo e combina o pagamento por lá. Nada é cobrado no site.
 // Se as contas estiverem fora do ar, o pedido ainda pode seguir direto pelo WhatsApp (sem cupom).
-export function PaginaPedido({ catalogo, cupons }: { catalogo: ProdutoCarrinho[]; cupons: Cupom[] }) {
+export function PaginaPedido({ catalogo, cupons: cuponsDaLoja }: { catalogo: ProdutoCarrinho[]; cupons: Cupom[] }) {
+  // Mais o cupom que esta cliente ganhou no Varal de roupinhas (pessoal: o servidor não manda na lista da loja).
+  const cupons = useCuponsComVaral(cuponsDaLoja);
   const itens = useItensCarrinho();
   const preferencias = usePreferenciasCompra();
   const local = useLocal();
