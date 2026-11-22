@@ -38,3 +38,19 @@ export function sourceColor(source: string, mode: ThemeMode) {
 }
 
 export const otherColor = (mode: ThemeMode) => colors[mode].other;
+
+/**
+ * A cor da identidade de cada canal (a mesma da logo), para quando o trecho de um gráfico representa o canal em si:
+ * fundo e a cor do texto que fica legível por cima. Canais sem marca própria não entram (quem chama usa o tom neutro).
+ */
+const identidade: Record<string, { fundo: string; texto: string }> = {
+  Instagram: { fundo: "linear-gradient(90deg, #f9b445 0%, #ee3f6c 52%, #a03fc0 100%)", texto: "#ffffff" },
+  WhatsApp: { fundo: "#25d366", texto: "#06381a" },
+  Google: { fundo: "#4285f4", texto: "#ffffff" },
+  Facebook: { fundo: "#1877f2", texto: "#ffffff" },
+  // O site é o próprio ateliê: a sálvia da logo.
+  Site: { fundo: "#788569", texto: "#ffffff" },
+  "Loja online": { fundo: "#788569", texto: "#ffffff" },
+};
+
+export const corDaIdentidade = (source: string) => identidade[source] ?? null;

@@ -12,6 +12,7 @@ import { parseDateOnly } from "@/lib/format";
 import type { Tone } from "@/styles/theme";
 import { leadsHref, origensDoCanal } from "../links";
 import { joinSources, type SourceRow } from "../metrics";
+import { corDaIdentidade } from "../palette";
 import { Card, CardHead, EmptyNote } from "./ui";
 
 /* Coluna de apoio do Painel: os bebês que estão para chegar (o prazo real de cada enxoval), o faturamento mês a mês
@@ -177,8 +178,8 @@ export function BirthsCard({ births }: { births: Births }) {
 /* ---------- Conversão por canal ---------- */
 
 /**
- * Uma barra só para os clientes do mês, repartida por canal (cada trecho tem a largura da parte dele): o canal que
- * mais converteu vem cheio, os seguintes em tons mais claros e o último hachurado. Em cima a escala; em cada divisa
+ * Uma barra só para os clientes do mês, repartida por canal (cada trecho tem a largura da parte dele), na cor da
+ * identidade do canal (a da logo); canal sem marca própria usa a sálvia e "Outros" vem hachurado. Em cima a escala; em cada divisa
  * uma linha que passa pela barra; embaixo de cada trecho, o canal e a conversão dele.
  */
 const Conversao = styled.div`
@@ -281,7 +282,7 @@ export function ChannelsCard({ rows }: { rows: SourceRow[] }) {
                 style={{ flex: `${parte.clientes} 1 0` }}
                 aria-label={`${parte.nome}: ${plural(parte.clientes, "cliente", "clientes")} de ${plural(parte.leads, "lead", "leads")}, ${Math.round((parte.clientes / parte.leads) * 100)}% de conversão. Abrir a lista`}
               >
-                <span className="parte" data-tom={indice === partes.length - 1 && partes.length > 1 ? 4 : indice + 1} aria-hidden>
+                <span className="parte" data-tom={parte.logo ? Math.min(indice + 1, 3) : 4} style={parte.logo && corDaIdentidade(parte.nome) ? { background: corDaIdentidade(parte.nome)!.fundo, color: corDaIdentidade(parte.nome)!.texto } : undefined} aria-hidden>
                   <span>{plural(parte.clientes, "cliente", "clientes")}</span>
                 </span>
                 {rotulo(parte)}
