@@ -20,7 +20,9 @@ export async function GET(request: Request) {
         { name: 'Versão da Graph API', configured: /^v\d{2,3}\.0$/.test(config.version) },
         { name: 'Chave de criptografia do servidor', configured: encryptionReady() },
       ],
-      connection: c ? { username: c.username, expiresAt: new Date(c.expires_at).toISOString(), expired: c.expires_at <= Date.now(), scopes: JSON.parse(c.scopes_json), subscribedFields: JSON.parse(c.fields_json) } : null,
+      // `outroPerfil`: a conta ligada não é o perfil do Ateliê (ex.: conta de teste): a tela avisa.
+      perfilEsperado: config.expectedUsername,
+      connection: c ? { username: c.username, outroPerfil: Boolean(config.expectedUsername) && c.username.toLowerCase() !== config.expectedUsername, expiresAt: new Date(c.expires_at).toISOString(), expired: c.expires_at <= Date.now(), scopes: JSON.parse(c.scopes_json), subscribedFields: JSON.parse(c.fields_json) } : null,
       events: { total: Number(count?.total || 0), lastReceivedAt: count?.latest ? new Date(Number(count.latest)).toISOString() : null },
     };
   });

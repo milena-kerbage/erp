@@ -14,7 +14,8 @@ import { Actions, Note, Notice, Stack } from '@/features/whatsapp/components/sha
 type Status = {
   urls: Record<string, string>; checks: { name: string; configured: boolean }[]; scopes: string[]; retentionDays: number;
   app: { appId: string; appSecretSalvo: boolean; webhookSecretPronto: boolean; versao: string; configId: string; modo: 'facebook' | 'instagram'; pageId: string };
-  connection: { username: string; expiresAt: string; expired: boolean; scopes: string[]; subscribedFields: string[] } | null;
+  perfilEsperado?: string;
+  connection: { username: string; outroPerfil?: boolean; expiresAt: string; expired: boolean; scopes: string[]; subscribedFields: string[] } | null;
   events: { total: number; lastReceivedAt: string | null };
 };
 type Erro = { texto: string; campo?: string };
@@ -76,6 +77,7 @@ function CartaoConta({ status, aoMudar, aoAvisar }: { status: Status; aoMudar: (
     <Cabeca><Titulo><InstagramLogoIcon size={20} aria-hidden /> Perfil do Instagram</Titulo><Pill $tone={conta && !conta.expired ? 'green' : 'peach'}>{conta ? (conta.expired ? 'Acesso vencido' : 'Conectado') : 'Não conectado'}</Pill></Cabeca>
     {conta ? <Stack>
       <Perfil><CheckCircleIcon size={28} weight="fill" aria-hidden /><div><strong>@{conta.username}</strong><span>Acesso válido até {data(conta.expiresAt)} · Notificações: {conta.subscribedFields.length ? 'ligadas' : 'desligadas'}</span></div></Perfil>
+      {conta.outroPerfil && <Notice $error role="status">Conectado como <strong>@{conta.username}</strong>, que não é o perfil do Ateliê (@{status.perfilEsperado}). Serve para testar: as mensagens e os comentários que chegarem aqui são dessa conta. Para ligar o perfil do Ateliê, desconecte e conecte de novo marcando o @{status.perfilEsperado}.</Notice>}
       <Note>Última notificação recebida: {data(status.events.lastReceivedAt)} · {status.events.total} evento(s) guardado(s) por {status.retentionDays} dias.</Note>
       <Actions>
         <Button size="sm" loading={ocupado === 'subscribe'} disabled={conta.expired} onClick={() => void agir('subscribe', 'Notificações habilitadas: mensagens e comentários passam a chegar ao ERP.')}>Habilitar notificações</Button>
@@ -87,7 +89,7 @@ function CartaoConta({ status, aoMudar, aoAvisar }: { status: Status; aoMudar: (
     </Stack> : <Stack>
       <Passos>
         <li>Cadastre o app do Instagram logo abaixo (uma vez só) e confira os endereços na Meta.</li>
-        <li>{status.app.modo === 'facebook' ? <>Clique em <strong>Conectar Instagram</strong>, entre com o Instagram (ou o Facebook), escolha o portfólio do Ateliê e marque o Instagram <strong>@milenakerbageatelie</strong>. Não precisa de página do Facebook.</> : <>Clique em <strong>Conectar Instagram</strong> e entre com o perfil <strong>@milenakerbageatelie</strong>.</>}</li>
+        <li>{status.app.modo === 'facebook' ? <>Clique em <strong>Conectar Instagram</strong>, entre com o Instagram (ou o Facebook), escolha o portfólio e marque <strong>uma</strong> conta do Instagram: a do Ateliê é <strong>@milenakerbageatelie</strong>. Não precisa de página do Facebook.</> : <>Clique em <strong>Conectar Instagram</strong> e entre com o perfil <strong>@milenakerbageatelie</strong>.</>}</li>
         <li>De volta aqui, clique em <strong>Habilitar notificações</strong>.</li>
       </Passos>
       <Actions><Button icon={InstagramLogoIcon} loading={ocupado === 'oauth/start'} disabled={!podeConectar} onClick={() => void agir('oauth/start', '')}>Conectar Instagram</Button>{!podeConectar && <Note>Falta cadastrar o App ID e o App Secret do Instagram.</Note>}</Actions>

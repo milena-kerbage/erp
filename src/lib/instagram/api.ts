@@ -195,8 +195,11 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
   }
   if (contas.size) {
     const lista = [...contas].map(([id, username]) => ({ id, username }));
-    const conta = lista.find((item) => item.username.toLowerCase() === config.expectedUsername) ?? (lista.length === 1 && !config.expectedUsername ? lista[0] : undefined);
-    if (!conta) throw new InstagramError(403, `A conta autorizada foi ${lista.map((item) => `@${item.username}`).join(', ')}; na janela da Meta, selecione o Instagram @${config.expectedUsername}.`, 'WRONG_ACCOUNT');
+    // Quem escolhe a conta é a pessoa, na janela da Meta: uma conta marcada conecta, seja qual for (o perfil do Ateliê ou
+    // uma conta de teste; a tela avisa quando não é o do Ateliê). Com várias marcadas, vale a do Ateliê; sem ela, pede
+    // para marcar uma só.
+    const conta = lista.find((item) => item.username.toLowerCase() === config.expectedUsername) ?? (lista.length === 1 ? lista[0] : undefined);
+    if (!conta) throw new InstagramError(403, `A Meta compartilhou ${lista.length} contas (${lista.map((item) => `@${item.username}`).join(', ')}) e nenhuma é o @${config.expectedUsername}. Conecte de novo e marque só a conta que quer ligar ao ERP.`, 'WRONG_ACCOUNT');
     if (!/^[a-zA-Z0-9._]{1,30}$/.test(conta.username)) throw new InstagramError(502, 'Perfil inválido recebido da Meta.');
     // O portfólio da cliente (para renovar ou consultar o token depois). Não impede a conexão se a Meta não informar.
     let portfolio = '';
@@ -233,11 +236,10 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
       if (typeof pagina.access_token === 'string' && typeof conta.id === 'string') paginas.push({ id: String(pagina.id), token: pagina.access_token, ig: conta.id, username: typeof conta.username === 'string' ? conta.username : '' });
     } catch { /* página sem acesso para este token */ }
   }
-  const contasDoToken = new Set(idsDe((escopo) => escopo.startsWith('instagram_')));
-  const escolhida = paginas.find((p) => p.username.toLowerCase() === config.expectedUsername) ?? (paginas.length === 1 && (!config.expectedUsername || contasDoToken.has(paginas[0].ig)) ? paginas[0] : undefined);
+  const escolhida = paginas.find((p) => p.username.toLowerCase() === config.expectedUsername) ?? (paginas.length === 1 ? paginas[0] : undefined);
   if (!escolhida) {
     throw new InstagramError(403, paginas.length
-      ? `A conta autorizada foi ${paginas.map((p) => `@${p.username || p.ig}`).join(', ')}; na janela da Meta, selecione o Instagram @${config.expectedUsername}.`
+      ? `A Meta compartilhou ${paginas.length} contas (${paginas.map((p) => `@${p.username || p.ig}`).join(', ')}) e nenhuma é o @${config.expectedUsername}. Conecte de novo e marque só a conta que quer ligar ao ERP.`
       : `A Meta concluiu o login, mas não compartilhou nenhuma conta do Instagram com o app (permissões recebidas: ${escopos.join(', ') || 'nenhuma'}). Conecte de novo e, na janela da Meta, escolha o portfólio do Ateliê e marque o Instagram @${config.expectedUsername} na lista de contas antes de concluir. A conta precisa ser profissional e estar no portfólio.`,
       'WRONG_ACCOUNT');
   }

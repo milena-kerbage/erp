@@ -136,10 +136,18 @@ test('login unificado: a conta vem de /me/assigned_instagram_accounts, sem pági
     return Response.json({ data: [] });
   };
   await store.instagramDb().prepare('DELETE FROM instagram_connections').run();
-  // Outra conta marcada na janela da Meta: recusa dizendo qual veio.
-  await assert.rejects(api.exchangeCode('codigo', montar([{ id: '17841400000001', username: 'outra.loja' }])), (erro) => erro.code === 'WRONG_ACCOUNT' && /@outra\.loja/.test(erro.message) && /@milenakerbageatelie/.test(erro.message));
-  assert.equal(await store.currentConnection(), undefined, 'nada é guardado quando a conta é outra');
+  // Várias contas marcadas e nenhuma é a do Ateliê: pede para marcar uma só, sem guardar nada.
+  await assert.rejects(api.exchangeCode('codigo', montar([{ id: '17841400000001', username: 'outra.loja' }, { id: '17841400000002', username: 'mais.uma' }])), (erro) => erro.code === 'WRONG_ACCOUNT' && /@outra\.loja/.test(erro.message) && /marque só a conta/.test(erro.message));
+  assert.equal(await store.currentConnection(), undefined, 'nada é guardado na dúvida');
 
+  // Uma conta só, mesmo não sendo a do Ateliê (conta de teste): conecta a que a pessoa escolheu na janela da Meta.
+  await api.exchangeCode('codigo', montar([{ id: '17841400000001', username: 'owallaceproenca' }]));
+  assert.equal((await store.currentConnection()).username, 'owallaceproenca');
+  // Trocar de perfil exige desconectar antes (não troca em silêncio).
+  await assert.rejects(api.exchangeCode('codigo', montar([{ id: IG, username: 'milenakerbageatelie' }])), { code: 'ACCOUNT_ALREADY_CONNECTED' });
+  await store.instagramDb().prepare('DELETE FROM instagram_connections').run();
+
+  // Com a do Ateliê entre as marcadas, é ela que conecta.
   await api.exchangeCode('codigo', montar([{ id: '17841400000001', username: 'outra.loja' }, { id: IG, username: 'MilenaKerbageAtelie' }]));
   const conexao = await store.currentConnection();
   assert.equal(conexao.account_id, IG); assert.equal(conexao.username, 'MilenaKerbageAtelie');
