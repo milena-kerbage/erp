@@ -6,7 +6,8 @@ import type { ClienteErp, ContaCliente, PedidoErp } from "@/lib/loja/contas";
 import type { CarrinhoDaCliente, LeadVinculado } from "@/features/ecommerce/types";
 import { useCurrentUser } from "@/features/settings/store";
 import { ErpRequestError, erpRequest, requestError } from "@/features/operations/client";
-import { Notice, Pill, Table, TableCard } from "@/features/operations/components/ui";
+import { ResponsiveTable, TableCard } from "@/components/ui/Table";
+import { Notice, Pill } from "@/features/operations/components/ui";
 import { STATUS_PEDIDO, type CupomConta, type StatusPedido } from "@/loja/lib/contas/regras";
 import type { Tone } from "@/styles/theme";
 
@@ -115,33 +116,9 @@ export function AvisoRestrito({ area }: { area: string }) {
 
 /* ---------- Estilos ---------- */
 
-/** Caixa da tabela: mede a própria largura (a tabela vira lista quando o espaço é curto, com ou sem a sidebar aberta). */
-export const CaixaTabela = styled(TableCard)`container-type: inline-size;`;
-
-/**
- * Tabela que, em espaço curto (celular, tablet, sidebar aberta), vira uma lista de cartões: cada célula
- * mostra o próprio título (data-label), sem rolagem lateral. Use dentro de <CaixaTabela>.
- */
-export const TabelaResponsiva = styled(Table)`
-  tbody tr { cursor: default; }
-  tbody tr[data-clicavel] { cursor: pointer; }
-  tbody tr[data-clicavel]:hover td { background-color: ${({ theme }) => theme.colors.interactive.hover}; }
-  td { transition: background-color ${({ theme }) => theme.transitions.fast}; }
-
-  @container (max-width: 58rem) {
-    display: block;
-    thead { display: none; }
-    tbody, tr, td { display: block; }
-    tr { padding: ${({ theme }) => theme.spacing(3, 3.5)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle}; }
-    tr:last-of-type { border-bottom: 0; }
-    td, td:first-of-type, td:last-of-type, td:not(:last-of-type) { display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.spacing(3)}; height: auto; min-height: 1.75rem; padding: ${({ theme }) => theme.spacing(1, 0)}; border: 0; white-space: normal; text-align: right; }
-    td > * { min-width: 0; }
-    td[data-label]::before { content: attr(data-label); flex-shrink: 0; color: ${({ theme }) => theme.colors.text.muted}; font-size: 0.75rem; text-align: left; }
-    td[data-principal] { justify-content: flex-start; text-align: left; padding-bottom: ${({ theme }) => theme.spacing(2)}; }
-    td[data-acoes] { justify-content: flex-end; padding-top: ${({ theme }) => theme.spacing(2)}; }
-    td[data-acoes]:empty { display: none; }
-  }
-`;
+/** A moldura e a tabela do sistema (a que vira lista em espaço curto): ver components/ui/Table. */
+export const CaixaTabela = TableCard;
+export const TabelaResponsiva = ResponsiveTable;
 
 export const Quem = styled.div`display: flex; align-items: center; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0; > span { min-width: 0; }`;
 export const Nome = styled.span`display: block; font-weight: ${({ theme }) => theme.fontWeights.medium}; color: ${({ theme }) => theme.colors.text.primary}; overflow: hidden; text-overflow: ellipsis;`;

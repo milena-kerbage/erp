@@ -240,6 +240,32 @@ export function Segments({ ratio, color, count = 24, label }: { ratio: number; c
   );
 }
 
+/* ---------- Barra lisa ---------- */
+
+const ProgressRoot = styled("span", transientOptions)<{ $parte: number; $tone: Tone }>`
+  display: block;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.palette.neutral[100]};
+  overflow: hidden;
+
+  &::after {
+    content: "";
+    display: block;
+    width: ${({ $parte }) => Math.min(100, Math.max(0, $parte))}%;
+    min-width: ${({ $parte }) => ($parte > 0 ? "0.25rem" : "0")};
+    height: 100%;
+    border-radius: inherit;
+    background: ${({ theme, $tone }) => (theme.mode === "dark" ? theme.tones[$tone].fg : `color-mix(in srgb, ${theme.tones[$tone].fg} 60%, ${theme.tones[$tone].soft})`)};
+    transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+`;
+
+/** Barra lisa e fina (no lugar dos tracinhos): a parte preenchida no tom do indicador, sobre um trilho neutro. */
+export function Progress({ ratio, tone, label }: { ratio: number; tone: Tone; label: string }) {
+  return <ProgressRoot role="img" aria-label={label} $parte={ratio * 100} $tone={tone} />;
+}
+
 /* ---------- Variação ---------- */
 
 const DeltaRoot = styled("span", transientOptions)<{ $tone: "good" | "bad" | "flat" }>`

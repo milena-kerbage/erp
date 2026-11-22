@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { startNavigationProgress } from "@/components/layout/NavigationProgress";
+import { Table, TableCard } from "@/components/ui/Table";
 import { Card, Notice, Page, PageHeader, Pill } from "@/features/operations/components/ui";
 import type { ColecaoGestao, Disponibilidade, OrdenacaoProdutos, ProdutoResumoGestao, RespostaCategorias, RespostaProdutos, StatusProduto } from "@/features/ecommerce/types";
 import { DISPONIBILIDADE, RELEVANCIAS, type ValorRelevancia, dataHora, erpRequest, loja, reais, requestError, STATUS_PRODUTO, trilhasDeCategorias } from "./api";
@@ -237,46 +238,23 @@ const OrdemRotulo = styled.span`${({ theme }) => theme.media.md} { display: none
 
 const dataCurta = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "America/Fortaleza" });
 
-const TabelaRolagem = styled.div`
+/** A moldura da tabela do sistema; no celular a lista vira cartões (abaixo). */
+const TabelaRolagem = styled(TableCard)`
   margin-top: ${({ theme }) => theme.spacing(2)};
-  overflow-x: auto;
 
   ${({ theme }) => theme.media.md} { display: none; }
 `;
 
-const Tabela = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-
-  th {
-    height: 2.25rem;
-    padding: ${({ theme }) => theme.spacing(0, 2.5)};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
-    font-size: ${({ theme }) => theme.fontSizes.xs};
-    font-weight: ${({ theme }) => theme.fontWeights.medium};
-    color: ${({ theme }) => theme.colors.text.muted};
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  td {
-    padding: ${({ theme }) => theme.spacing(2.5)};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint};
-    color: ${({ theme }) => theme.colors.text.primary};
-    vertical-align: middle;
-  }
-
-  td:first-of-type, th:first-of-type { width: 3.25rem; padding-left: 0; }
-  td:last-of-type, th:last-of-type { width: 2.5rem; padding-right: 0; text-align: right; }
+/** A tabela do sistema, só com o que é desta lista: a coluna da foto, a do menu e o nome que pode quebrar linha. */
+const Tabela = styled(Table)`
+  td { white-space: normal; }
+  td:first-of-type, th:first-of-type { width: 4.25rem; }
+  td:last-of-type, th:last-of-type { width: 3rem; text-align: right; }
   td:nth-of-type(2) { min-width: 14rem; }
-  tbody tr:last-of-type td { border-bottom: 0; }
-  tbody tr:hover td { background-color: ${({ theme }) => theme.colors.interactive.hover}; }
-  tr[aria-busy] { opacity: 0.55; }
-  td:nth-of-type(8) { white-space: nowrap; }
+  td:nth-of-type(n + 3) { white-space: nowrap; }
 
   /* Tela média: a coluna de data sai para o resto caber sem rolar */
-  ${({ theme }) => theme.media.xl} { th:nth-of-type(8), td:nth-of-type(8) { display: none; } }
+  ${({ theme }) => theme.media.xl} { th:nth-of-type(9), td:nth-of-type(9) { display: none; } }
 `;
 
 const Foto = styled("span", { shouldForwardProp: (prop) => !prop.startsWith("$") })<{ $grande: boolean }>`

@@ -141,7 +141,7 @@ export const Card = styled.div`
   gap: ${({ theme }) => theme.spacing(4)};
   padding: ${({ theme }) => theme.spacing(5)};
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  border-radius: ${({ theme }) => theme.radii.lg};
+  border-radius: ${({ theme }) => theme.radii.md};
   background-color: ${({ theme }) => theme.palette.neutral[0]};
 
   ${({ theme }) => theme.media.md} {
@@ -427,63 +427,8 @@ export const StatGrid = styled.div`
 
 /* ---------- Tabela em cartão ---------- */
 
-export const TableCard = styled.div`
-  overflow: auto;
-  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  background-color: ${({ theme }) => theme.palette.neutral[0]};
-`;
-
-export const Table = styled.table`
-  ${staggerChildren(12, 25, "& tbody tr")};
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-
-  th {
-    height: 2.25rem;
-    padding: ${({ theme }) => theme.spacing(0, 3)};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
-    background-color: ${({ theme }) => theme.colors.background.surface};
-    font-size: ${({ theme }) => theme.fontSizes.xs};
-    font-weight: ${({ theme }) => theme.fontWeights.medium};
-    color: ${({ theme }) => theme.colors.text.muted};
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  td {
-    height: 3rem;
-    padding: ${({ theme }) => theme.spacing(0, 3)};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint};
-    color: ${({ theme }) => theme.colors.text.primary};
-    white-space: nowrap;
-  }
-
-  th:first-of-type,
-  td:first-of-type {
-    padding-left: ${({ theme }) => theme.spacing(4)};
-  }
-
-  th:last-of-type,
-  td:last-of-type {
-    padding-right: ${({ theme }) => theme.spacing(3)};
-  }
-
-  /* Divisória vertical entre as colunas */
-  th:not(:last-of-type),
-  td:not(:last-of-type) {
-    border-right: 1px solid ${({ theme }) => theme.colors.border.faint};
-  }
-
-  tbody tr:last-of-type td {
-    border-bottom: 0;
-  }
-
-  tbody tr:hover td {
-    background-color: ${({ theme }) => theme.colors.interactive.hover};
-  }
-`;
+/** A tabela do sistema: ver components/ui/Table. */
+export { Table, TableCard } from "@/components/ui/Table";
 
 /** Ícone + texto numa linha (células, listas). */
 export const Inline = styled.span`

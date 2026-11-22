@@ -14,6 +14,7 @@ import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Switch } from "@/components/ui/Switch";
 import { TextField } from "@/components/ui/TextField";
+import { Table, TableCard } from "@/components/ui/Table";
 import { Card, FieldGrid, Notice, Page, PageHeader, Pill, Stack, Toolbar } from "@/features/operations/components/ui";
 import type { EntradaGrupoOpcoes, GrupoOpcoesComUso, TipoGrupoOpcoes } from "@/features/ecommerce/types";
 import { conflito, erpRequest, loja, normalizar, reais, requestError, SLUG, slugificar, tamanho } from "./api";
@@ -83,10 +84,10 @@ export function Opcoes() {
                 {podeEditar && <><MenuSeparator /><MenuItem icon={TrashIcon} muted disabled={grupo.produtos > 0} meta={grupo.produtos ? "em uso" : undefined} onSelect={() => setExcluir(grupo)}>Excluir</MenuItem></>}
               </Menu>
             </Topo>
-            <TabelaOpcoes>
+            <TableCard><TabelaOpcoes>
               <thead><tr><th>Opção</th><th>Acréscimo</th><th>Disponível</th></tr></thead>
               <tbody>{grupo.opcoes.map((opcao) => <tr key={opcao.id}><td>{opcao.rotulo}</td><td>{opcao.acrescimoCentavos ? `+ ${reais(opcao.acrescimoCentavos)}` : "—"}</td><td>{opcao.disponivel ? "Sim" : <Pill $tone="yellow">Indisponível</Pill>}</td></tr>)}</tbody>
-            </TabelaOpcoes>
+            </TabelaOpcoes></TableCard>
             <Uso>
               <Button variant="ghost" size="sm" icon={aberto ? CaretDownIcon : CaretRightIcon} disabled={!grupo.usadoEm.length} aria-expanded={aberto} onClick={() => alternar(grupo.id)}>
                 {grupo.usadoEm.length ? `Usado em ${grupo.usadoEm.length} produto${grupo.usadoEm.length === 1 ? "" : "s"}` : "Ainda não usado em produtos"}
@@ -213,15 +214,11 @@ const GrupoCaixa = styled.article`
 const Topo = styled.div`display: flex; align-items: flex-start; justify-content: space-between; gap: ${({ theme }) => theme.spacing(2)}; > div { display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(1.5)}; min-width: 0; }`;
 const Selos = styled.div`display: flex; flex-wrap: wrap; align-items: center; gap: ${({ theme }) => theme.spacing(1.5)};`;
 
-const TabelaOpcoes = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-
-  th { padding: ${({ theme }) => theme.spacing(1.5, 2)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle}; font-size: ${({ theme }) => theme.fontSizes.xs}; font-weight: ${({ theme }) => theme.fontWeights.medium}; color: ${({ theme }) => theme.colors.text.muted}; text-align: left; }
-  td { padding: ${({ theme }) => theme.spacing(1.5, 2)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint}; color: ${({ theme }) => theme.colors.text.primary}; overflow-wrap: anywhere; }
-  td:nth-of-type(2), td:nth-of-type(3) { white-space: nowrap; }
-  tr:last-of-type td { border-bottom: 0; }
+/** A tabela do sistema dentro da caixa do grupo: sem moldura própria e com o texto da opção podendo quebrar linha. */
+const TabelaOpcoes = styled(Table)`
+  td:first-of-type { white-space: normal; overflow-wrap: anywhere; }
+  th:first-of-type, td:first-of-type { padding-left: ${({ theme }) => theme.spacing(2.5)}; }
+  th:last-of-type, td:last-of-type { padding-right: ${({ theme }) => theme.spacing(2.5)}; }
 `;
 
 const Uso = styled.div`

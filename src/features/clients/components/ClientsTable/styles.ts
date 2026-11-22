@@ -5,13 +5,12 @@ import Link from "next/link";
 import { transientOptions } from "@/lib/emotion/transient";
 import { staggerChildren } from "@/styles/animations";
 import type { Tone } from "@/styles/theme";
+import { bodyCell, columnDivider, headCell, rowHover } from "@/components/ui/Table";
 
 /** Largura da coluna da caixa de seleção (a do cliente gruda logo depois). */
 export const CHECK_WIDTH = "2.75rem";
 
 /** Fundos opacos (as colunas fixas precisam cobrir o que rola por baixo). */
-const rowHover = (theme: Theme) =>
-  `color-mix(in srgb, ${theme.palette.neutral[900]} 3.5%, ${theme.colors.background.surface})`;
 const rowSelected = (theme: Theme) =>
   `color-mix(in srgb, ${theme.palette.sage[500]} 9%, ${theme.colors.background.surface})`;
 
@@ -107,15 +106,9 @@ export const Th = styled("th", transientOptions)<{ $sticky?: Sticky; $align?: "l
   position: sticky;
   top: 0;
   z-index: 2;
-  height: 2.25rem;
-  padding: ${({ theme }) => theme.spacing(0, 2.5)};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  background-color: ${({ theme }) => theme.colors.background.surface};
-  font-size: ${({ theme }) => theme.fontSizes.xs};
-  font-weight: ${({ theme }) => theme.fontWeights.medium};
-  color: ${({ theme }) => theme.colors.text.muted};
+  /* O cabeçalho da tabela do sistema (components/ui/Table) */
+  ${({ theme }) => headCell(theme)};
   text-align: ${({ $align = "left" }) => $align};
-  white-space: nowrap;
 
   ${({ $sticky }) => stickyStyles($sticky)};
   ${({ $sticky }) => ($sticky ? "z-index: 3;" : "")}
@@ -131,7 +124,7 @@ export const Th = styled("th", transientOptions)<{ $sticky?: Sticky; $align?: "l
 
   /* Divisória vertical entre as colunas (menos depois da seleção e da última) */
   &:not(:first-of-type):not(:last-of-type) {
-    border-right: 1px solid ${({ theme }) => theme.colors.border.faint};
+    ${({ theme }) => columnDivider(theme)};
   }
 `;
 
@@ -174,13 +167,10 @@ export const Tr = styled("tr", transientOptions)<{ $selected: boolean }>`
 `;
 
 export const Td = styled("td", transientOptions)<{ $sticky?: Sticky; $align?: "left" | "right"; $muted?: boolean }>`
-  height: 2.5rem;
-  padding: ${({ theme }) => theme.spacing(0, 2.5)};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint};
+  /* A célula da tabela do sistema (components/ui/Table) */
+  ${({ theme }) => bodyCell(theme)};
   color: ${({ theme, $muted }) => ($muted ? theme.colors.text.secondary : theme.colors.text.primary)};
   text-align: ${({ $align = "left" }) => $align};
-  white-space: nowrap;
-  transition: background-color ${({ theme }) => theme.transitions.fast};
 
   ${({ $sticky }) => stickyStyles($sticky)};
 
@@ -195,7 +185,7 @@ export const Td = styled("td", transientOptions)<{ $sticky?: Sticky; $align?: "l
 
   /* Divisória vertical entre as colunas (menos depois da seleção e da última) */
   &:not(:first-of-type):not(:last-of-type) {
-    border-right: 1px solid ${({ theme }) => theme.colors.border.faint};
+    ${({ theme }) => columnDivider(theme)};
   }
 `;
 
