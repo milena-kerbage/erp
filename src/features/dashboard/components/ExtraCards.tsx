@@ -176,38 +176,68 @@ export function BirthsCard({ births }: { births: Births }) {
 /* ---------- Conversão por canal ---------- */
 
 /**
- * Os canais lado a lado (em telas estreitas, dois por linha): logo, nome e a taxa em cima, a barra da conversão
- * embaixo. Quantos de quantos fica na dica do link.
+ * Uma barra grossa por canal, todas na mesma escala (0 a 100%, marcada em cima): o trecho cheio é quem virou cliente,
+ * o hachurado é quem ainda não fechou. À esquerda o canal, à direita a taxa.
  */
-const Canais = styled.ul`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-  gap: ${({ theme }) => theme.spacing(1, 4)};
+const Conversao = styled.div`
+  --rotulo: 8.5rem;
+  --taxa: 2.75rem;
+  --vao: ${({ theme }) => theme.spacing(3)};
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing(1.5)};
 
-  a { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto; align-items: center; gap: ${({ theme }) => theme.spacing(2)}; margin: 0 -${({ theme }) => theme.spacing(2)}; padding: ${({ theme }) => theme.spacing(1.5, 2)}; border-radius: ${({ theme }) => theme.radii.md}; color: inherit; font-size: 0.8125rem; text-decoration: none; transition: background-color 160ms; }
-  a:hover, a:focus-visible { background: ${({ theme }) => theme.colors.interactive.hover}; }
-  .logo { display: grid; place-items: center; color: ${({ theme }) => theme.colors.text.muted}; }
+  @container (max-width: 520px) {
+    --rotulo: 5.5rem;
+    --vao: ${({ theme }) => theme.spacing(2)};
+    .dentro { display: none; }
+  }
+
+  /* A escala e as linhas de 25 em 25% ocupam só a coluna das barras */
+  .escala, .grade { margin: 0 calc(var(--taxa) + var(--vao)) 0 calc(var(--rotulo) + var(--vao)); }
+  .escala { position: relative; height: 0.875rem; font-size: 0.625rem; letter-spacing: 0.06em; color: ${({ theme }) => theme.colors.text.muted}; }
+  .escala span { position: absolute; top: 0; transform: translateX(-50%); }
+  .escala span:first-of-type { transform: none; }
+  .escala span:last-of-type { transform: translateX(-100%); }
+  .grade {
+    position: absolute;
+    top: 1.125rem;
+    right: 0;
+    bottom: -4px;
+    left: 0;
+    border-right: 1px solid ${({ theme }) => theme.colors.border.subtle};
+    background: linear-gradient(to right, ${({ theme }) => theme.colors.border.subtle} 1px, transparent 1px) 0 0 / 25% 100%;
+    pointer-events: none;
+  }
+
+  ul { position: relative; display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(1.5)}; }
+  a { display: grid; grid-template-columns: var(--rotulo) minmax(0, 1fr) var(--taxa); align-items: center; gap: var(--vao); color: inherit; font-size: 0.8125rem; text-decoration: none; }
+  a:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary.main}; outline-offset: 2px; border-radius: ${({ theme }) => theme.radii.sm}; }
+  .canal { display: flex; align-items: center; gap: ${({ theme }) => theme.spacing(2)}; min-width: 0; }
+  .logo { display: grid; flex-shrink: 0; place-items: center; width: 1.25rem; color: ${({ theme }) => theme.colors.text.muted}; }
   .nome { overflow: hidden; color: ${({ theme }) => theme.colors.text.secondary}; white-space: nowrap; text-overflow: ellipsis; }
   .taxa { font-size: 0.9375rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; letter-spacing: -0.01em; color: ${({ theme }) => theme.colors.text.primary}; text-align: right; white-space: nowrap; }
-`;
 
-const Trilho = styled("span", transientOptions)<{ $parte: number }>`
-  grid-column: 1 / -1;
-  height: 0.375rem;
-  border-radius: 999px;
-  background: ${({ theme }) => theme.palette.neutral[100]};
-  overflow: hidden;
-
-  &::after {
-    content: "";
-    display: block;
-    width: ${({ $parte }) => Math.min(100, $parte)}%;
-    min-width: ${({ $parte }) => ($parte > 0 ? "0.375rem" : "0")};
-    height: 100%;
-    border-radius: inherit;
-    background: ${({ theme }) => theme.palette.sage[400]};
-    transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  .barra {
+    display: flex;
+    height: 1.75rem;
+    border-radius: 6px;
+    /* Quem ainda não fechou: hachurado claro */
+    background:
+      repeating-linear-gradient(135deg, ${({ theme }) => theme.palette.neutral[200]} 0 1px, transparent 1px 7px),
+      ${({ theme }) => theme.palette.neutral[50]};
+    overflow: hidden;
+    font-size: 0.6875rem;
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
+    white-space: nowrap;
+    transition: filter 160ms;
   }
+  a:hover .barra { filter: brightness(0.96); }
+  .cheia, .resto { display: flex; align-items: center; min-width: 0; overflow: hidden; }
+  .cheia { background: ${({ theme }) => theme.palette.sage[500]}; color: ${({ theme }) => theme.palette.neutral[0]}; box-shadow: 2px 0 0 ${({ theme }) => theme.palette.neutral[0]}; transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .resto { flex: 1; color: ${({ theme }) => theme.colors.text.muted}; font-weight: ${({ theme }) => theme.fontWeights.medium}; }
+  .dentro { padding: 0 ${({ theme }) => theme.spacing(2.5)}; }
 `;
 
 /**
@@ -222,22 +252,33 @@ export function ChannelsCard({ rows }: { rows: SourceRow[] }) {
       {canais.length === 0 ? (
         <EmptyNote>Nenhum lead chegou neste mês ainda.</EmptyNote>
       ) : (
-        <Canais>
-          {canais.map((row) => {
-            const Icone = findChoice(leadSources, row.source)?.icon ?? DotsThreeCircleIcon;
-            const taxa = row.count ? (row.converted / row.count) * 100 : 0;
-            return (
-              <li key={row.source}>
-                <Link href={leadsHref({ origens: origensDoCanal(row.source), criados: 30 })} title={`${row.converted} de ${plural(row.count, "lead virou", "leads viraram")} cliente`} aria-label={`${row.source}: ${row.converted} de ${plural(row.count, "lead virou", "leads viraram")} cliente, ${Math.round(taxa)}%. Abrir a lista`}>
-                  <span className="logo" aria-hidden>{logoDaOrigem(row.source, 18) ?? <Icone size={17} />}</span>
-                  <span className="nome">{row.source}</span>
-                  <span className="taxa">{Math.round(taxa)}%</span>
-                  <Trilho $parte={taxa} aria-hidden />
-                </Link>
-              </li>
-            );
-          })}
-        </Canais>
+        <Conversao>
+          <div className="escala" aria-hidden>
+            {[0, 25, 50, 75, 100].map((marca) => <span key={marca} style={{ left: `${marca}%` }}>{marca}%</span>)}
+          </div>
+          <div className="grade" aria-hidden />
+          <ul>
+            {canais.map((row) => {
+              const Icone = findChoice(leadSources, row.source)?.icon ?? DotsThreeCircleIcon;
+              const taxa = row.count ? (row.converted / row.count) * 100 : 0, abertos = row.count - row.converted;
+              return (
+                <li key={row.source}>
+                  <Link href={leadsHref({ origens: origensDoCanal(row.source), criados: 30 })} aria-label={`${row.source}: ${row.converted} de ${plural(row.count, "lead virou", "leads viraram")} cliente, ${Math.round(taxa)}%. Abrir a lista`}>
+                    <span className="canal">
+                      <span className="logo" aria-hidden>{logoDaOrigem(row.source, 18) ?? <Icone size={17} />}</span>
+                      <span className="nome">{row.source}</span>
+                    </span>
+                    <span className="barra" aria-hidden>
+                      {taxa > 0 && <span className="cheia" style={{ width: `${taxa}%` }}>{taxa >= 14 && <span className="dentro">{plural(row.converted, "cliente", "clientes")}</span>}</span>}
+                      <span className="resto">{100 - taxa >= 14 && <span className="dentro">{abertos} em aberto</span>}</span>
+                    </span>
+                    <span className="taxa">{Math.round(taxa)}%</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </Conversao>
       )}
     </Card>
   );

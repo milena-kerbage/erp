@@ -25,11 +25,12 @@ const CORES_CANAL: Record<Canal, CSSProperties> = {
   instagram: { "--canal-bg": "linear-gradient(135deg, rgb(255 168 61 / 0.11) 0%, rgb(225 48 108 / 0.1) 55%, rgb(131 58 180 / 0.11) 100%)" } as CSSProperties,
 };
 
-const INICIO = new Set(["/", "/leads"]);
+// Só o Painel abre o menu; Leads e clientes fica com os módulos (E-commerce) e as Configurações.
+const INICIO = new Set(["/"]);
 
 /**
- * Menu principal no centro do header (no lugar da antiga barra lateral): ícones agrupados — início, atendimento,
- * módulos e configurações —, com o nome em dica embaixo. O item da página atual mostra o nome ao lado do ícone, e os
+ * Menu principal no centro do header (no lugar da antiga barra lateral): ícones agrupados — o Painel, o atendimento
+ * e, juntos, Leads e clientes, os módulos e as Configurações —, com o nome em dica embaixo. O item da página atual mostra o nome ao lado do ícone, e os
  * canais mostram quantas conversas estão sem ler. O ícone de menu abre o painel lateral com tudo: os módulos e as
  * seções de cada um, os que ainda estão em produção e as configurações.
  */
