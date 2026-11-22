@@ -58,7 +58,7 @@ const marco = css({
   fontSize: "xs",
   fontWeight: "semibold",
   "[data-situacao=feita] > &": { bg: "marca", borderColor: "marca", color: "sobreDestaque" },
-  "[data-situacao=atual] > &": { borderColor: "marca", color: "marca", boxShadow: "[0 0 0 4px token(colors.marcaSuave)]" },
+  "[data-situacao=atual] > &": { borderColor: "marca", color: "marcaTexto", boxShadow: "[0 0 0 4px token(colors.marcaSuave)]" },
 });
 
 const rotulo = css({ "[data-situacao=atual] &": { fontWeight: "medium" } });

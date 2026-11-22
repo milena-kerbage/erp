@@ -3,7 +3,7 @@ import { receitaBotao } from "./src/loja/estilos/receitas/botao";
 
 // Panda CSS: estilos com API de objeto (css, styled, receitas) gerados NO BUILD.
 // Zero JavaScript de estilo no navegador e funciona em Server Components (docs/loja.md).
-// Identidade do Ateliê Milena Kerbage: a mesma do ERP (src/styles/theme.ts) — sálvia #788569 da
+// Identidade do Ateliê Milena Kerbage: a mesma do ERP (src/styles/theme.ts) — sálvia #798568 da
 // logo, neutros quentes puxados para o verde, Inter no texto e Scarlett só em destaques sem acento
 // (a fonte não tem acentos nem cedilha). Componentes nunca usam cor ou medida literal.
 export default defineConfig({
@@ -92,7 +92,7 @@ export default defineConfig({
         sairPeca: { from: { opacity: "1", scale: "1" }, to: { opacity: "0", scale: "0.86" } },
         realcePeca: {
           "0%": { filter: "drop-shadow(0 0 0 transparent)" },
-          "35%": { filter: "drop-shadow(0 0 2.4cqw rgba(97, 109, 84, 0.7))" },
+          "35%": { filter: "drop-shadow(0 0 2.4cqw rgba(121, 133, 104, 0.7))" },
           "100%": { filter: "drop-shadow(0 0 0 transparent)" },
         },
         // Linha do tempo "Passo a passo": a sálvia preenche a linha e os marcos acendem
@@ -102,7 +102,7 @@ export default defineConfig({
         acenderMarco: {
           // Cores fixas (keyframes não passam pelos tokens): superficie/textoSuave/pesponto → marca.
           from: { backgroundColor: "#FFFFFF", color: "#5F6459", borderColor: "#E3E5DC" },
-          to: { backgroundColor: "#616D54", color: "#FFFFFF", borderColor: "#616D54" },
+          to: { backgroundColor: "#798568", color: "#FFFFFF", borderColor: "#798568" },
         },
       },
       tokens: {
@@ -274,26 +274,30 @@ export default defineConfig({
       },
       semanticTokens: {
         colors: {
-          // Sálvia da marca (ERP: palette.sage). 600 nos botões: contraste AA com texto branco.
-          marca: { value: "#616D54" }, // sage 600
-          marcaContraste: { value: "#4D5743" }, // sage 700 (hover/pressionado)
-          marcaSuave: { value: "#E6EADF" }, // sage 100 (selos, fundos de destaque)
-          logo: { value: "#788569" }, // sage 500: cor exata da logo
+          // Sálvia da marca (ERP: palette.sage). Os botões usam o verde oficial da identidade (#798568, sage 500);
+          // o texto branco sobre ele tem contraste 3,9:1 (passa para texto em negrito/grande e para componentes).
+          marca: { value: "#798568" }, // sage 500: o verde oficial da identidade
+          marcaContraste: { value: "#626D53" }, // sage 600 (hover/pressionado)
+          // Texto e ícones no verde da marca: um degrau mais escuro que o oficial, para o contraste (5,5:1 sobre o fundo;
+          // o #798568 puro daria 3,8:1, pouco para texto pequeno).
+          marcaTexto: { value: "#626D53" }, // sage 600
+          marcaSuave: { value: "#E7EADE" }, // sage 100 (selos, fundos de destaque)
+          logo: { value: "#798568" }, // sage 500: cor exata da logo
           fundo: { value: "#FCFCF8" }, // neutral 25: branco quente
           fundoSutil: { value: "#F6F7F2" }, // neutral 50 (barra utilitária)
           veu: { value: "rgba(18, 20, 17, 0.4)" }, // escurece a página atrás de menus e painéis
           superficie: { value: "#FFFFFF" },
           superficieSuave: { value: "#EEEFE8" }, // neutral 100
-          escuro: { value: "#3C4435" }, // sage 800: títulos, menu e ícones no verde da marca
-          texto: { value: "#434B3B" }, // sage 750: texto corrido em verde-sálvia escuro (contraste 9:1 sobre o fundo)
-          textoSuave: { value: "#5E6852" }, // sage 650: texto secundário (contraste 5,8:1)
+          escuro: { value: "#3D4434" }, // sage 800: títulos, menu e ícones no verde da marca
+          texto: { value: "#444B3A" }, // sage 750: texto corrido em verde-sálvia escuro (contraste 9:1 sobre o fundo)
+          textoSuave: { value: "#5F6851" }, // sage 650: texto secundário (contraste 5,8:1)
           textoSobreEscuro: { value: "#D2D5C9" }, // neutral 300
           divisoria: { value: "rgba(29, 31, 27, 0.08)" }, // linha fina sobre fundo claro (rodapé)
           // Blocos no lugar das fotos até as fotos reais do ateliê chegarem.
           placeholder: { value: "#E3E5DC" }, // neutral 200
           placeholderForte: { value: "#D2D5C9" }, // neutral 300
           // Fundo de estúdio das fotos de produto: linho claro com um sopro de sálvia.
-          fundoProduto: { value: "#F4F6F0" }, // sage 50
+          fundoProduto: { value: "#F5F6EF" }, // sage 50
           borda: { value: "#E3E5DC" }, // neutral 200
           sucesso: { value: "#3D7A4F" },
           alerta: { value: "#8A5417" }, // tom pêssego do ERP com contraste AA sobre fundo claro
@@ -307,10 +311,10 @@ export default defineConfig({
           whatsapp: { value: "#25D366" }, // cor oficial do WhatsApp (só no ícone do atalho)
           // Fundo único do banner principal da home: fica fixo atrás do carrossel e desce por trás dos
           // cards de categoria, então todos os slides usam a mesma cor.
-          fundoBanner: { value: "#4D5743" }, // sage 700
+          fundoBanner: { value: "#4E5742" }, // sage 700
           // Formas que dão ritmo aos slides (pedestal, faixa, círculo, anéis), nos tons do fundo.
-          fundoBannerClaro: { value: "#616D54" }, // sage 600
-          fundoBannerEscuro: { value: "#3C4435" }, // sage 800
+          fundoBannerClaro: { value: "#626D53" }, // sage 600
+          fundoBannerEscuro: { value: "#3D4434" }, // sage 800
           linhaSobreBanner: { value: "rgba(255, 255, 255, 0.22)" },
           // Cabeçalho em pílula e home. A pílula é sálvia-linho translúcida (sage 100 a 82%, com desfoque),
           // e não o cinza neutro de vidro: o texto escuro mantém contraste > 9:1 mesmo sobre o hero escuro.
@@ -330,7 +334,7 @@ export default defineConfig({
             rosado: { value: "#7E5048" },
           },
           // Rodapé (§4): fundo escuro e quente, texto branco e divisórias finas no celular.
-          fundoRodape: { value: "#2C3227" }, // verde-sálvia profundo (sage 900)
+          fundoRodape: { value: "#2D3226" }, // verde-sálvia profundo (sage 900)
           textoSobreRodape: { value: "#D5DACB" }, // texto claro esverdeado (contraste > 10:1 sobre o fundo)
           divisoriaSobreEscuro: { value: "rgba(255, 255, 255, 0.18)" },
           // Identidade de ateliê: linho nos blocos alternados e o "pesponto" (linha tracejada fina, como

@@ -80,7 +80,7 @@ function Logada({ cliente, cupom, catalogo, fotos }: { cliente: ContaCliente; cu
         ) : null}
         {faltando > 0 && (
           <div className={cartaoSimples}>
-            <IdentificationCard size={22} aria-hidden className={css({ flexShrink: "0", color: "marca" })} />
+            <IdentificationCard size={22} aria-hidden className={css({ flexShrink: "0", color: "marcaTexto" })} />
             <div>
               <p className={css({ fontWeight: "medium", color: "escuro" })}>Complete o seu perfil (opcional)</p>
               <p className={css({ mt: "1" })}>

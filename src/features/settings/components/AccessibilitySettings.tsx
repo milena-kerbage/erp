@@ -122,7 +122,7 @@ const Preview = styled("span", transientOptions)<{ $mode: Appearance }>`
     width: 40%;
     height: 5px;
     border-radius: 3px;
-    background: ${({ $mode }) => ($mode === "dark" ? "#4a4e46" : "#cfd6c4")};
+    background: ${({ $mode }) => ($mode === "dark" ? "#4a4e46" : "#d0d6c3")};
     box-shadow: 0 10px 0 ${({ $mode }) => ($mode === "dark" ? "#34372f" : "#e3e5dc")};
   }
 `;

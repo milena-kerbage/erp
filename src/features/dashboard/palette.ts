@@ -50,8 +50,8 @@ const identidade: Record<string, { fundo: string; texto: string }> = {
   Google: { fundo: "#4285f4", texto: "#ffffff" },
   Facebook: { fundo: "#1877f2", texto: "#ffffff" },
   // O site é o próprio ateliê: a sálvia da logo.
-  Site: { fundo: "#788569", texto: "#ffffff" },
-  "Loja online": { fundo: "#788569", texto: "#ffffff" },
+  Site: { fundo: "#798568", texto: "#ffffff" },
+  "Loja online": { fundo: "#798568", texto: "#ffffff" },
 };
 
 export const corDaIdentidade = (source: string) => identidade[source] ?? null;

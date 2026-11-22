@@ -251,7 +251,7 @@ export function Selecao({
                       className={cx(linha, opcaoLista)}
                     >
                       <span className={css({ flex: "1", minW: "0", truncate: true })}>{opcao.rotulo}</span>
-                      {selecionada && <Check size={16} weight="bold" aria-hidden className={css({ flexShrink: "0", color: "marca" })} />}
+                      {selecionada && <Check size={16} weight="bold" aria-hidden className={css({ flexShrink: "0", color: "marcaTexto" })} />}
                     </li>
                   );
                 })}

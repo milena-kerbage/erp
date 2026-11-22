@@ -55,7 +55,7 @@ const icone = css({
   h: "10",
   borderRadius: "pilula",
   bg: "superficie",
-  color: "marca",
+  color: "marcaTexto",
 });
 
-const rubrica = css({ mb: "1", fontSize: "xs", fontWeight: "medium", letterSpacing: "rubrica", textTransform: "uppercase", color: "marca" });
+const rubrica = css({ mb: "1", fontSize: "xs", fontWeight: "medium", letterSpacing: "rubrica", textTransform: "uppercase", color: "marcaTexto" });

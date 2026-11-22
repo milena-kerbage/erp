@@ -36,15 +36,15 @@ const SECOES: Record<SecaoMenu, { rotulo: string; plural: string; descricao: str
 
 /** Cores aproximadas dos tons da loja (src/loja/componentes/inicio/Midia.tsx), só para a prévia. */
 const TONS: Record<string, { fundo: string; escuro: boolean; rotulo: string }> = {
-  salvia: { fundo: "linear-gradient(160deg, #616D54, #4D5743 55%, #3C4435)", escuro: true, rotulo: "Sálvia" },
-  musgo: { fundo: "linear-gradient(200deg, #788569, #616D54 50%, #4D5743)", escuro: true, rotulo: "Musgo" },
-  noite: { fundo: "linear-gradient(180deg, #3C4435, #1d1f1b)", escuro: true, rotulo: "Noite" },
-  salviaClara: { fundo: "linear-gradient(160deg, #e6eadf, #cfd6c4)", escuro: false, rotulo: "Sálvia clara" },
-  linho: { fundo: "linear-gradient(160deg, #f6f3ec, #F3EFE6 45%, #e6eadf)", escuro: false, rotulo: "Linho" },
+  salvia: { fundo: "linear-gradient(160deg, #626D53, #4E5742 55%, #3D4434)", escuro: true, rotulo: "Sálvia" },
+  musgo: { fundo: "linear-gradient(200deg, #798568, #626D53 50%, #4E5742)", escuro: true, rotulo: "Musgo" },
+  noite: { fundo: "linear-gradient(180deg, #3D4434, #1d1f1b)", escuro: true, rotulo: "Noite" },
+  salviaClara: { fundo: "linear-gradient(160deg, #e7eade, #d0d6c3)", escuro: false, rotulo: "Sálvia clara" },
+  linho: { fundo: "linear-gradient(160deg, #f6f3ec, #F3EFE6 45%, #e7eade)", escuro: false, rotulo: "Linho" },
   areia: { fundo: "linear-gradient(160deg, #f1ede4, #e7e1d4 50%, #d9d1c1)", escuro: false, rotulo: "Areia" },
   rose: { fundo: "linear-gradient(160deg, #f6f3ec, #E9C9C3)", escuro: false, rotulo: "Rosê" },
   azul: { fundo: "linear-gradient(160deg, #f6f3ec, #C6D7E3)", escuro: false, rotulo: "Azul bebê" },
-  verde: { fundo: "linear-gradient(160deg, #F3EFE6, #b0bb9f)", escuro: false, rotulo: "Verde" },
+  verde: { fundo: "linear-gradient(160deg, #F3EFE6, #b1bb9e)", escuro: false, rotulo: "Verde" },
   cru: { fundo: "linear-gradient(160deg, #f6f3ec, #EDE6D6)", escuro: false, rotulo: "Cru" },
   cinza: { fundo: "linear-gradient(160deg, #f1ede4, #d6d8d2)", escuro: false, rotulo: "Cinza" },
   branco: { fundo: "linear-gradient(160deg, #ffffff, #f1ede4)", escuro: false, rotulo: "Branco" },

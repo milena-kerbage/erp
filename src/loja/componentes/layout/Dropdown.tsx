@@ -314,4 +314,4 @@ export const linha = css({
 
 const iconeItem = css({ display: "inline-flex", flexShrink: "0", alignItems: "center", justifyContent: "center", minW: "[18px]", color: "textoSuave", "& svg": { w: "[18px]", h: "[18px]" } });
 
-const metaItem = css({ flexShrink: "0", fontSize: "xs", color: "marca", fontWeight: "medium" });
+const metaItem = css({ flexShrink: "0", fontSize: "xs", color: "marcaTexto", fontWeight: "medium" });

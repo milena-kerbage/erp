@@ -315,7 +315,7 @@ const brilho = css({
   backgroundClip: "text",
   color: "transparent",
   animation: "brilhoDestaque",
-  _motionReduce: { animation: "[none]", color: "marca" },
+  _motionReduce: { animation: "[none]", color: "marcaTexto" },
 });
 
 // Botão de expandir (16×16) colado ao rótulo: invisível até receber foco pelo teclado.

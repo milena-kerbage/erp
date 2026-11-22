@@ -4,19 +4,19 @@
  * em `theme.palette` para casos pontuais.
  */
 const palette = {
-  /** Verde sálvia da marca — 500 é a cor da logo (#788569). */
+  /** Verde sálvia da marca — 500 é a cor oficial da identidade (#798568); a escala inteira tem o mesmo matiz. */
   sage: {
-    50: "#f4f6f0",
-    100: "#e6eadf",
-    200: "#cfd6c4",
-    300: "#b0bb9f",
-    400: "#93a081",
-    500: "#788569",
-    600: "#616d54",
-    700: "#4d5743",
-    800: "#3c4435",
-    900: "#2c3227",
-    950: "#1c2019",
+    50: "#f5f6ef",
+    100: "#e7eade",
+    200: "#d0d6c3",
+    300: "#b1bb9e",
+    400: "#94a080",
+    500: "#798568",
+    600: "#626d53",
+    700: "#4e5742",
+    800: "#3d4434",
+    900: "#2d3226",
+    950: "#1d2018",
   },
   /** Neutros quentes, levemente puxados para o verde. */
   neutral: {
@@ -69,10 +69,11 @@ export const theme = {
     brand: palette.sage[500],
 
     primary: {
-      main: palette.sage[600],
-      hover: palette.sage[700],
+      /** O verde principal é o da identidade (500); o hover e o ativo escurecem um degrau cada. */
+      main: palette.sage[500],
+      hover: palette.sage[600],
       /** Estado ativo/selecionado (pílulas, itens de menu). */
-      strong: palette.sage[800],
+      strong: palette.sage[700],
       subtle: palette.sage[100],
       contrast: palette.neutral[0],
     },
@@ -301,9 +302,9 @@ function darkColors() {
   return {
     brand: p.sage[500],
     primary: {
-      main: p.sage[600],
-      hover: p.sage[700],
-      strong: p.sage[800],
+      main: p.sage[500],
+      hover: p.sage[600],
+      strong: p.sage[700],
       subtle: p.sage[100],
       contrast: "#161814",
     },

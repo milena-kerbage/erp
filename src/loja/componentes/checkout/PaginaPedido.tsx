@@ -521,7 +521,7 @@ const numeroPasso = css({
   bg: "marcaSuave",
   fontSize: "sm",
   fontWeight: "semibold",
-  color: "marca",
+  color: "marcaTexto",
 });
 
 const alerta = css({ p: "3", mb: "4", borderRadius: "md", bg: "alertaSuave", fontSize: "sm", lineHeight: "texto", color: "erro" });

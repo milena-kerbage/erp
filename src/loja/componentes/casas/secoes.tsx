@@ -166,7 +166,7 @@ export function ConviteMontador({ pdp = false, titulo = "Monte o seu quartinho" 
     <section aria-labelledby="titulo-convite-montador" className={cx(paddingDe(pdp), css({ mt: { base: "12", desktop: "16" } }))}>
       <div className={convite}>
         <div className={css({ display: "grid", gap: "4", justifyItems: "start", maxW: "[56ch]" })}>
-          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "marca" })}>Quartinho personalizado</p>
+          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "marcaTexto" })}>Quartinho personalizado</p>
           <h2 id="titulo-convite-montador" className={css({ fontSize: { base: "blocoTablet", desktop: "bloco" }, fontWeight: "normal", lineHeight: "bloco", letterSpacing: "bloco", color: "escuro" })}>
             {titulo}
           </h2>
@@ -284,7 +284,7 @@ export function DiferenciaisProjetos({ id = "titulo-diferenciais", pdp = false }
                   h: "12",
                   borderRadius: "full",
                   bg: "marcaSuave",
-                  color: "marca",
+                  color: "marcaTexto",
                 })}
               >
                 <Icone size={22} weight="light" />
@@ -352,7 +352,7 @@ export function EtapasProjetos({ id = "titulo-etapas", pdp = false }: { id?: str
                 </span>
                 <h3 className={tituloEtapa}>
                   <span className={css({ srOnly: true })}>Etapa {indice + 1}: </span>
-                  <Icone size={18} weight="light" aria-hidden className={css({ display: { base: "inline-block", lg: "none" }, mr: "2", verticalAlign: "[-3px]", color: "marca" })} />
+                  <Icone size={18} weight="light" aria-hidden className={css({ display: { base: "inline-block", lg: "none" }, mr: "2", verticalAlign: "[-3px]", color: "marcaTexto" })} />
                   {etapa.titulo}
                 </h3>
                 <p className={css({ mt: { base: "1", lg: "2" }, fontSize: "sm", lineHeight: "relaxed", color: "texto" })}>{etapa.texto}</p>
@@ -459,7 +459,7 @@ const iconeEtapa = css({
   mb: "4",
   borderRadius: "full",
   bg: "marcaSuave",
-  color: "marca",
+  color: "marcaTexto",
 });
 
 const tituloEtapa = css({ fontSize: { base: "md", lg: "xl" }, fontWeight: { base: "medium", lg: "normal" }, letterSpacing: { lg: "bloco" }, color: "escuro" });

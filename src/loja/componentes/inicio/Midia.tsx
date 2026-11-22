@@ -226,7 +226,7 @@ const selo = css({
 });
 
 const sobreEscuro = css({ color: "fundo" });
-const sobreClaro = css({ color: "marca" });
+const sobreClaro = css({ color: "marcaTexto" });
 
 const TONS: Record<TomMidia, string> = {
   salvia: css({ bgImage: "[linear-gradient(160deg, token(colors.marca) 0%, token(colors.marcaContraste) 55%, token(colors.fundoBannerEscuro) 100%)]" }),

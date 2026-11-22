@@ -201,8 +201,8 @@ const medalhao = css({
   borderRadius: "full",
   bg: "fundo",
   borderWidth: "1px",
-  borderColor: "[rgba(97, 109, 84, 0.35)]",
-  boxShadow: "[0 0 0 8px token(colors.fundo), 0 0 0 9px rgba(97, 109, 84, 0.22), 0 12px 32px rgba(29, 31, 27, 0.12)]",
+  borderColor: "[rgba(121, 133, 104, 0.35)]",
+  boxShadow: "[0 0 0 8px token(colors.fundo), 0 0 0 9px rgba(121, 133, 104, 0.22), 0 12px 32px rgba(29, 31, 27, 0.12)]",
 });
 
 const simbolo = css({ w: { base: "[46px]", desktop: "[60px]" }, h: "auto" });

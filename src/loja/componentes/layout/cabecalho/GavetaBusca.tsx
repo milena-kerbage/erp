@@ -403,7 +403,7 @@ const linkAtalho = css({
   textUnderlineOffset: "[4px]",
   textDecorationThickness: "1px",
   borderRadius: "xs",
-  _hover: { color: "marca" },
+  _hover: { color: "marcaTexto" },
   _focusVisible: { outline: "none", boxShadow: "anelFoco" },
 });
 

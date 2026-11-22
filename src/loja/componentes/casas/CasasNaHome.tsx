@@ -18,7 +18,7 @@ export function CasasNaHome() {
     <div className={css({ mt: { base: "16", lg: "24" } })}>
       <section aria-labelledby="titulo-projetos-home" className={banner}>
         <div className={conteudo}>
-          <p className={css({ fontSize: "sm", fontWeight: "medium", letterSpacing: "[0.12em]", textTransform: "uppercase", color: "marca" })}>
+          <p className={css({ fontSize: "sm", fontWeight: "medium", letterSpacing: "[0.12em]", textTransform: "uppercase", color: "marcaTexto" })}>
             Personalizado
           </p>
           <h2 id="titulo-projetos-home" className={frase}>

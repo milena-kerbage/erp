@@ -354,7 +354,7 @@ export function PainelCompra() {
           <span className={css({ srOnly: true })}> (abre em nova aba)</span>
         </a>
         <p className={notaPersonalizacao}>
-          <Needle size={16} aria-hidden className={css({ flexShrink: "0", color: "marca" })} />
+          <Needle size={16} aria-hidden className={css({ flexShrink: "0", color: "marcaTexto" })} />
           <span>Qualquer item pode ser personalizado ou modificado: cores, tecido, bordado e medidas, combinados com o ateliê.</span>
         </p>
       </div>

@@ -92,7 +92,7 @@ export const botaoTerciario = css({
 export const botaoSecundario = css({
   ...baseBotao,
   bg: "transparent",
-  color: "marca",
+  color: "marcaTexto",
   borderWidth: "1px",
   borderColor: "marca",
   _hover: { bg: "marca", color: "sobreDestaque" },

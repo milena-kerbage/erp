@@ -408,5 +408,5 @@ const brilho = css({
   backgroundClip: "text",
   color: "transparent",
   animation: "brilhoDestaque",
-  _motionReduce: { animation: "[none]", color: "marca" },
+  _motionReduce: { animation: "[none]", color: "marcaTexto" },
 });

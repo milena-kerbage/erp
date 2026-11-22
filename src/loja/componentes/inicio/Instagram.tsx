@@ -103,7 +103,7 @@ const assinatura = css({
   fontWeight: "normal",
   fontSize: { base: "3xl", desktop: "4xl" },
   lineHeight: "titulo",
-  color: "marca",
+  color: "marcaTexto",
 });
 
 // 3 colunas no celular, 4 no tablet e 6 no desktop; no máximo 2 linhas em cada largura.

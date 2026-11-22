@@ -20,7 +20,7 @@ export const TEMA = {
   texto: "#1D1F1B",
   textoSuave: "#6A6F63",
   linha: "#DAD9CE",
-  destaque: "#616D54",
+  destaque: "#798568",
   sobreDestaque: "#FFFFFF",
   site: "ateliemilenakerbage.com.br",
 } as const;
