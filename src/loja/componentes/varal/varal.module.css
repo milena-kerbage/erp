@@ -65,12 +65,13 @@
 .corda path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .fio { stroke: var(--v-corda); stroke-width: 3; }
 .torcido { stroke: #a39274; stroke-width: 1; stroke-dasharray: 3 5; }
-/* A peça caiu: a corda dá um tranco */
-.cena[data-fase="caindo"] .corda { animation: tranco 620ms cubic-bezier(0.3, 1.6, 0.5, 1); }
+/* A peça soltou: a corda dá um tranco suave (no instante em que o último pregador abre) */
+.cena[data-fase="caindo"] .corda { animation: tranco 1400ms cubic-bezier(0.3, 1.4, 0.5, 1) 1750ms both; }
 @keyframes tranco {
   0% { transform: translateY(0); }
-  30% { transform: translateY(-5px); }
-  60% { transform: translateY(3px); }
+  28% { transform: translateY(-6px); }
+  56% { transform: translateY(3px); }
+  80% { transform: translateY(-1px); }
   100% { transform: translateY(0); }
 }
 
@@ -101,26 +102,20 @@
   from { transform: rotate(calc(var(--giro) * -1)); }
   to { transform: rotate(var(--giro)); }
 }
-/* O tranco da corda sacode as vizinhas */
-.cena[data-fase="caindo"] .lugar:not([data-escolhida]) { animation: sacudir 700ms ease-out; }
-@keyframes sacudir {
-  0% { transform: rotate(0deg) translateY(0); }
-  25% { transform: rotate(-5deg) translateY(-4px); }
-  55% { transform: rotate(4deg) translateY(2px); }
-  100% { transform: rotate(0deg) translateY(0); }
-}
-
 /* Os pregadores ficam na corda (por cima da peça) */
-.pregadores { position: absolute; inset: 0 0 auto; z-index: 1; display: block; pointer-events: none; }
-.lugar[data-estado="caindo"] .pregadores { animation: estalo 420ms cubic-bezier(0.3, 1.8, 0.5, 1); transform-origin: 50% 10%; }
-@keyframes estalo {
-  0% { transform: scale(1); }
-  35% { transform: scale(1.18, 0.86) rotate(-6deg); }
-  70% { transform: scale(0.94, 1.08) rotate(4deg); }
+.pregadores { position: absolute; inset: 0 0 auto; z-index: 1; display: block; pointer-events: none; transition: opacity 900ms ease; }
+.pregadores g[data-n] { transform-box: fill-box; transform-origin: 50% 20%; }
+/* Um de cada vez: primeiro o da direita abre devagar; o outro segura a peça mais um pouco e então solta */
+.lugar[data-estado="caindo"] .pregadores g[data-n="1"] { animation: abrir 900ms cubic-bezier(0.3, 1.5, 0.5, 1) 420ms both; }
+.lugar[data-estado="caindo"] .pregadores g[data-n="2"] { animation: abrir 900ms cubic-bezier(0.3, 1.5, 0.5, 1) 1650ms both; }
+@keyframes abrir {
+  0% { transform: none; }
+  30% { transform: scale(1.28, 0.84) translateY(-2px) rotate(-8deg); }
+  62% { transform: scale(0.92, 1.1) rotate(5deg); }
   100% { transform: none; }
 }
 .lugar[data-estado="foi"] .pregadores,
-.lugar[data-estado="misterio"] .pregadores { opacity: 0; transition: opacity 300ms ease; }
+.lugar[data-estado="misterio"] .pregadores { opacity: 0; }
 
 .peca {
   position: relative;
@@ -133,75 +128,85 @@
   transform-origin: 50% 9%;
   -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 6px 8px rgb(60 68 53 / 0.1));
-  transition: filter 240ms ease, opacity 420ms ease;
-  /* Chegada: as peças são penduradas uma a uma */
-  animation: pendurar 700ms cubic-bezier(0.34, 1.4, 0.64, 1) calc(var(--ordem) * 90ms) backwards;
+  /* Tudo muda devagar: nada aparece nem some de repente */
+  transition: transform 700ms cubic-bezier(0.3, 1.2, 0.4, 1), filter 700ms ease, opacity 1100ms ease;
 }
 .peca svg { display: block; }
+/* Chegada (só antes do jogo começar): as peças são penduradas uma a uma */
+.cena[data-fase="convite"] .peca,
+.cena[data-fase="fechado"] .peca { animation: pendurar 1100ms cubic-bezier(0.3, 1.3, 0.5, 1) calc(var(--ordem) * 160ms) backwards; }
 @keyframes pendurar {
-  from { opacity: 0; transform: translateY(-26px) rotate(-10deg) scale(0.9); }
-  to { opacity: 1; transform: none; }
+  0% { opacity: 0; transform: translateY(-30px) rotate(-10deg) scale(0.88); }
+  60% { opacity: 1; transform: translateY(3px) rotate(4deg) scale(1.02); }
+  100% { opacity: 1; transform: none; }
 }
 .peca:focus-visible { outline: 2px solid var(--v-marca); outline-offset: 4px; border-radius: 12px; }
 
-/* Liberou a escolha: as peças dão um pulinho, uma depois da outra, chamando para o jogo */
-.cena[data-fase="escolha"] .peca { animation: acordar 620ms cubic-bezier(0.34, 1.5, 0.6, 1) calc(var(--ordem) * 110ms) backwards; }
-@keyframes acordar {
-  0% { transform: translateY(0) scale(1); }
-  40% { transform: translateY(-12px) scale(1.06) rotate(-4deg); }
-  70% { transform: translateY(3px) scale(0.98) rotate(3deg); }
-  100% { transform: none; }
-}
-/* Convite a tocar: a peça balança mais rápido e ganha um brilho */
+/* Convite a tocar: a peça sobe um pouquinho e inclina, devagar (sem trocar de animação: o clique continua daqui) */
 .cena[data-fase="escolha"] .peca:hover,
 .cena[data-fase="escolha"] .peca:focus-visible {
-  animation: chamar 480ms ease-in-out infinite alternate;
-  filter: drop-shadow(0 12px 16px rgb(60 68 53 / 0.18)) brightness(1.03);
-}
-@keyframes chamar {
-  from { transform: rotate(-6deg) scale(1.05); }
-  to { transform: rotate(6deg) scale(1.05); }
+  transform: translateY(-5px) rotate(-4deg) scale(1.07);
+  filter: drop-shadow(0 14px 18px rgb(60 68 53 / 0.18)) brightness(1.03);
 }
 
-/* Antes do e-mail: o varal aparece, mas ainda não responde */
+/* Antes do telefone: o varal aparece, mas ainda não responde */
 .cena[data-fase="convite"] .peca,
 .cena[data-fase="fechado"] .peca { cursor: default; pointer-events: none; }
 .cena[data-fase="fechado"] .peca { opacity: 0.45; filter: grayscale(0.35); }
 
-/* Escolheu: as outras esmaecem e param de responder */
-.cena[data-escolhida] .lugar:not([data-escolhida]) .peca { opacity: 0.3; pointer-events: none; filter: saturate(0.6); }
-.cena[data-escolhida] .lugar:not([data-escolhida]) .pregadores { opacity: 0.45; }
+/* Escolheu: as outras esmaecem bem devagar e param de responder */
+.cena[data-escolhida] .lugar:not([data-escolhida]) .peca { opacity: 0.28; pointer-events: none; filter: saturate(0.55); }
+.cena[data-escolhida] .lugar:not([data-escolhida]) .pregadores { opacity: 0.4; }
+.lugar[data-escolhida] { z-index: 2; }
 
-/* Suspense: a escolhida balança cada vez mais, com um halo pulsando atrás e estrelinhas girando em volta */
-.lugar[data-estado="sorteando"] { animation: none; z-index: 2; }
-.lugar[data-estado="sorteando"] .peca { pointer-events: none; animation: suspense 1500ms ease-in-out infinite; filter: drop-shadow(0 12px 18px rgb(97 109 84 / 0.28)) brightness(1.04); }
-@keyframes suspense {
-  0% { transform: rotate(0deg) scale(1.04); }
-  12% { transform: rotate(-5deg) scale(1.05); }
-  26% { transform: rotate(6deg) scale(1.06); }
-  40% { transform: rotate(-8deg) scale(1.07); }
-  54% { transform: rotate(9deg) scale(1.08); }
-  68% { transform: rotate(-10deg) scale(1.08); }
-  82% { transform: rotate(8deg) scale(1.07); }
-  100% { transform: rotate(0deg) scale(1.04); }
+/* 1. Foco: a escolhida cresce e se endireita, devagar (é daqui que o balanço do suspense começa) */
+.lugar[data-estado="foco"] .peca {
+  pointer-events: none;
+  transform: scale(1.1);
+  filter: drop-shadow(0 14px 20px rgb(97 109 84 / 0.24)) brightness(1.04);
+  transition-duration: 1100ms;
 }
+
+/* 2. Suspense: um pêndulo lento que vai abrindo e volta ao centro. Começa e termina na mesma pose do foco, então
+      pode repetir (enquanto o servidor sorteia) e entregar para a queda sem tranco. */
+.lugar[data-estado="sorteando"] .peca {
+  pointer-events: none;
+  filter: drop-shadow(0 14px 20px rgb(97 109 84 / 0.24)) brightness(1.04);
+  animation: suspense 3400ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes suspense {
+  0% { transform: rotate(0deg) scale(1.1); }
+  14% { transform: rotate(-4deg) scale(1.1); }
+  30% { transform: rotate(6deg) scale(1.11); }
+  46% { transform: rotate(-9deg) scale(1.12); }
+  62% { transform: rotate(11deg) scale(1.12); }
+  78% { transform: rotate(-7deg) scale(1.11); }
+  90% { transform: rotate(3deg) scale(1.1); }
+  100% { transform: rotate(0deg) scale(1.1); }
+}
+
+/* O halo e as estrelinhas chegam e vão embora devagar, junto com o suspense */
 .halo {
   position: absolute;
   top: 18%;
   left: 50%;
   z-index: -1;
-  width: 150%;
+  width: 170%;
   aspect-ratio: 1;
-  margin-left: -75%;
+  margin-left: -85%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(255 255 255 / 0.95), rgb(233 223 247 / 0.55) 55%, transparent 72%);
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.95), rgb(233 223 247 / 0.5) 52%, transparent 72%);
   opacity: 0;
+  transform: scale(0.7);
   pointer-events: none;
+  transition: opacity 1400ms ease, transform 1400ms ease;
 }
-.lugar[data-estado="sorteando"] .halo { animation: pulsar 900ms ease-in-out infinite alternate; }
-@keyframes pulsar {
-  from { opacity: 0.35; transform: scale(0.82); }
-  to { opacity: 1; transform: scale(1.06); }
+.lugar[data-estado="foco"] .halo { opacity: 0.55; transform: scale(0.9); }
+.lugar[data-estado="sorteando"] .halo { opacity: 1; transform: scale(1); animation: respirar 1700ms ease-in-out 1400ms infinite alternate; }
+.lugar[data-estado="caindo"] .halo { opacity: 0.6; transform: scale(1.05); }
+@keyframes respirar {
+  from { transform: scale(0.94); }
+  to { transform: scale(1.08); }
 }
 .orbita {
   position: absolute;
@@ -212,8 +217,12 @@
   margin-left: -75%;
   pointer-events: none;
   opacity: 0;
+  transition: opacity 1400ms ease;
+  animation: orbitar 9s linear infinite;
 }
-.lugar[data-estado="sorteando"] .orbita { opacity: 1; animation: orbitar 2.4s linear infinite; transition: opacity 300ms ease; }
+.lugar[data-estado="foco"] .orbita { opacity: 0.5; }
+.lugar[data-estado="sorteando"] .orbita { opacity: 1; }
+.lugar[data-estado="caindo"] .orbita { opacity: 0.35; }
 @keyframes orbitar { to { transform: rotate(360deg); } }
 .orbita svg {
   position: absolute;
@@ -223,34 +232,38 @@
   height: 13px;
   margin: -6.5px;
   color: #e9cf7f;
-  transform: rotate(var(--ang)) translateY(calc(var(--peca) * -0.74));
-  animation: piscar 700ms ease-in-out calc(var(--ordem) * 110ms) infinite alternate;
+  transform: rotate(var(--ang)) translateY(calc(var(--peca) * -0.78));
+  animation: piscar 1300ms ease-in-out calc(var(--ordem) * 210ms) infinite alternate;
 }
 .orbita svg:nth-of-type(even) { color: #cdb8e8; width: 10px; height: 10px; margin: -5px; }
 @keyframes piscar {
-  from { opacity: 0.25; }
+  from { opacity: 0.2; }
   to { opacity: 1; }
 }
 
-/* O pregador solta: a peça dá um pulinho, rodopia e cai para fora da tela */
-.lugar[data-estado="caindo"] { animation: none; z-index: 2; }
+/* 3. A soltura, sem pressa: o primeiro pregador abre e a peça pende de lado; ela balança presa por um só; o
+      segundo abre e ela cai planando, girando devagar, até sumir. Começa na pose em que o suspense terminou. */
 .lugar[data-estado="caindo"] .peca {
   pointer-events: none;
-  animation: queda 1100ms cubic-bezier(0.55, 0, 0.9, 0.45) forwards;
+  animation: queda 3600ms linear forwards;
 }
 @keyframes queda {
-  0% { transform: translateY(0) rotate(0deg) scale(1.04); opacity: 1; }
-  16% { transform: translateY(-16px) rotate(-12deg) scale(1.08); opacity: 1; }
-  30% { transform: translateY(-4px) rotate(14deg) scale(1.04); opacity: 1; }
-  100% { transform: translateY(110vh) rotate(200deg) scale(0.9); opacity: 0; }
+  0% { transform: rotate(0deg) scale(1.1); opacity: 1; animation-timing-function: ease-in-out; }
+  10% { transform: rotate(-3deg) scale(1.1); opacity: 1; animation-timing-function: cubic-bezier(0.3, 1.4, 0.5, 1); }
+  24% { transform: translate(-5px, 8px) rotate(17deg) scale(1.09); opacity: 1; animation-timing-function: ease-in-out; }
+  34% { transform: translate(-3px, 6px) rotate(11deg) scale(1.09); opacity: 1; animation-timing-function: ease-in-out; }
+  44% { transform: translate(-5px, 9px) rotate(19deg) scale(1.08); opacity: 1; animation-timing-function: ease-in-out; }
+  50% { transform: translate(-5px, 10px) rotate(17deg) scale(1.08); opacity: 1; animation-timing-function: cubic-bezier(0.5, 0, 0.85, 0.55); }
+  78% { transform: translate(14px, 46vh) rotate(64deg) scale(1); opacity: 1; animation-timing-function: linear; }
+  100% { transform: translate(30px, 92vh) rotate(120deg) scale(0.94); opacity: 0; }
 }
 .lugar[data-estado="foi"] .peca,
 .lugar[data-estado="misterio"] .peca { visibility: hidden; }
-.lugar[data-estado="foi"], .lugar[data-estado="misterio"] { animation: none; }
 
 /* ---------- A etiqueta do prêmio ---------- */
 
-/* Desce da corda fechada, com um "?", e depois vira para mostrar o prêmio. Na cor da marca. */
+/* 4. O mistério: a etiqueta desce da corda bem devagar, fechada, com um "?" que respira. 5. Depois vira, lenta,
+      para mostrar o prêmio. Na cor da marca. */
 .etiqueta {
   position: absolute;
   top: calc(var(--y) * 1px);
@@ -261,14 +274,15 @@
   max-width: min(52cqi, 200px);
   translate: var(--desloc, -50%) 0;
   transform-origin: var(--eixo, 50%) 0;
-  perspective: 600px;
-  animation: etiqueta-desce 640ms cubic-bezier(0.34, 1.6, 0.5, 1) both, etiqueta-balanca 2.6s ease-in-out 700ms infinite alternate;
+  perspective: 700px;
+  animation: etiqueta-desce 2100ms cubic-bezier(0.22, 1, 0.36, 1) both, etiqueta-balanca 3.4s ease-in-out 2100ms infinite alternate;
 }
 /* Nas pontas, a etiqueta abre para dentro da cena */
 .etiqueta[data-borda="inicio"] { --desloc: -24%; --eixo: 24%; }
 .etiqueta[data-borda="fim"] { --desloc: -76%; --eixo: 76%; }
-.etiqueta[data-quieta] { animation: etiqueta-balanca 2.6s ease-in-out infinite alternate; }
+.etiqueta[data-quieta] { animation: etiqueta-balanca 3.4s ease-in-out infinite alternate; }
 
+/* O fio cresce primeiro; a etiqueta vem pendurada nele */
 .etiqueta::before {
   content: "";
   display: block;
@@ -276,15 +290,17 @@
   height: 18px;
   margin-left: calc(var(--eixo, 50%) - 1px);
   background: var(--v-corda);
+  transform-origin: 50% 0;
+  animation: fio-cresce 900ms ease-out both;
+}
+.etiqueta[data-quieta]::before { animation: none; }
+@keyframes fio-cresce {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
 }
 
-.cartao { position: relative; display: block; transform-style: preserve-3d; transition: transform 760ms cubic-bezier(0.3, 1.4, 0.5, 1); }
+.cartao { position: relative; display: block; transform-style: preserve-3d; transition: transform 1500ms cubic-bezier(0.65, 0, 0.25, 1); }
 .etiqueta[data-virada] .cartao { transform: rotateY(180deg); }
-.etiqueta:not([data-virada]) .cartao { animation: curiosidade 520ms ease-in-out 640ms infinite alternate; }
-@keyframes curiosidade {
-  from { transform: rotateY(0deg) rotate(-3deg) scale(1); }
-  to { transform: rotateY(0deg) rotate(3deg) scale(1.06); }
-}
 
 .face {
   position: relative;
@@ -319,11 +335,17 @@
   box-shadow: inset 0 0 0 1.5px #4d5743;
 }
 .face[data-lado="frente"] { position: absolute; inset: 0; background: #788569; font-size: 26px; font-weight: 600; }
+.face[data-lado="frente"] b { display: block; font-weight: inherit; animation: curiosidade 1500ms ease-in-out 1600ms infinite alternate; }
 .face[data-lado="verso"] { transform: rotateY(180deg); }
+@keyframes curiosidade {
+  from { transform: scale(1); opacity: 0.8; }
+  to { transform: scale(1.28); opacity: 1; }
+}
 
 @keyframes etiqueta-desce {
-  0% { opacity: 0; transform: translateY(-18px) scale(0.2, 0.05) rotate(-10deg); }
-  60% { opacity: 1; transform: translateY(4px) scale(1.06) rotate(4deg); }
+  0% { opacity: 0; transform: translateY(-22px) scale(0.5, 0.2); }
+  35% { opacity: 0; transform: translateY(-22px) scale(0.5, 0.2); }
+  75% { opacity: 1; transform: translateY(3px) scale(1.03); }
   100% { opacity: 1; transform: none; }
 }
 @keyframes etiqueta-balanca {
@@ -331,7 +353,7 @@
   to { rotate: 2.5deg; }
 }
 
-/* A festa quando o prêmio aparece: confetes em tons pastel saltando de trás da etiqueta */
+/* A festa quando o prêmio aparece: confetes em tons pastel sobem de trás da etiqueta e caem flutuando */
 .estouro { position: absolute; top: 46px; left: var(--eixo, 50%); width: 0; height: 0; pointer-events: none; }
 .estouro i {
   position: absolute;
@@ -341,14 +363,15 @@
   border-radius: 2px;
   background: var(--cor);
   opacity: 0;
-  animation: estourar 1000ms cubic-bezier(0.15, 0.7, 0.3, 1) 380ms both;
+  animation: estourar 2600ms cubic-bezier(0.15, 0.75, 0.3, 1) 800ms both;
 }
 .estouro i:nth-of-type(3n) { border-radius: 50%; width: 7px; height: 7px; }
 .estouro i:nth-of-type(4n) { width: 5px; height: 11px; }
 @keyframes estourar {
   0% { opacity: 0; transform: rotate(var(--ang)) translateY(0) scale(0.4); }
-  18% { opacity: 1; }
-  100% { opacity: 0; transform: rotate(var(--ang)) translateY(calc(var(--dist) * -1)) rotate(180deg) scale(1); }
+  14% { opacity: 1; }
+  55% { opacity: 1; transform: rotate(var(--ang)) translateY(calc(var(--dist) * -1)) rotate(140deg) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--ang)) translateY(calc(var(--dist) * -0.82)) translateY(26px) rotate(260deg) scale(0.9); }
 }
 
 /* ---------- Textos e formulário ---------- */
@@ -392,7 +415,7 @@
   to { opacity: 1; transform: none; }
 }
 .convite label { color: var(--v-escuro); font-size: 14px; font-weight: 600; }
-.convite input[type="email"] {
+.convite input[type="tel"] {
   width: 100%;
   height: 48px;
   margin-top: 6px;
@@ -404,7 +427,7 @@
   font: inherit;
   font-size: 16px;
 }
-.convite input[type="email"]:focus { outline: 2px solid var(--v-marca); outline-offset: 1px; border-color: transparent; }
+.convite input[type="tel"]:focus { outline: 2px solid var(--v-marca); outline-offset: 1px; border-color: transparent; }
 .convite input[aria-invalid="true"] { border-color: #b03a26; }
 .aceite { display: flex; align-items: flex-start; gap: 10px; color: var(--v-suave); font-size: 13px; font-weight: 400 !important; line-height: 1.45; }
 .aceite input { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; accent-color: var(--v-marca); }
@@ -413,21 +436,45 @@
 
 /* ---------- A janela do prêmio ---------- */
 
-.premio { display: grid; gap: 14px; text-align: center; }
-.premio p { color: var(--v-suave); font-size: 15px; line-height: 1.5; }
-.premio .ganhou { color: var(--v-suave); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.premio { display: grid; gap: 12px; text-align: center; }
+.premio p { color: var(--v-suave); font-size: 14px; line-height: 1.5; }
+.premio .ganhou { color: var(--v-suave); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
 .premio .valor { color: var(--v-escuro); font-size: clamp(30px, 8vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
+
+/* O cupom como uma etiqueta de pano: trama de linho, pesponto em volta e o código bordado no meio */
+.pano {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  margin: 4px 0;
+  padding: 18px 16px 16px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(0deg, rgb(120 133 105 / 0.07) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(120 133 105 / 0.07) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #f6f1e7, #efeadd);
+  box-shadow: inset 0 0 0 1px rgb(120 133 105 / 0.18), 0 1px 0 #fff;
+}
+/* O pesponto */
+.pano::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1.5px dashed rgb(120 133 105 / 0.55);
+  border-radius: 9px;
+  pointer-events: none;
+}
+.pano small { color: var(--v-suave); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
 .codigo {
   display: block;
-  padding: 16px 12px;
-  border: 2px dashed #b9a98c;
-  border-radius: 12px;
-  background: #fffdf4;
   color: var(--v-escuro);
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: clamp(20px, 6vw, 26px);
+  font-family: inherit;
+  font-size: clamp(22px, 6.4vw, 28px);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  /* O relevo de linha bordada */
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
   user-select: all;
   -webkit-user-select: all;
   word-break: break-all;

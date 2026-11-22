@@ -13,7 +13,7 @@ import estilos from "./varal.module.css";
 
 const MINI: { peca: Peca; x: number; y: number; dur: string; atraso: string }[] = [
   { peca: "body", x: 18, y: 8, dur: "3.2s", atraso: "-0.4s" },
-  { peca: "touca", x: 50, y: 13, dur: "3.9s", atraso: "-1.6s" },
+  { peca: "fralda", x: 50, y: 13, dur: "3.9s", atraso: "-1.6s" },
   { peca: "meinha", x: 82, y: 8, dur: "3.5s", atraso: "-2.4s" },
 ];
 

@@ -1,22 +1,26 @@
 import type { Peca } from "@/loja/lib/varal/regras";
 
 // As cinco roupinhas do varal, desenhadas à mão em SVG (traço fino, cantos arredondados). Tudo em tons pastel bem
-// clarinhos e delicados: rosa, azul, amarelo, lilás e verde, sem vermelho. Os pregadores são um desenho à parte
+// clarinhos e delicados: rosa (body), azul (macacão), amarelo (fraldinha de boca), lilás (babador) e verde (meinha),
+// sem vermelho. Os pregadores são um desenho à parte
 // (<Pregadores>), na mesma caixa de 100 × 124: quando a peça cai, eles ficam na corda. A corda passa na altura 12.
 
 const TRACO = { strokeWidth: 1.8, strokeLinejoin: "round", strokeLinecap: "round" } as const;
 const COSTURA = { fill: "none", strokeWidth: 1.1, strokeDasharray: "2.4 2.6", strokeLinecap: "round" } as const;
 
 /** Onde ficam os pregadores de cada peça (no eixo x da caixa de 100). */
-const PREGADORES: Record<Peca, number[]> = { body: [33, 67], macacao: [34, 66], touca: [50], babador: [33, 67], meinha: [50] };
+const PREGADORES: Record<Peca, number[]> = { body: [33, 67], macacao: [34, 66], fralda: [31, 69], babador: [33, 67], meinha: [50] };
 
 /** Pregador de madeira clara, preso na corda. */
-function Pregador({ x }: { x: number }) {
+function Pregador({ x, n }: { x: number; n: number }) {
   return (
     <g transform={`translate(${x} 2)`}>
+      {/* O grupo de dentro é o que se mexe quando o pregador abre (data-n: a ordem em que solta) */}
+      <g data-n={n}>
       <rect x={-4} y={0} width={8} height={21} rx={2.4} fill="#F1DFC4" stroke="#C9A77C" strokeWidth={1.4} />
       <path d="M-4 9.5 H4" stroke="#A9AFB3" strokeWidth={1.6} strokeLinecap="round" />
       <path d="M0 13 V21" stroke="#C9A77C" strokeWidth={1} strokeLinecap="round" />
+      </g>
     </g>
   );
 }
@@ -43,15 +47,19 @@ function Macacao() {
   );
 }
 
-function Touca() {
+/** Fraldinha de boca (o paninho de limpar a babinha): um pano pendurado pelos dois cantos, com barrado e bordado. */
+function Fralda() {
   return (
     <>
-      <circle cx={50} cy={31} r={9} fill="#FFFAE6" stroke="#E3CB82" {...TRACO} />
-      <path d="M45 28 Q50 24 55 28 M44 33 Q50 30 56 33" fill="none" stroke="#EFDDA3" strokeWidth={1} strokeLinecap="round" />
-      <path d="M25 80 Q23 42 50 39 Q77 42 75 80 Z" fill="#FCF1C6" stroke="#E3CB82" {...TRACO} />
-      <path d="M38 45 Q34 60 35 76 M50 42 V76 M62 45 Q66 60 65 76" stroke="#EFDDA3" {...COSTURA} />
-      <rect x={21} y={76} width={58} height={17} rx={8} fill="#E9DFF7" stroke="#BDA9DC" {...TRACO} />
-      <path d="M30 80 V89 M38 80 V89 M46 80 V89 M54 80 V89 M62 80 V89 M70 80 V89" stroke="#CFC0E8" strokeWidth={1.1} strokeLinecap="round" />
+      {/* O pano: a borda de cima cede entre os pregadores e a de baixo termina num barrado ondulado */}
+      <path d="M23 23 Q50 31 77 23 L79 80 Q73 85 67 80 Q61 75 55 80 Q50 84 45 80 Q39 75 33 80 Q27 85 21 80 Z" fill="#FCF1C6" stroke="#E3CB82" {...TRACO} />
+      {/* Dobras suaves do tecido */}
+      <path d="M38 29 Q36 52 38 76 M62 29 Q64 52 62 76" fill="none" stroke="#F3E3AE" strokeWidth={1.2} strokeLinecap="round" />
+      {/* O barrado, com o pesponto */}
+      <path d="M22 68 H78" stroke="#EFDDA3" {...COSTURA} />
+      <path d="M25 30 Q50 37 75 30" stroke="#EFDDA3" {...COSTURA} />
+      {/* O bordado: um coraçãozinho rosa no canto */}
+      <path d="M66 60 C62.6 57.4 62 54.8 63.9 53.7 C65 53.1 65.9 53.9 66 54.7 C66.1 53.9 67 53.1 68.1 53.7 C70 54.8 69.4 57.4 66 60 Z" fill="#FBDDE2" stroke="#E5A9B6" strokeWidth={1.1} strokeLinejoin="round" />
     </>
   );
 }
@@ -69,19 +77,20 @@ function Babador() {
   );
 }
 
+/** Meinha pequena (proporcional às outras peças): o desenho encolhe em torno do pregador. */
 function Meinha() {
   return (
-    <>
-      <path d="M38 30 L62 30 L62 68 Q62 74 68 77 L79 83 Q90 89 86 98 Q82 107 69 105 L49 101 Q37 98 38 85 Z" fill="#DCEBD3" stroke="#A9C79B" {...TRACO} />
-      <path d="M41 84 Q42 95 52 97" stroke="#BFD8B3" {...COSTURA} />
-      <path d="M72 81 Q80 88 80 100" fill="none" stroke="#A9C79B" strokeWidth={1.3} strokeLinecap="round" />
-      <rect x={35} y={22} width={30} height={15} rx={5} fill="#FCF1C6" stroke="#E3CB82" {...TRACO} />
-      <path d="M42 26 V33 M50 26 V33 M58 26 V33" stroke="#EFDDA3" strokeWidth={1.1} strokeLinecap="round" />
-    </>
+    <g transform="translate(50 20) scale(0.56) translate(-50 -20)">
+      <path d="M38 30 L62 30 L62 68 Q62 74 68 77 L79 83 Q90 89 86 98 Q82 107 69 105 L49 101 Q37 98 38 85 Z" fill="#DCEBD3" stroke="#A9C79B" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M41 84 Q42 95 52 97" fill="none" stroke="#BFD8B3" strokeWidth={1.5} strokeDasharray="3 3.4" strokeLinecap="round" />
+      <path d="M72 81 Q80 88 80 100" fill="none" stroke="#A9C79B" strokeWidth={1.8} strokeLinecap="round" />
+      <rect x={35} y={22} width={30} height={15} rx={5} fill="#FCF1C6" stroke="#E3CB82" strokeWidth={2.4} strokeLinejoin="round" />
+      <path d="M42 26 V33 M50 26 V33 M58 26 V33" stroke="#EFDDA3" strokeWidth={1.5} strokeLinecap="round" />
+    </g>
   );
 }
 
-const DESENHO: Record<Peca, () => React.ReactNode> = { body: Body, macacao: Macacao, touca: Touca, babador: Babador, meinha: Meinha };
+const DESENHO: Record<Peca, () => React.ReactNode> = { body: Body, macacao: Macacao, fralda: Fralda, babador: Babador, meinha: Meinha };
 
 export function Roupinha({ peca }: { peca: Peca }) {
   const Desenho = DESENHO[peca];
@@ -96,7 +105,8 @@ export function Roupinha({ peca }: { peca: Peca }) {
 export function Pregadores({ peca, className }: { peca: Peca; className?: string }) {
   return (
     <svg viewBox="0 0 100 124" width="100%" className={className} aria-hidden focusable="false">
-      {PREGADORES[peca].map((x) => <Pregador key={x} x={x} />)}
+      {/* O da direita solta primeiro (n = 1); o da esquerda (ou o único) segura a peça até o fim (n = 2) */}
+      {PREGADORES[peca].map((x, indice) => <Pregador key={x} x={x} n={indice === 0 ? 2 : 1} />)}
     </svg>
   );
 }

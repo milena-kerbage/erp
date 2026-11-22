@@ -459,23 +459,24 @@ test('telas do catálogo: filtro por coleção e ordenação, fotos devolvem a r
   assert.deepEqual((await imagensDaLoja(join(directory, 'sem-pasta'))).imagens, [{ caminho: '/vitrine/categorias/enxoval.jpg', emUso: true }]);
 });
 
-test('varal de roupinhas: sorteio no servidor, um cupom por e-mail, fora da lista pública e válido no pedido', async () => {
+test('varal de roupinhas: sorteio no servidor, um cupom por telefone, fora da lista pública e válido no pedido', async () => {
   const publico = await varalPublico();
   assert.equal(publico.ativo, true); assert.match(publico.condicoes, /7 dias.*R\$ 199/); assert.equal('premios' in publico, false, 'prêmios e chances nunca vão para a loja');
-  await assert.rejects(jogarVaral({ email: 'x', peca: 'body', consentimento: true }), { code: 'EMAIL_INVALIDO' });
-  await assert.rejects(jogarVaral({ email: 'mae@example.test', peca: 'body', consentimento: false }), { code: 'SEM_CONSENTIMENTO' });
-  await assert.rejects(jogarVaral({ email: 'mae@example.test', peca: 'vestido', consentimento: true }), { code: 'PECA_INVALIDA' });
+  await assert.rejects(jogarVaral({ telefone: '8599', peca: 'body', consentimento: true }), { code: 'TELEFONE_INVALIDO' });
+  await assert.rejects(jogarVaral({ telefone: '(85) 8888-12345', peca: 'body', consentimento: true }), { code: 'TELEFONE_INVALIDO' }, 'celular começa com 9');
+  await assert.rejects(jogarVaral({ telefone: '(85) 99999-0001', peca: 'body', consentimento: false }), { code: 'SEM_CONSENTIMENTO' });
+  await assert.rejects(jogarVaral({ telefone: '(85) 99999-0001', peca: 'touca', consentimento: true }), { code: 'PECA_INVALIDA' });
 
   // O sorteio é do servidor: 0 cai no primeiro prêmio (5%) e 0,99 no último (15%), seja qual for a peça.
   const agora = Date.now();
-  const primeiro = await jogarVaral({ email: ' Mae@Example.test ', peca: 'touca', consentimento: true }, agora, () => 0);
-  assert.equal(primeiro.premio, '5% de desconto'); assert.match(primeiro.codigo, /^BEBE5-[A-HJ-NP-Z2-9]{4}$/); assert.equal(primeiro.jaJogou, false); assert.equal(primeiro.peca, 'touca');
-  const outro = await jogarVaral({ email: 'tia@example.test', peca: 'touca', consentimento: true }, agora, () => 0.99);
+  const primeiro = await jogarVaral({ telefone: ' (85) 99999-0001 ', peca: 'fralda', consentimento: true }, agora, () => 0);
+  assert.equal(primeiro.premio, '5% de desconto'); assert.match(primeiro.codigo, /^BEBE5-[A-HJ-NP-Z2-9]{4}$/); assert.equal(primeiro.jaJogou, false); assert.equal(primeiro.peca, 'fralda');
+  const outro = await jogarVaral({ telefone: '85 3333-0002', peca: 'fralda', consentimento: true }, agora, () => 0.99);
   assert.equal(outro.premio, '15% de desconto'); assert.match(outro.codigo, /^BEBE15-/);
 
-  // Uma jogada por e-mail: jogar de novo (outra peça, outro sorteio) devolve o mesmo cupom.
-  const repetido = await jogarVaral({ email: 'mae@example.test', peca: 'meinha', consentimento: true }, agora + 1000, () => 0.99);
-  assert.equal(repetido.codigo, primeiro.codigo); assert.equal(repetido.jaJogou, true); assert.equal(repetido.peca, 'touca');
+  // Uma jogada por telefone (com ou sem o 55, com ou sem máscara): jogar de novo devolve o mesmo cupom.
+  const repetido = await jogarVaral({ telefone: '+55 85 99999 0001', peca: 'meinha', consentimento: true }, agora + 1000, () => 0.99);
+  assert.equal(repetido.codigo, primeiro.codigo); assert.equal(repetido.jaJogou, true); assert.equal(repetido.peca, 'fralda');
 
   // Pessoal: não aparece na lista que a loja manda ao navegador nem na tela de Cupons do ERP.
   assert.equal((await cuponsDeCampanha() ?? []).some((cupom) => cupom.codigo.startsWith('BEBE')), false);
@@ -489,17 +490,17 @@ test('varal de roupinhas: sorteio no servidor, um cupom por e-mail, fora da list
   assert.equal(escolherCupom(primeiro.codigo, 19900, conta, campanhas.cupons, agora + 8 * 86_400_000).tipo, 'invalido', 'depois de 7 dias expira');
   assert.equal(escolherCupom('BEMVINDO5', 19900, { logada: false, cupom: null }, campanhas.cupons, agora).tipo, 'ok', 'os cupons de código seguem valendo');
 
-  const painel = await painelVaral(new URL('http://erp.test/?busca=tia'));
+  const painel = await painelVaral(new URL('http://erp.test/?busca=3333'));
   assert.equal(painel.resumo.jogadas, 2); assert.equal(painel.resumo.valendo, 2); assert.equal(painel.jogadas.length, 1);
-  assert.equal(painel.jogadas[0].email, 'tia@example.test'); assert.equal(painel.jogadas[0].situacao, 'valendo'); assert.equal(painel.jogadas[0].premio, '15% de desconto');
+  assert.equal(painel.jogadas[0].telefone, '8533330002'); assert.equal(painel.jogadas[0].situacao, 'valendo'); assert.equal(painel.jogadas[0].premio, '15% de desconto');
 
   // Cadastro do ERP: as chances somam 100; fechado, não aceita jogada nova, mas quem já ganhou continua vendo o cupom.
   await assert.rejects(salvarConfigVaral({ ativo: true, premios: [{ tipo: 'percentual', valor: 10, chance: 50, prefixo: 'MIMO10' }], validadeDias: 7, minimoCentavos: 0 }, gestora), /somar 100/);
   await salvarConfigVaral({ ativo: false, premios: [{ tipo: 'valor', valor: 3000, chance: 100, prefixo: 'MIMO30' }], validadeDias: 10, minimoCentavos: 0 }, gestora);
   assert.equal((await varalPublico()).ativo, false);
-  await assert.rejects(jogarVaral({ email: 'nova@example.test', peca: 'body', consentimento: true }), { code: 'VARAL_FECHADO' });
-  assert.equal((await jogarVaral({ email: 'mae@example.test', peca: 'body', consentimento: true })).codigo, primeiro.codigo);
+  await assert.rejects(jogarVaral({ telefone: '(11) 98888-0003', peca: 'body', consentimento: true }), { code: 'VARAL_FECHADO' });
+  assert.equal((await jogarVaral({ telefone: '85999990001', peca: 'body', consentimento: true })).codigo, primeiro.codigo);
   await salvarConfigVaral({ ativo: true, premios: [{ tipo: 'valor', valor: 3000, chance: 100, prefixo: 'MIMO30' }], validadeDias: 10, minimoCentavos: 0 }, gestora);
-  const fixo = await jogarVaral({ email: 'nova@example.test', peca: 'babador', consentimento: true });
+  const fixo = await jogarVaral({ telefone: '(11) 98888-0003', peca: 'babador', consentimento: true });
   assert.equal(fixo.premio, 'R$ 30 de desconto'); assert.match(fixo.codigo, /^MIMO30-/); assert.equal(fixo.condicoes, 'Válido por 10 dias.');
 });

@@ -17,7 +17,7 @@ import { AvisoRestrito, dataHora, data, dinheiro, LinkTexto, Nome, plural, Sub, 
 import { erpRequest, requestError } from "@/features/operations/client";
 import { Actions, Empty, Notice, Page, PageHeader, Pill } from "@/features/operations/components/ui";
 import type { JogadaVaral, ResumoVaral } from "@/lib/loja/varal";
-import { type ConfigVaral, NOME_DA_PECA, type PremioVaral, textoDasCondicoes, textoDoPremio, validarConfigVaral } from "@/loja/lib/varal/regras";
+import { type ConfigVaral, mascararTelefone, NOME_DA_PECA, type PremioVaral, textoDasCondicoes, textoDoPremio, validarConfigVaral } from "@/loja/lib/varal/regras";
 import type { Tone } from "@/styles/theme";
 
 // Marketing › Varal de roupinhas: o minigame de cupom da loja. Aqui a gestão liga e desliga o jogo, define os
@@ -150,13 +150,13 @@ export function VaralMarketing({ origemLoja }: { origemLoja: string }) {
         </Quadro>
 
         <Jogadas id="jogadas" aria-label="Quem jogou">
-          <Topo><h3>Quem jogou</h3><SearchField label="Buscar jogadas" placeholder="E-mail ou código do cupom" value={busca} onChange={(evento) => setBusca(evento.target.value)} /></Topo>
+          <Topo><h3>Quem jogou</h3><SearchField label="Buscar jogadas" placeholder="WhatsApp ou código do cupom" value={busca} onChange={(evento) => setBusca(evento.target.value)} /></Topo>
           {!dados.jogadas.length ? (
-            <EmptyState title={termo ? "Nenhuma jogada com essa busca" : "Nenhuma jogada ainda"} description={termo ? "Tente outro e-mail ou código." : "Quando uma cliente escolher uma roupinha na loja, ela aparece aqui com o prêmio e o cupom."} />
+            <EmptyState title={termo ? "Nenhuma jogada com essa busca" : "Nenhuma jogada ainda"} description={termo ? "Tente outro telefone ou código." : "Quando uma cliente escolher uma roupinha na loja, ela aparece aqui com o prêmio e o cupom."} />
           ) : <TableCard><ResponsiveTable>
-            <thead><tr><th>Cliente</th><th>Peça</th><th>Prêmio</th><th>Cupom</th><th>Jogou em</th><th>Vale até</th><th>Situação</th><th>Pedido</th></tr></thead>
+            <thead><tr><th>WhatsApp</th><th>Peça</th><th>Prêmio</th><th>Cupom</th><th>Jogou em</th><th>Vale até</th><th>Situação</th><th>Pedido</th></tr></thead>
             <tbody>{dados.jogadas.map((jogada) => <tr key={jogada.id}>
-              <td data-principal><Nome>{jogada.email}</Nome></td>
+              <td data-principal><Nome>{jogada.telefone ? mascararTelefone(jogada.telefone) : "—"}</Nome></td>
               <td data-label="Peça">{NOME_DA_PECA[jogada.peca] ?? jogada.peca}</td>
               <td data-label="Prêmio"><strong>{jogada.premio}</strong></td>
               <td data-label="Cupom"><Codigo>{jogada.codigo}</Codigo></td>

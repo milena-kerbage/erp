@@ -3,9 +3,11 @@
 //
 // O jogo é só a embalagem: o prêmio é sempre sorteado no servidor, e a peça escolhida não muda as chances.
 
-export const PECAS = ["body", "macacao", "touca", "babador", "meinha"] as const;
+export const PECAS = ["body", "macacao", "fralda", "babador", "meinha"] as const;
 export type Peca = (typeof PECAS)[number];
-export const NOME_DA_PECA: Record<Peca, string> = { body: "body", macacao: "macacão", touca: "touca", babador: "babador", meinha: "meinha" };
+export const NOME_DA_PECA: Record<Peca, string> = { body: "body", macacao: "macacão", fralda: "fraldinha", babador: "babador", meinha: "meinha" };
+/** A peça guardada numa jogada antiga pode não existir mais no varal (a touca virou fralda): cai na do meio. */
+export const pecaValida = (valor: unknown): Peca => PECAS.find((peca) => peca === valor) ?? "fralda";
 
 /** Um prêmio do sorteio: desconto em percentual ou em valor fixo (centavos), a chance (peso) e o prefixo do código. */
 export type PremioVaral = { tipo: "percentual" | "valor"; valor: number; chance: number; prefixo: string };
@@ -64,17 +66,28 @@ export function textoDasCondicoes(validadeDias: number, minimoCentavos: number):
   return minimoCentavos > 0 ? `${prazo} em compras a partir de ${reais(minimoCentavos)}.` : `${prazo}.`;
 }
 
-/** E-mail em minúsculas e sem espaços, ou null se não parece um e-mail. */
-export function normalizarEmailVaral(valor: unknown): string | null {
+/**
+ * O telefone (WhatsApp) que identifica a jogada: só os dígitos, com DDD, sem o 55 do país. Aceita fixo (10 dígitos)
+ * e celular (11, começando com 9 depois do DDD). null se não parece um telefone do Brasil.
+ */
+export function normalizarTelefoneVaral(valor: unknown): string | null {
   if (typeof valor !== "string") return null;
-  const email = valor.trim().toLowerCase();
-  return email.length >= 6 && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email : null;
+  let digitos = valor.replace(/\D/g, "");
+  if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) digitos = digitos.slice(2);
+  if (digitos.length !== 10 && digitos.length !== 11) return null;
+  if (!/^[1-9][1-9]/.test(digitos)) return null;
+  if (digitos.length === 11 && digitos[2] !== "9") return null;
+  return digitos;
 }
 
-/** "ma•••@gmail.com": o e-mail como aparece nas listas do ERP quando não precisa ser lido inteiro. */
-export function mascararEmail(email: string): string {
-  const [usuario, dominio = ""] = email.split("@");
-  return `${usuario.slice(0, 2)}${"•".repeat(Math.max(1, Math.min(4, usuario.length - 2)))}@${dominio}`;
+/** Máscara enquanto a cliente digita: "(85) 99999-1234" (ou "(85) 3333-1234" com 10 dígitos). */
+export function mascararTelefone(valor: string): string {
+  const digitos = valor.replace(/\D/g, "").slice(0, 11);
+  if (digitos.length <= 2) return digitos.length ? `(${digitos}` : "";
+  const ddd = digitos.slice(0, 2), resto = digitos.slice(2);
+  if (resto.length <= 4) return `(${ddd}) ${resto}`;
+  const corte = resto.length === 9 ? 5 : 4;
+  return `(${ddd}) ${resto.slice(0, corte)}-${resto.slice(corte)}`;
 }
 
 /** Confere o cadastro que vem do ERP. Devolve a configuração limpa ou lança um Error com a mensagem para a tela. */

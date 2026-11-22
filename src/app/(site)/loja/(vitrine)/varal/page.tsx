@@ -24,7 +24,7 @@ export default function PaginaVaral() {
       <div className={cx(prosa, css({ mt: { base: "12", desktop: "16" }, mx: "auto" }))}>
         <h2 id="como-funciona">Como funciona</h2>
         <ol>
-          <li>Você informa o seu e-mail e escolhe uma roupinha do varal.</li>
+          <li>Você informa o seu WhatsApp e escolhe uma roupinha do varal.</li>
           <li>A peça cai e a etiqueta mostra o seu desconto, com o código do cupom.</li>
           <li>O cupom já fica aplicado na sua sacola. É só montar o enxoval e enviar o pedido pelo WhatsApp.</li>
         </ol>

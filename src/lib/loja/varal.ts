@@ -3,15 +3,16 @@ import { ApiError, type Actor } from '../erp/access.ts';
 import { initializeERP } from '../erp/core.ts';
 import { auditarGestao, exigirGravacaoGestao, gestaoDb, iso, type Linha, paginacao, texto, travarGestao } from './gestao/esquema.ts';
 import {
-  CONFIG_PADRAO, type ConfigVaral, gerarCodigoVaral, normalizarEmailVaral, type Peca, PECAS, type PremioVaral, type ResultadoVaral, sortearPremio,
+  CONFIG_PADRAO, type ConfigVaral, gerarCodigoVaral, normalizarTelefoneVaral, type Peca, PECAS, pecaValida, type PremioVaral, type ResultadoVaral, sortearPremio,
   textoDasCondicoes, textoDoPremio, validarConfigVaral,
 } from '../../loja/lib/varal/regras.ts';
 
 // Varal de roupinhas (módulo Marketing): o minigame de cupom da loja. Sem tabela nova, para não depender de migração:
 // - a configuração e cada jogada ficam em workspace_settings (chave-valor do ERP): "marketing:varal" e
-//   "varal:jogada:<hash do e-mail>";
-// - o prêmio é um cupom de campanha (loja_cupons_campanha) de uso único, com o id "varal-<hash do e-mail>". O id é a
-//   chave primária: é ele que garante UMA jogada por e-mail, mesmo com dois cliques ao mesmo tempo.
+//   "varal:jogada:<hash do telefone>";
+// - o prêmio é um cupom de campanha (loja_cupons_campanha) de uso único, com o id "varal-<hash do telefone>". O id é
+//   a chave primária: é ele que garante UMA jogada por telefone, mesmo com dois cliques ao mesmo tempo.
+// A cliente se identifica pelo WhatsApp (com o aceite de receber novidades por ele).
 // Os cupons do varal não entram na lista de cupons que a loja manda ao navegador nem na tela de Cupons do ERP
 // (gestao/cupons.ts filtra pelo prefixo do id): cada cliente só vê o próprio código.
 
@@ -20,9 +21,9 @@ const CHAVE_CONFIG = 'marketing:varal';
 const PREFIXO_JOGADA = 'varal:jogada:';
 const DIA = 86_400_000;
 
-type Jogada = { email: string; peca: Peca; premio: string; tipo: 'percentual' | 'valor'; valor: number; codigo: string; validoAte: number; minimoCentavos: number; validadeDias: number; consentimento: true; em: number };
+type Jogada = { telefone: string; peca: Peca; premio: string; tipo: 'percentual' | 'valor'; valor: number; codigo: string; validoAte: number; minimoCentavos: number; validadeDias: number; consentimento: true; em: number };
 
-const hashDoEmail = (email: string) => createHash('sha256').update(`varal:${email}`).digest('hex').slice(0, 40);
+const hashDoTelefone = (telefone: string) => createHash('sha256').update(`varal:${telefone}`).digest('hex').slice(0, 40);
 const aleatorio = () => randomInt(0, 1_000_000) / 1_000_000;
 
 async function banco() { await initializeERP(); return gestaoDb(); }
@@ -58,34 +59,34 @@ export async function salvarConfigVaral(entrada: unknown, ator: Actor) {
 function resultado(jogada: Jogada, jaJogou: boolean): ResultadoVaral {
   return {
     premio: jogada.premio, tipo: jogada.tipo, valor: jogada.valor, codigo: jogada.codigo, validoAte: new Date(jogada.validoAte).toISOString(), minimoCentavos: jogada.minimoCentavos,
-    condicoes: textoDasCondicoes(jogada.validadeDias, jogada.minimoCentavos), peca: jogada.peca, jaJogou,
+    condicoes: textoDasCondicoes(jogada.validadeDias, jogada.minimoCentavos), peca: pecaValida(jogada.peca), jaJogou,
   };
 }
 
-/** A jogada guardada daquele e-mail (ou a reconstrução pelo cupom, se o registro da jogada faltar). */
-async function jogadaDe(chave: string, email: string): Promise<Jogada | null> {
+/** A jogada guardada daquele telefone (ou a reconstrução pelo cupom, se o registro da jogada faltar). */
+async function jogadaDe(chave: string, telefone: string): Promise<Jogada | null> {
   const database = await banco();
   const linha = await database.prepare('SELECT data_json FROM workspace_settings WHERE id = ?').get(PREFIXO_JOGADA + chave);
   if (linha) { try { return JSON.parse(String(linha.data_json)) as Jogada; } catch { /* registro ilegível: reconstrói pelo cupom */ } }
   const cupom = await database.prepare('SELECT * FROM loja_cupons_campanha WHERE id = ?').get(PREFIXO_ID_CUPOM_VARAL + chave);
   if (!cupom) return null;
   const tipo = texto(cupom.tipo) === 'valor' ? 'valor' : 'percentual', valor = Number(cupom.valor), criado = Number(cupom.criado), fim = Number(cupom.fim ?? criado);
-  return { email, peca: 'body', premio: textoDoPremio({ tipo, valor }), tipo, valor, codigo: texto(cupom.codigo), validoAte: fim, minimoCentavos: Number(cupom.minimo_centavos), validadeDias: Math.max(1, Math.round((fim - criado) / DIA)), consentimento: true, em: criado };
+  return { telefone, peca: 'fralda', premio: textoDoPremio({ tipo, valor }), tipo, valor, codigo: texto(cupom.codigo), validoAte: fim, minimoCentavos: Number(cupom.minimo_centavos), validadeDias: Math.max(1, Math.round((fim - criado) / DIA)), consentimento: true, em: criado };
 }
 
 /**
- * A jogada: confere o e-mail, o aceite e a peça; se o e-mail já jogou, devolve o mesmo cupom; senão sorteia o prêmio
+ * A jogada: confere o telefone, o aceite e a peça; se o telefone já jogou, devolve o mesmo cupom; senão sorteia o prêmio
  * AQUI (a peça não muda as chances), cria o cupom de uso único e guarda a jogada.
  */
-export async function jogarVaral(entrada: { email?: unknown; peca?: unknown; consentimento?: unknown }, agora = Date.now(), sorteio: () => number = aleatorio): Promise<ResultadoVaral> {
-  const email = normalizarEmailVaral(entrada.email);
-  if (!email) throw new ApiError(400, 'Informe um e-mail válido.', 'EMAIL_INVALIDO');
+export async function jogarVaral(entrada: { telefone?: unknown; peca?: unknown; consentimento?: unknown }, agora = Date.now(), sorteio: () => number = aleatorio): Promise<ResultadoVaral> {
+  const telefone = normalizarTelefoneVaral(entrada.telefone);
+  if (!telefone) throw new ApiError(400, 'Informe o seu WhatsApp com DDD.', 'TELEFONE_INVALIDO');
   if (entrada.consentimento !== true) throw new ApiError(400, 'Para jogar, aceite receber as novidades do ateliê.', 'SEM_CONSENTIMENTO');
   const peca = PECAS.find((item) => item === entrada.peca);
   if (!peca) throw new ApiError(400, 'Escolha uma roupinha do varal.', 'PECA_INVALIDA');
-  const chave = hashDoEmail(email);
+  const chave = hashDoTelefone(telefone);
 
-  const anterior = await jogadaDe(chave, email);
+  const anterior = await jogadaDe(chave, telefone);
   if (anterior) return resultado(anterior, true);
 
   const config = await lerConfigVaral();
@@ -105,26 +106,26 @@ export async function jogarVaral(entrada: { email?: unknown; peca?: unknown; con
       if (!(await database.prepare('SELECT id FROM loja_cupons_campanha WHERE codigo = ?').get(candidato))) { codigo = candidato; break; }
     }
     if (!codigo) throw new ApiError(503, 'Não foi possível gerar o cupom agora. Tente de novo.', 'CUPOM_INDISPONIVEL');
-    const nova: Jogada = { email, peca, premio: textoDoPremio(premio), tipo: premio.tipo, valor: premio.valor, codigo, validoAte, minimoCentavos: config.minimoCentavos, validadeDias: config.validadeDias, consentimento: true, em: agora };
+    const nova: Jogada = { telefone, peca, premio: textoDoPremio(premio), tipo: premio.tipo, valor: premio.valor, codigo, validoAte, minimoCentavos: config.minimoCentavos, validadeDias: config.validadeDias, consentimento: true, em: agora };
     await database.prepare(`INSERT INTO loja_cupons_campanha (id, codigo, descricao, tipo, valor, minimo_centavos, inicio, fim, limite_total, limite_por_cliente, primeira_compra, exibir, ativo, revisao, criado, atualizado)
       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 1, 1, 0, 0, 1, 1, ?, ?)`).run(idCupom, codigo, `Varal de roupinhas: ${nova.premio}`, premio.tipo, premio.valor, config.minimoCentavos, validoAte, agora, agora);
     await database.prepare('INSERT INTO workspace_settings (id,data_json,revision,updated) VALUES (?, ?, 1, ?)').run(PREFIXO_JOGADA + chave, JSON.stringify(nova), agora);
     return nova;
   });
   if (jogada) return resultado(jogada, false);
-  const guardada = await jogadaDe(chave, email);
+  const guardada = await jogadaDe(chave, telefone);
   if (!guardada) throw new ApiError(503, 'Não foi possível concluir agora. Tente de novo em instantes.', 'INDISPONIVEL');
   return resultado(guardada, true);
 }
 
 // ---------------------------------------------------------------- ERP (Marketing)
 
-export type JogadaVaral = { id: string; email: string; peca: Peca; premio: string; codigo: string; jogouEm: string; validoAte: string; situacao: 'usado' | 'valendo' | 'expirado'; pedido: string | null; descontoCentavos: number };
+export type JogadaVaral = { id: string; telefone: string; peca: Peca; premio: string; codigo: string; jogouEm: string; validoAte: string; situacao: 'usado' | 'valendo' | 'expirado'; pedido: string | null; descontoCentavos: number };
 export type ResumoVaral = { jogadas: number; usados: number; valendo: number; descontoCentavos: number; porPremio: { premio: string; quantidade: number; usados: number }[] };
 
 const ONDE_VARAL = `c.id LIKE '${PREFIXO_ID_CUPOM_VARAL}%'`;
 
-/** Config, números e as jogadas mais recentes para a tela do ERP. `?busca=` procura por e-mail ou código. */
+/** Config, números e as jogadas mais recentes para a tela do ERP. `?busca=` procura por telefone ou código. */
 export async function painelVaral(url: URL): Promise<{ config: ConfigVaral & { revisao: number }; resumo: ResumoVaral; jogadas: JogadaVaral[]; total: number }> {
   const database = await banco(), agora = Date.now();
   const { limite, offset } = paginacao(url, 50, 200);
@@ -151,10 +152,11 @@ export async function painelVaral(url: URL): Promise<{ config: ConfigVaral & { r
   for (const linha of linhas) {
     let jogada: Jogada;
     try { jogada = JSON.parse(String(linha.data_json)) as Jogada; } catch { continue; }
-    if (termo && !jogada.email.includes(termo) && !jogada.codigo.toLowerCase().includes(termo)) continue;
+    const quem = jogada.telefone ?? '', digitos = termo.replace(/\D/g, '');
+    if (termo && !(digitos.length >= 3 && quem.includes(digitos)) && !jogada.codigo.toLowerCase().includes(termo)) continue;
     const cupom = porCodigo.get(jogada.codigo);
     todas.push({
-      id: texto(linha.id).slice(PREFIXO_JOGADA.length), email: jogada.email, peca: jogada.peca, premio: jogada.premio, codigo: jogada.codigo, jogouEm: iso(jogada.em), validoAte: iso(jogada.validoAte),
+      id: texto(linha.id).slice(PREFIXO_JOGADA.length), telefone: quem, peca: pecaValida(jogada.peca), premio: jogada.premio, codigo: jogada.codigo, jogouEm: iso(jogada.em), validoAte: iso(jogada.validoAte),
       situacao: situacaoDe(cupom, jogada.validoAte), pedido: cupom?.pedido_numero ? texto(cupom.pedido_numero) : null, descontoCentavos: Number(cupom?.desconto_centavos ?? 0),
     });
   }

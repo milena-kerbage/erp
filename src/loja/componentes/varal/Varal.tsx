@@ -7,16 +7,17 @@ import { Dialogo } from "@/loja/componentes/carrinho/Dialogo";
 import { botaoContorno, botaoEscuro, largo } from "@/loja/componentes/carrinho/estilos";
 import { salvarPreferenciasCompra } from "@/loja/componentes/carrinho/estado";
 import { Check, Copy } from "@/loja/componentes/icones";
-import { NOME_DA_PECA, normalizarEmailVaral, PECAS, type Peca, type ResultadoVaral } from "@/loja/lib/varal/regras";
+import { mascararTelefone, NOME_DA_PECA, normalizarTelefoneVaral, PECAS, pecaValida, type Peca, type ResultadoVaral } from "@/loja/lib/varal/regras";
 import { guardarResultadoVaral, useResultadoVaral, varalVencido } from "./guardado";
 import { Brilho, Pregadores, Roupinha } from "./Roupinhas";
 import estilos from "./varal.module.css";
 
-// Varal de roupinhas: o minigame de um clique que entrega o cupom. A cliente informa o e-mail (com o aceite) e
-// escolhe uma peça. Aí vem o suspense: a peça balança cada vez mais, com estrelinhas girando em volta; o pregador
-// solta, ela rodopia e cai; uma etiqueta fechada (um "?") desce no lugar e vira para mostrar o prêmio, com confetes.
-// Em seguida abre a janela do cupom. O jogo é só a embalagem: o prêmio vem do servidor (POST /api/varal) e a peça
-// não muda as chances.
+// Varal de roupinhas: o minigame de um clique que entrega o cupom. A cliente informa o WhatsApp (com o aceite) e
+// escolhe uma peça. Aí tudo acontece devagar, com suspense e sem cortes (cada fase começa na pose em que a anterior
+// terminou): a peça cresce (foco), balança num pêndulo lento com estrelinhas em volta (suspense, enquanto o servidor
+// sorteia), os pregadores abrem um a um e ela cai planando (queda), uma etiqueta fechada com "?" desce no lugar
+// (mistério) e vira para mostrar o prêmio, com confetes. Só então abre a janela do cupom.
+// O jogo é só a embalagem: o prêmio vem do servidor (POST /api/varal) e a peça não muda as chances.
 
 /**
  * Onde cada peça fica na corda: --x em % da largura e --y em px. A corda vai de uma ponta à outra do bloco e é mais
@@ -48,14 +49,17 @@ const CONFETES = ["#FBDDE2", "#D9EAF6", "#FCF1C6", "#E9DFF7", "#DCEBD3", "#FFFFF
   { cor, ang: indice * 60 + 14, dist: 44 + ((indice + 1) % 3) * 16 },
 ]);
 
-type Fase = "convite" | "escolha" | "sorteando" | "caindo" | "misterio" | "etiqueta" | "fechado";
+type Fase = "convite" | "escolha" | "foco" | "sorteando" | "caindo" | "misterio" | "etiqueta" | "fechado";
+
+/** Quanto dura cada fase (ms). Batem com as animações de varal.module.css. */
+const TEMPO = { foco: 1200, queda: 3600, misterio: 3900, virada: 1500, janela: 2800 };
 
 const semAnimacao = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function Varal() {
   const guardado = useResultadoVaral();
   const [fase, setFase] = useState<Fase>("convite");
-  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [aceite, setAceite] = useState(false);
   const [erroForm, setErroForm] = useState("");
   const [aviso, setAviso] = useState("");
@@ -64,10 +68,12 @@ export function Varal() {
   const [janela, setJanela] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [condicoes, setCondicoes] = useState("");
-  const idEmail = useId(), idErro = useId();
+  const idTelefone = useId(), idErro = useId();
   const codigo = useRef<HTMLElement>(null);
   const instrucao = useRef<HTMLParagraphElement>(null);
   const temporizadores = useRef<number[]>([]);
+  // O prêmio que o servidor já devolveu, esperando o pêndulo do suspense fechar o ciclo para entrar em cena.
+  const pronto = useRef<ResultadoVaral | null>(null);
 
   // O jogo está no ar? (e as condições do cupom, para o convite). Quem já jogou vê o cupom mesmo com o varal recolhido.
   useEffect(() => {
@@ -88,45 +94,58 @@ export function Varal() {
   // (Só vale antes de ela começar a jogar agora: durante a jogada, o prêmio só aparece no fim da animação.)
   const anterior = !resultado && !escolhida && guardado && !varalVencido(guardado) ? guardado : null;
   const premiado = resultado ?? anterior;
-  const pecaDoPremio = premiado ? (escolhida ?? premiado.peca) : null;
+  const pecaDoPremio = premiado ? (escolhida ?? pecaValida(premiado.peca)) : null;
   const faseDaCena: Fase = anterior ? "etiqueta" : fase;
 
   const depois = (ms: number, acao: () => void) => { temporizadores.current.push(window.setTimeout(acao, ms)); };
 
   function comecar(evento: FormEvent) {
     evento.preventDefault();
-    if (!normalizarEmailVaral(email)) { setErroForm("Confira o e-mail: precisa ser um endereço válido."); return; }
+    if (!normalizarTelefoneVaral(telefone)) { setErroForm("Confira o WhatsApp: informe o número com DDD."); return; }
     if (!aceite) { setErroForm("Para jogar, marque o aceite de comunicação."); return; }
     setErroForm(""); setAviso("");
     setFase("escolha");
     depois(60, () => instrucao.current?.focus());
   }
 
+  /** Fim do suspense: a peça solta e cai, a etiqueta desce fechada, vira para o prêmio e só então a janela abre. */
+  function revelar(premio: ResultadoVaral) {
+    pronto.current = null;
+    setResultado(premio);
+    if (semAnimacao()) { setFase("etiqueta"); setJanela(true); return; }
+    setFase("caindo");
+    depois(TEMPO.queda, () => setFase("misterio"));
+    depois(TEMPO.queda + TEMPO.misterio, () => setFase("etiqueta"));
+    depois(TEMPO.queda + TEMPO.misterio + TEMPO.virada + TEMPO.janela, () => setJanela(true));
+  }
+
+  /** O pêndulo do suspense fechou um ciclo (a peça está no centro): se o prêmio já chegou, a queda começa daqui. */
+  function cicloDoSuspense() {
+    if (pronto.current && fase === "sorteando") revelar(pronto.current);
+  }
+
   async function escolher(peca: Peca) {
     if (fase !== "escolha") return;
-    setEscolhida(peca); setFase("sorteando"); setAviso("");
-    const inicio = Date.now();
+    setEscolhida(peca); setAviso("");
+    const parado = semAnimacao();
+    // Primeiro o foco (a peça cresce, as outras esmaecem); o pêndulo começa quando ela chega no lugar.
+    setFase(parado ? "sorteando" : "foco");
+    if (!parado) depois(TEMPO.foco, () => setFase((atual) => (atual === "foco" ? "sorteando" : atual)));
     try {
-      const resposta = await fetch("/api/varal", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ email, peca, consentimento: aceite }) });
+      const resposta = await fetch("/api/varal", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ telefone, peca, consentimento: aceite }) });
       const dados = (await resposta.json().catch(() => null)) as { resultado?: ResultadoVaral; erro?: { mensagem?: string } } | null;
       if (!resposta.ok || !dados?.resultado) throw new Error(dados?.erro?.mensagem || "Não foi possível concluir agora. Tente de novo em instantes.");
       const premio = dados.resultado;
       guardarResultadoVaral(premio);
       // O cupom já fica aplicado na sacola: a cliente não perde o desconto se fechar a janela.
       salvarPreferenciasCompra({ cupom: premio.codigo, semCupomAutomatico: undefined });
-      const revelar = () => {
-        setResultado(premio);
-        if (semAnimacao()) { setFase("etiqueta"); setJanela(true); return; }
-        // A peça cai, a etiqueta desce fechada, vira para o prêmio e só então a janela abre.
-        setFase("caindo");
-        depois(1100, () => setFase("misterio"));
-        depois(1100 + 1500, () => setFase("etiqueta"));
-        depois(1100 + 1500 + 1700, () => setJanela(true));
-      };
-      // O suspense dura pelo menos um balanço inteiro, mesmo quando o servidor responde na hora.
-      const espera = semAnimacao() ? 0 : Math.max(0, 1500 - (Date.now() - inicio));
-      depois(espera, revelar);
+      if (parado) { revelar(premio); return; }
+      // A revelação espera o pêndulo fechar o ciclo (cicloDoSuspense), para a queda sair da mesma pose, sem tranco.
+      pronto.current = premio;
+      // Rede de segurança: se a aba estiver em segundo plano e a animação não avisar, segue assim mesmo.
+      depois(TEMPO.foco + 2 * 3400 + 600, () => { if (pronto.current) revelar(pronto.current); });
     } catch (falha) {
+      pronto.current = null;
       setEscolhida(null); setFase("escolha");
       setAviso(falha instanceof Error ? falha.message : "Não foi possível concluir agora. Tente de novo em instantes.");
     }
@@ -148,7 +167,7 @@ export function Varal() {
   const texto = anterior
     ? `Você já escolheu sua roupinha. Seu cupom continua valendo: ${anterior.codigo}`
     : fase === "fechado" ? "As roupinhas voltam para o varal em breve. Enquanto isso, o enxoval continua esperando por você."
-    : fase === "convite" ? "Deixe seu e-mail e escolha uma roupinha do varal para descobrir seu desconto."
+    : fase === "convite" ? "Deixe seu WhatsApp e escolha uma roupinha do varal para descobrir seu desconto."
     : "Escolha uma roupinha do varal para descobrir seu desconto.";
 
   return (
@@ -174,7 +193,7 @@ export function Varal() {
         {PECAS.map((peca, indice) => {
           const lugar = LUGARES[indice], brisa = BRISA[indice];
           const dela = (pecaDoPremio ?? escolhida) === peca;
-          const estado = !dela ? undefined : anterior || faseDaCena === "etiqueta" ? "foi" : faseDaCena === "misterio" ? "misterio" : faseDaCena === "caindo" ? "caindo" : faseDaCena === "sorteando" ? "sorteando" : undefined;
+          const estado = !dela ? undefined : anterior || faseDaCena === "etiqueta" ? "foi" : faseDaCena === "misterio" ? "misterio" : faseDaCena === "caindo" ? "caindo" : faseDaCena === "sorteando" ? "sorteando" : faseDaCena === "foco" ? "foco" : undefined;
           const sumiu = estado === "foi" || estado === "misterio";
           return (
             <div key={peca} className={estilos.lugar} data-escolhida={dela || undefined} data-estado={estado}
@@ -182,7 +201,7 @@ export function Varal() {
               {dela && <span className={estilos.halo} aria-hidden />}
               <button type="button" className={estilos.peca} style={{ "--ordem": indice } as CSSProperties}
                 aria-label={`Escolher ${NOME_DA_PECA[peca]}`} disabled={faseDaCena !== "escolha"} aria-hidden={sumiu || undefined} tabIndex={sumiu ? -1 : undefined}
-                onClick={() => void escolher(peca)}>
+                onClick={() => void escolher(peca)} onAnimationIteration={dela ? cicloDoSuspense : undefined}>
                 <Roupinha peca={peca} />
               </button>
               <Pregadores peca={peca} className={estilos.pregadores} />
@@ -205,7 +224,7 @@ export function Varal() {
                 </span>
               )}
               <span className={estilos.cartao}>
-                <span className={estilos.face} data-lado="frente" aria-hidden>?</span>
+                <span className={estilos.face} data-lado="frente" aria-hidden><b>?</b></span>
                 <span className={estilos.face} data-lado="verso">{premiado?.premio ?? " "}</span>
               </span>
             </div>
@@ -215,20 +234,20 @@ export function Varal() {
 
       <div className={estilos.base}>
         <p role="status" aria-live="polite" className={estilos.regra}>
-          {premiado && faseDaCena === "etiqueta" ? `Você ganhou ${premiado.premio}.` : fase === "sorteando" ? "Hum… o que será que tem nessa?" : fase === "caindo" ? "Soltou o pregador!" : fase === "misterio" ? "Tem uma etiqueta descendo…" : fase === "fechado" && !anterior ? "" : "Uma escolha por cliente."}
+          {premiado && faseDaCena === "etiqueta" ? `Você ganhou ${premiado.premio}.` : fase === "foco" || fase === "sorteando" ? "Hum… o que será que tem nessa?" : fase === "caindo" ? "O pregador está soltando…" : fase === "misterio" ? "Tem uma etiqueta descendo…" : fase === "fechado" && !anterior ? "" : "Uma escolha por cliente."}
         </p>
         {aviso && <p role="alert" className={estilos.aviso}>{aviso}</p>}
 
         {!anterior && fase === "convite" && (
           <form className={estilos.convite} onSubmit={comecar} noValidate style={{ marginTop: 16 }}>
-            <label htmlFor={idEmail}>
-              Seu e-mail
-              <input id={idEmail} type="email" name="email" autoComplete="email" inputMode="email" placeholder="voce@exemplo.com" required value={email}
-                aria-invalid={Boolean(erroForm) || undefined} aria-describedby={erroForm ? idErro : undefined} onChange={(evento) => { setEmail(evento.target.value); setErroForm(""); }} />
+            <label htmlFor={idTelefone}>
+              Seu WhatsApp
+              <input id={idTelefone} type="tel" name="telefone" autoComplete="tel-national" inputMode="numeric" placeholder="(85) 99999-9999" maxLength={16} required value={telefone}
+                aria-invalid={Boolean(erroForm) || undefined} aria-describedby={erroForm ? idErro : undefined} onChange={(evento) => { setTelefone(mascararTelefone(evento.target.value)); setErroForm(""); }} />
             </label>
             <label className={estilos.aceite}>
               <input type="checkbox" checked={aceite} onChange={(evento) => { setAceite(evento.target.checked); setErroForm(""); }} />
-              <span>Aceito receber novidades e ofertas do Ateliê Milena Kerbage por e-mail. Posso cancelar quando quiser. Veja a <Link href="/politicas/privacidade">política de privacidade</Link>.</span>
+              <span>Aceito receber novidades e ofertas do Ateliê Milena Kerbage pelo WhatsApp. Posso cancelar quando quiser. Veja a <Link href="/politicas/privacidade">política de privacidade</Link>.</span>
             </label>
             {erroForm && <p id={idErro} role="alert" className={estilos.erro}>{erroForm}</p>}
             <button type="submit" className={cx(botaoEscuro, largo)}>Quero escolher minha roupinha</button>
@@ -253,11 +272,13 @@ export function Varal() {
         </div>}>
         {premiado && (
           <div className={estilos.premio}>
-            <p className={estilos.ganhou}>{premiado.jaJogou ? "Seu cupom continua valendo" : "Você ganhou"}</p>
+            <p className={estilos.ganhou}>{premiado.jaJogou ? "Seu mimo continua valendo" : "Você ganhou"}</p>
             <p className={estilos.valor}>{premiado.premio}</p>
-            <code ref={codigo} className={estilos.codigo} aria-label={`Código do cupom: ${premiado.codigo}`}>{premiado.codigo}</code>
-            <p>{premiado.condicoes}</p>
-            <p>Já deixamos o cupom aplicado na sua sacola. O desconto entra no pedido que você envia pelo WhatsApp.</p>
+            <div className={estilos.pano}>
+              <small>seu cupom</small>
+              <code ref={codigo} className={estilos.codigo} aria-label={`Código do cupom: ${premiado.codigo}`}>{premiado.codigo}</code>
+            </div>
+            <p>{premiado.condicoes} Já está na sua sacola.</p>
             <p aria-live="polite" style={{ minHeight: "1.4em" }}>{copiado ? "Cupom copiado." : ""}</p>
           </div>
         )}
