@@ -113,3 +113,18 @@ Executar `npm run test:instagram`, `npm run test:instagram:postgres`, `npm run t
 Validação local desta entrega: testes unitários da integração e regressões de WhatsApp/Meta, gestão e feed aprovados; migração executada duas vezes no PostgreSQL WASM isolado, com RLS/grants verificados; teste HTTP em produção aprovado para autenticação/papéis/Origin, callbacks públicos, cancelamento OAuth, challenge, assinatura, persistência/deduplicação, exclusão e revisão. TypeScript e build de produção isolado aprovados. O Verify Token foi gerado em `.env.local`, preservando as demais credenciais. Nenhuma migração, publicação ou chamada à conta Meta real foi feita.
 
 Depois do deploy/migração/configuração, verificar as páginas sem sessão, cadastrar e validar o webhook, conectar a conta de teste, inscrever os campos, enviar uma mensagem/comentário controlado e confirmar a persistência. Repetir entrega para verificar deduplicação; testar assinatura inválida e revogação/exclusão real. Não há validação externa ou publicação implícita por testes locais.
+
+## Login unificado (config_id) — corrigido em 22/11/2026
+
+O app do Ateliê usa o **Instagram API with Unified Login** (a tela mostra "login unificado (configuração …)"). Nesse modo:
+
+- A pessoa entra com Instagram ou Facebook e marca a conta do Instagram na janela da Meta. **Não existe página do Facebook no caminho.**
+- O `code` vira um token de usuário do sistema do portfólio da cliente. Com ele, `/me` é o usuário do sistema, não o Instagram.
+- A conta vem de `GET /me/assigned_instagram_accounts?fields=id,username` e o portfólio de `GET /me?fields=client_business_id` (guardado em `instagram.clientBusinessId`).
+- Todas as chamadas vão para `graph.facebook.com/<versão>/<ID da conta do Instagram>/…` com esse token: `subscribed_apps`, `conversations`, `messages`.
+- A conexão grava `instagram.loginTipo = unificado` e apaga `instagram.pageId`. Com isso `usaPaginaDoFacebook()` é falso e nada cai na página, mesmo que alguém cadastre um ID de página depois.
+- O caminho pela página do Facebook (login antigo) continua no código só como reserva, quando a Meta não devolve nenhuma conta do Instagram atribuída.
+
+Antes da correção o código procurava a página do Facebook (ou os IDs nas permissões granulares do token, que a Meta omite quando a cliente compartilha "todas as contas") e falhava com "A Meta não informou a página do Facebook ligada ao Instagram".
+
+Fonte: developers.facebook.com › Instagram Platform › Instagram API with Unified Login › Get started (passos 5 e 6), Authentication e Webhooks › Set up.

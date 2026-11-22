@@ -1,8 +1,8 @@
 import { readBytes } from '../whatsapp/core.ts';
-import { InstagramError, instagramConfig, instagramUrls, requireOAuthConfig } from './config.ts';
+import { InstagramError, instagramConfig, instagramUrls, requireOAuthConfig, usaPaginaDoFacebook } from './config.ts';
 import { seal } from './crypto.ts';
 import { connectionToken, currentConnection, instagramDb, saveConnection } from './store.ts';
-import { carregarAjustesInstagram, gravarPaginaInstagram } from './ajustes.ts';
+import { carregarAjustesInstagram, gravarLoginUnificado, gravarPaginaInstagram } from './ajustes.ts';
 
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): ObjectValue => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : {};
@@ -39,7 +39,9 @@ export function authorizationUrl(state: string) {
   const config = requireOAuthConfig();
   if (!/^[a-f0-9]{64}$/.test(state)) throw new InstagramError(400, 'Estado de autorização inválido.');
   if (config.modo === 'facebook') {
-    // Login do Facebook para Empresas (configuração com as permissões de Instagram), no formato passado pela Meta.
+    // Login unificado (Instagram API with Unified Login, sobre o Login do Facebook para Empresas): a URL da Meta com o
+    // config_id. A pessoa entra com Instagram ou Facebook, escolhe o portfólio e a conta do Instagram. `prompt=login`
+    // mostra sempre as duas opções de entrada.
     const url = new URL('https://www.facebook.com/dialog/oauth');
     url.search = new URLSearchParams({ client_id: config.appId, config_id: config.configId, display: 'popup', override_default_response_type: 'true', redirect_uri: instagramUrls().redirect, response_type: 'code', state, prompt: 'login' }).toString();
     return url.toString();
@@ -83,14 +85,20 @@ export async function subscribeAccount(fetcher: typeof fetch = fetch) {
   const fields = subscribedFields(JSON.parse(c.scopes_json));
   if (!fields.length) throw new InstagramError(409, 'Autorize mensagens ou comentários para habilitar notificações.', 'PERMISSION_REQUIRED');
   if (config.modo === 'facebook') {
-    // Mensagens do Instagram pela página ligada: o app é inscrito na página (os campos do objeto "instagram" ficam no painel).
-    // Com página: inscreve a página; só Instagram: inscreve a própria conta do Instagram nos campos autorizados.
-    const alvo = /^\d{1,32}$/.test(config.pageId) ? config.pageId : c.account_id;
+    // Login unificado: inscreve a própria conta do Instagram (POST /<IG_ID>/subscribed_apps em graph.facebook.com, com
+    // o token do usuário do sistema). Só a conexão antiga, feita pela página, inscreve a página do Facebook.
+    const alvo = usaPaginaDoFacebook(config) ? config.pageId : c.account_id;
     const inscrever = async (campos: string) => metaRequest(`https://graph.facebook.com/${config.version}/${alvo}/subscribed_apps`, { method: 'POST', body: new URLSearchParams({ subscribed_fields: campos, access_token: await connectionToken(c) }) }, fetcher);
-    let resposta: ObjectValue;
-    try { resposta = await inscrever(alvo === c.account_id ? fields.join(',') : 'messages,messaging_postbacks,message_reactions,message_reads'); }
-    catch { resposta = await inscrever('messages'); }
-    if (resposta.success !== true) throw new InstagramError(502, 'A Meta não confirmou a inscrição da página.', 'SUBSCRIPTION_FAILED');
+    // A Meta só aceita os campos marcados no painel do app: tenta todos, depois só mensagens e comentários e, por fim, só mensagens.
+    const tentativas = alvo === c.account_id
+      ? [fields.join(','), fields.filter((campo) => campo === 'messages' || campo === 'comments').join(','), 'messages']
+      : ['messages,messaging_postbacks,message_reactions,message_reads', 'messages'];
+    let resposta: ObjectValue = {}, falha: unknown = null;
+    for (const campos of [...new Set(tentativas.filter(Boolean))]) {
+      try { resposta = await inscrever(campos); falha = null; break; } catch (erro) { falha = erro; }
+    }
+    if (falha) throw falha;
+    if (resposta.success !== true) throw new InstagramError(502, 'A Meta não confirmou a inscrição das notificações.', 'SUBSCRIPTION_FAILED');
     const atualizado = await instagramDb().prepare('UPDATE instagram_connections SET fields_json = ? WHERE subject_hash = ? AND token_cipher = ?').run(JSON.stringify(fields), c.subject_hash, c.token_cipher);
     if (!atualizado.changes) throw new InstagramError(409, 'A conexão mudou. Atualize a configuração.');
     return { subscribed: true, fields };
@@ -117,11 +125,13 @@ export async function refreshToken(fetcher: typeof fetch = fetch, now = Date.now
   return { refreshed: true, expiresAt: new Date(expires).toISOString() };
 }
 
-/* ------------------------------------------------------------------ login pelo Facebook (config_id) */
-// Roteiro do ERP da Le Ange: com o ID da configuração (Login do Facebook para Empresas) a Meta devolve um token de usuário
-// do sistema, que não se estende e não lista páginas em /me/accounts. Então: troca o code (tenta os dois App Secrets),
-// confere o token (app e permissões), descobre as páginas pelas permissões do próprio token (granular_scopes) e por
-// /me/accounts, consulta cada página direto e guarda o acesso da página ligada ao @ esperado.
+/* ------------------------------------------------------------------ login com config_id (unificado) */
+// Instagram API with Unified Login (documentação da Meta, "Get started", passos 5 e 6): o code vira um token de
+// usuário do sistema do portfólio da cliente (Business Integration System User Access Token). Com ele, `/me` é o
+// usuário do sistema, NÃO a conta do Instagram: as contas que a cliente compartilhou vêm de
+// `/me/assigned_instagram_accounts`, e o portfólio de `/me?fields=client_business_id`. Não existe página do Facebook
+// nesse caminho. O caminho pela página (login antigo do Facebook) fica só como reserva, quando a Meta não devolve
+// nenhuma conta do Instagram atribuída.
 const ESCOPOS_FACEBOOK: Record<string, string> = { instagram_basic: 'instagram_business_basic', instagram_manage_messages: 'instagram_business_manage_messages', instagram_manage_comments: 'instagram_business_manage_comments', instagram_business_basic: 'instagram_business_basic', instagram_business_manage_messages: 'instagram_business_manage_messages', instagram_business_manage_comments: 'instagram_business_manage_comments' };
 async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedAt: number) {
   const config = requireOAuthConfig(), base = `https://graph.facebook.com/${config.version}`;
@@ -152,9 +162,57 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
       userToken = token((await metaRequest(url, {}, fetcher)).access_token);
     } catch { /* segue com o curto */ }
   }
-  // Páginas: das permissões granulares do token (escopos de página) e de /me/accounts.
   const granulares = (Array.isArray(info.granular_scopes) ? info.granular_scopes : []).map(object);
   const idsDe = (filtro: (escopo: string) => boolean) => granulares.filter((g) => typeof g.scope === 'string' && filtro(g.scope)).flatMap((g) => (Array.isArray(g.target_ids) ? g.target_ids : []).map(String)).filter((id) => /^\d{1,32}$/.test(id));
+  const idSistema = typeof info.user_id === 'string' && /^\d{1,32}$/.test(info.user_id) ? info.user_id : typeof info.user_id === 'number' ? String(info.user_id) : '';
+  const vencimento = (expira: unknown) => { const vence = Number(expira); return Number.isSafeInteger(vence) && vence > 0 ? Math.max(3600, Math.min(31536000, vence - Math.floor(Date.now() / 1000))) : 31536000; };
+  const concedidas = () => [...new Set(['instagram_business_basic', ...escopos.map((escopo) => ESCOPOS_FACEBOOK[escopo]).filter(Boolean)])];
+
+  // 1) Login unificado: as contas do Instagram que a cliente compartilhou com o app.
+  const contas = new Map<string, string>();
+  for (const caminho of ['me/assigned_instagram_accounts', ...(idSistema ? [`${idSistema}/assigned_instagram_accounts`] : [])]) {
+    if (contas.size) break;
+    try {
+      let url: URL | null = new URL(`${base}/${caminho}`);
+      url.search = new URLSearchParams({ fields: 'id,username', limit: '100', access_token: userToken }).toString();
+      for (let pagina = 0; url && pagina < 5; pagina += 1) {
+        const resposta = await metaRequest(url, {}, fetcher);
+        for (const conta of (Array.isArray(resposta.data) ? resposta.data : []).map(object)) if (typeof conta.id === 'string' && /^\d{1,32}$/.test(conta.id) && typeof conta.username === 'string') contas.set(conta.id, conta.username);
+        const proxima: unknown = object(resposta.paging).next;
+        url = typeof proxima === 'string' && proxima.startsWith('https://graph.facebook.com/') ? new URL(proxima) : null;
+      }
+    } catch { /* este token não tem esta lista */ }
+  }
+  // Reserva: a Meta também informa as contas nas permissões granulares do token (quando a cliente marcou contas específicas).
+  for (const id of idsDe((escopo) => escopo.startsWith('instagram_')).slice(0, 10)) {
+    if (contas.has(id)) continue;
+    try {
+      const url = new URL(`${base}/${id}`);
+      url.search = new URLSearchParams({ fields: 'id,username', access_token: userToken }).toString();
+      const conta = await metaRequest(url, {}, fetcher);
+      if (typeof conta.username === 'string') contas.set(String(conta.id ?? id), conta.username);
+    } catch { /* conta sem acesso para este token */ }
+  }
+  if (contas.size) {
+    const lista = [...contas].map(([id, username]) => ({ id, username }));
+    const conta = lista.find((item) => item.username.toLowerCase() === config.expectedUsername) ?? (lista.length === 1 && !config.expectedUsername ? lista[0] : undefined);
+    if (!conta) throw new InstagramError(403, `A conta autorizada foi ${lista.map((item) => `@${item.username}`).join(', ')}; na janela da Meta, selecione o Instagram @${config.expectedUsername}.`, 'WRONG_ACCOUNT');
+    if (!/^[a-zA-Z0-9._]{1,30}$/.test(conta.username)) throw new InstagramError(502, 'Perfil inválido recebido da Meta.');
+    // O portfólio da cliente (para renovar ou consultar o token depois). Não impede a conexão se a Meta não informar.
+    let portfolio = '';
+    try {
+      const url = new URL(`${base}/me`);
+      url.search = new URLSearchParams({ fields: 'client_business_id', access_token: userToken }).toString();
+      const eu = await metaRequest(url, {}, fetcher);
+      if (typeof eu.client_business_id === 'string' && /^\d{1,32}$/.test(eu.client_business_id)) portfolio = eu.client_business_id;
+    } catch { /* token sem esse campo */ }
+    await gravarLoginUnificado(portfolio, 'instagram-login');
+    await saveConnection({ subjectId: identifier(idSistema || conta.id), accountId: identifier(conta.id), username: conta.username, token: token(userToken), scopes: concedidas(), expiresIn: vencimento(info.expires_at), authorizedAt });
+    return { connected: true };
+  }
+
+  // 2) Login antigo, pela página do Facebook (só quando a Meta não devolveu nenhuma conta do Instagram atribuída).
+  // Páginas: das permissões granulares do token (escopos de página) e de /me/accounts.
   // A página cadastrada na tela (como o FACEBOOK_PAGE_ID da Le Ange) vem primeiro.
   const candidatas = new Set([config.pageId, ...idsDe((escopo) => escopo.startsWith('pages_') || escopo === 'business_management')].filter((id) => /^\d{1,32}$/.test(id)));
   // Usuário comum: /me/accounts; usuário do sistema: páginas atribuídas a ele no gerenciador de negócios.
@@ -166,7 +224,6 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
       for (const pagina of (Array.isArray(resposta.data) ? resposta.data : []).map(object)) if (typeof pagina.id === 'string') candidatas.add(pagina.id);
     } catch { /* este tipo de token não tem esta lista */ }
   }
-  const contasInstagram = new Set(idsDe((escopo) => escopo.startsWith('instagram_')));
   const paginas: Array<{ id: string; token: string; ig: string; username: string }> = [];
   for (const id of [...candidatas].slice(0, 25)) {
     try {
@@ -176,39 +233,17 @@ async function exchangeFacebook(code: string, fetcher: typeof fetch, authorizedA
       if (typeof pagina.access_token === 'string' && typeof conta.id === 'string') paginas.push({ id: String(pagina.id), token: pagina.access_token, ig: conta.id, username: typeof conta.username === 'string' ? conta.username : '' });
     } catch { /* página sem acesso para este token */ }
   }
-  const escolhida = paginas.find((p) => p.username.toLowerCase() === config.expectedUsername) ?? (paginas.length === 1 && (!config.expectedUsername || contasInstagram.has(paginas[0].ig)) ? paginas[0] : undefined);
-  // Só Instagram, sem página do Facebook: a conta vem das permissões do token e o próprio token (usuário do sistema)
-  // acessa a conta direto pelo ID do Instagram.
-  if (!escolhida && contasInstagram.size) {
-    const contas: Array<{ id: string; username: string }> = [];
-    for (const id of [...contasInstagram].slice(0, 10)) {
-      try {
-        const url = new URL(`${base}/${id}`);
-        url.search = new URLSearchParams({ fields: 'id,username', access_token: userToken }).toString();
-        const conta = await metaRequest(url, {}, fetcher);
-        if (typeof conta.username === 'string') contas.push({ id: String(conta.id ?? id), username: conta.username });
-      } catch { /* conta sem acesso para este token */ }
-    }
-    const conta = contas.find((c) => c.username.toLowerCase() === config.expectedUsername) ?? (contas.length === 1 && !config.expectedUsername ? contas[0] : undefined);
-    if (conta && /^[a-zA-Z0-9._]{1,30}$/.test(conta.username)) {
-      const vence = Number(info.expires_at), expiresIn = Number.isSafeInteger(vence) && vence > 0 ? Math.max(3600, Math.min(31536000, vence - Math.floor(Date.now() / 1000))) : 31536000;
-      await gravarPaginaInstagram('', 'instagram-login');
-      const granted = ['instagram_business_basic', ...escopos.map((escopo) => ESCOPOS_FACEBOOK[escopo]).filter(Boolean)];
-      await saveConnection({ subjectId: identifier(info.user_id ?? conta.id), accountId: identifier(conta.id), username: conta.username, token: token(userToken), scopes: [...new Set(granted)], expiresIn, authorizedAt });
-      return { connected: true };
-    }
-    if (contas.length) throw new InstagramError(403, `A conta autorizada foi ${contas.map((c) => `@${c.username}`).join(', ')}; na janela da Meta, selecione o @${config.expectedUsername}.`, 'WRONG_ACCOUNT');
-  }
+  const contasDoToken = new Set(idsDe((escopo) => escopo.startsWith('instagram_')));
+  const escolhida = paginas.find((p) => p.username.toLowerCase() === config.expectedUsername) ?? (paginas.length === 1 && (!config.expectedUsername || contasDoToken.has(paginas[0].ig)) ? paginas[0] : undefined);
   if (!escolhida) {
     throw new InstagramError(403, paginas.length
-      ? `A conta autorizada foi ${paginas.map((p) => `@${p.username || p.ig}`).join(', ')}; na janela da Meta, selecione a página ligada ao @${config.expectedUsername}.`
-      : `A Meta não informou a página do Facebook ligada ao Instagram (páginas verificadas: ${candidatas.size}; permissões recebidas: ${escopos.join(', ') || 'nenhuma'}). Cadastre o ID da página do Facebook do Ateliê no cartão “App do Instagram” (no Facebook: página > Sobre > Transparência da página) e conecte de novo. Se preferir, inclua pages_show_list e pages_manage_metadata na configuração ${config.configId}.`, 'WRONG_ACCOUNT');
+      ? `A conta autorizada foi ${paginas.map((p) => `@${p.username || p.ig}`).join(', ')}; na janela da Meta, selecione o Instagram @${config.expectedUsername}.`
+      : `A Meta concluiu o login, mas não compartilhou nenhuma conta do Instagram com o app (permissões recebidas: ${escopos.join(', ') || 'nenhuma'}). Conecte de novo e, na janela da Meta, escolha o portfólio do Ateliê e marque o Instagram @${config.expectedUsername} na lista de contas antes de concluir. A conta precisa ser profissional e estar no portfólio.`,
+      'WRONG_ACCOUNT');
   }
   if (!/^[a-zA-Z0-9._]{1,30}$/.test(escolhida.username)) throw new InstagramError(502, 'Perfil inválido recebido da Meta.');
   const infoPagina = await inspecionar(escolhida.token).catch(() => ({} as ObjectValue));
-  const vence = Number(infoPagina.expires_at), expiresIn = Number.isSafeInteger(vence) && vence > 0 ? Math.max(3600, Math.min(31536000, vence - Math.floor(Date.now() / 1000))) : 31536000;
   await gravarPaginaInstagram(identifier(escolhida.id), 'instagram-login');
-  const granted = ['instagram_business_basic', ...escopos.map((escopo) => ESCOPOS_FACEBOOK[escopo]).filter(Boolean)];
-  await saveConnection({ subjectId: identifier(info.user_id ?? escolhida.id), accountId: identifier(escolhida.ig), username: escolhida.username, token: token(escolhida.token), scopes: [...new Set(granted)], expiresIn, authorizedAt });
+  await saveConnection({ subjectId: identifier(idSistema || escolhida.id), accountId: identifier(escolhida.ig), username: escolhida.username, token: token(escolhida.token), scopes: concedidas(), expiresIn: vencimento(infoPagina.expires_at), authorizedAt });
   return { connected: true };
 }

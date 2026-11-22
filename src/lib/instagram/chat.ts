@@ -4,7 +4,7 @@
 // Janela da Meta: resposta livre até 24 h após a última mensagem da pessoa; até 7 dias com a etiqueta HUMAN_AGENT.
 
 import { metaRequest } from './api.ts';
-import { InstagramError, instagramConfig } from './config.ts';
+import { InstagramError, instagramConfig, usaPaginaDoFacebook } from './config.ts';
 import { connectionToken, currentConnection, instagramDb } from './store.ts';
 
 type Json = Record<string, unknown>;
@@ -32,7 +32,8 @@ const comToken = (url: URL, token: string) => { url.searchParams.set('access_tok
 /** Quem "fala" na API: a página ligada (login pelo Facebook com página), a conta do Instagram (só Instagram) ou "me". */
 function dono(conta: string) {
   const config = instagramConfig();
-  return config.modo === 'facebook' ? (ehId(config.pageId) ? config.pageId : conta) : 'me';
+  // Login unificado: sempre a conta do Instagram. Página do Facebook só na conexão antiga, feita pela página.
+  return config.modo === 'facebook' ? (usaPaginaDoFacebook(config) ? config.pageId : conta) : 'me';
 }
 
 function anexosDe(bruto: unknown): AnexoInstagram[] {

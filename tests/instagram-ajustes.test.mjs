@@ -92,7 +92,8 @@ test('login pelo Facebook: falha mostra o motivo real da Meta (código e mensage
     if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, type: 'SYSTEM_USER', app_id: '1178499741393086', user_id: '777', scopes: ['instagram_basic'], granular_scopes: [] } });
     return Response.json({ data: [] });
   };
-  await assert.rejects(api.exchangeCode('codigo', semPagina), (erro) => erro.code === 'WRONG_ACCOUNT' && /ID da página/.test(erro.message) && /instagram_basic/.test(erro.message));
+  // Nenhuma conta do Instagram compartilhada: o aviso manda marcar a conta na janela da Meta (e não pede página do Facebook).
+  await assert.rejects(api.exchangeCode('codigo', semPagina), (erro) => erro.code === 'WRONG_ACCOUNT' && /marque o Instagram @milenakerbageatelie/.test(erro.message) && !/ID da página/.test(erro.message) && /instagram_basic/.test(erro.message));
 });
 
 test('login pelo Facebook: usuário do sistema acha a página por assigned_pages ou pelo ID cadastrado na tela', async () => {
@@ -114,6 +115,49 @@ test('login pelo Facebook: usuário do sistema acha a página por assigned_pages
   await api.exchangeCode('codigo', montar(false));
   assert.equal((await store.currentConnection()).account_id, '17841400000000');
   await assert.rejects(ajustes.salvarAjustesInstagram({ pageId: 'abc' }, 'gestor'), (erro) => erro.field === 'pageId');
+});
+
+test('login unificado: a conta vem de /me/assigned_instagram_accounts, sem página; guarda o portfólio e inscreve a própria conta', async () => {
+  const api = await import('../src/lib/instagram/api.ts');
+  const store = await import('../src/lib/instagram/store.ts');
+  const IG = '17841477777777', chamadas = [];
+  // Como no caso real: token de usuário do sistema, permissões sem pages_*, nenhum ID nas permissões granulares e um ID
+  // de página que alguém cadastrou na tela (a página não devolve o vínculo com o Instagram).
+  await ajustes.salvarAjustesInstagram({ pageId: '123456789012345' }, 'gestor');
+  const montar = (contas) => async (endereco, opcoes = {}) => {
+    const u = new URL(String(endereco)), caminho = u.pathname.replace(/^\/v\d+\.0\//, '');
+    chamadas.push(`${opcoes.method || 'GET'} ${u.hostname} ${caminho}`);
+    if (caminho === 'oauth/access_token') return Response.json({ access_token: 'EAAunificado' + 'z'.repeat(40) });
+    if (caminho === 'debug_token') return Response.json({ data: { is_valid: true, type: 'SYSTEM_USER', app_id: '1178499741393086', user_id: '888', scopes: ['ads_management', 'ads_read', 'instagram_basic', 'instagram_manage_comments', 'instagram_content_publish', 'instagram_manage_messages', 'public_profile'], granular_scopes: [{ scope: 'instagram_basic' }], expires_at: 0 } });
+    if (caminho === 'me/assigned_instagram_accounts') return Response.json({ data: contas, paging: { cursors: { before: 'a', after: 'b' } } });
+    if (caminho === 'me' && u.searchParams.get('fields') === 'client_business_id') return Response.json({ client_business_id: '555000111222', id: '888' });
+    if (caminho === '123456789012345') return Response.json({ id: '123456789012345', name: 'Página' }); // sem pages_*: não traz access_token nem o Instagram
+    if (caminho === `${IG}/subscribed_apps` && opcoes.method === 'POST') return Response.json({ success: true });
+    return Response.json({ data: [] });
+  };
+  await store.instagramDb().prepare('DELETE FROM instagram_connections').run();
+  // Outra conta marcada na janela da Meta: recusa dizendo qual veio.
+  await assert.rejects(api.exchangeCode('codigo', montar([{ id: '17841400000001', username: 'outra.loja' }])), (erro) => erro.code === 'WRONG_ACCOUNT' && /@outra\.loja/.test(erro.message) && /@milenakerbageatelie/.test(erro.message));
+  assert.equal(await store.currentConnection(), undefined, 'nada é guardado quando a conta é outra');
+
+  await api.exchangeCode('codigo', montar([{ id: '17841400000001', username: 'outra.loja' }, { id: IG, username: 'MilenaKerbageAtelie' }]));
+  const conexao = await store.currentConnection();
+  assert.equal(conexao.account_id, IG); assert.equal(conexao.username, 'MilenaKerbageAtelie');
+  assert.deepEqual(JSON.parse(conexao.scopes_json).sort(), ['instagram_business_basic', 'instagram_business_manage_comments', 'instagram_business_manage_messages']);
+  const atual = config.instagramConfig();
+  assert.equal(atual.loginTipo, 'unificado'); assert.equal(atual.pageId, '', 'o ID de página cadastrado é apagado'); assert.equal(atual.clientBusinessId, '555000111222');
+  assert.equal(config.usaPaginaDoFacebook(), false);
+  assert.ok(chamadas.includes('GET graph.facebook.com me/assigned_instagram_accounts'));
+  assert.equal(chamadas.some((chamada) => chamada.includes('graph.instagram.com')), false, 'o login unificado só fala com graph.facebook.com');
+
+  // Notificações: a própria conta do Instagram é inscrita (nunca a página).
+  chamadas.length = 0;
+  const inscricao = await api.subscribeAccount(montar([]));
+  assert.equal(inscricao.subscribed, true); assert.ok(inscricao.fields.includes('messages') && inscricao.fields.includes('comments'));
+  assert.deepEqual(chamadas, [`POST graph.facebook.com ${IG}/subscribed_apps`]);
+  // Mesmo que alguém cadastre de novo um ID de página, a conexão unificada continua falando pela conta do Instagram.
+  await ajustes.salvarAjustesInstagram({ pageId: '123456789012345' }, 'gestor');
+  assert.equal(config.usaPaginaDoFacebook(), false);
 });
 
 test('só Instagram (sem página): conecta pela conta do token e o chat recebe, sincroniza e responde pelo ID do Instagram', async () => {

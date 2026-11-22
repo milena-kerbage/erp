@@ -5,7 +5,7 @@ import { definirAjustesSalvos, instagramConfig, InstagramError, PERMISSIONS, VER
 // Credenciais do Instagram cadastradas pelo gestor na tela (sem mexer na hospedagem), cifradas na mesma tabela das
 // integrações (`instagram.*`). Toda rota chama `carregarAjustesInstagram()` antes de usar instagramConfig().
 
-const CHAVES = { appId: 'instagram.appId', appSecret: 'instagram.appSecret', webhookSecret: 'instagram.webhookSecret', version: 'instagram.version', scopes: 'instagram.scopes', verifyToken: 'instagram.verifyToken', configId: 'instagram.configId', pageId: 'instagram.pageId' } as const;
+const CHAVES = { appId: 'instagram.appId', appSecret: 'instagram.appSecret', webhookSecret: 'instagram.webhookSecret', version: 'instagram.version', scopes: 'instagram.scopes', verifyToken: 'instagram.verifyToken', configId: 'instagram.configId', pageId: 'instagram.pageId', loginTipo: 'instagram.loginTipo', clientBusinessId: 'instagram.clientBusinessId' } as const;
 let carregadoEm = 0;
 
 export async function carregarAjustesInstagram(forcar = false) {
@@ -18,6 +18,7 @@ export async function carregarAjustesInstagram(forcar = false) {
       appId: ajustes[CHAVES.appId] || undefined, appSecret: ajustes[CHAVES.appSecret] || undefined, webhookSecret: ajustes[CHAVES.webhookSecret] || undefined,
       version: ajustes[CHAVES.version] || undefined, scopes: ajustes[CHAVES.scopes] || undefined, verifyToken: ajustes[CHAVES.verifyToken] || undefined, metaAppSecret: metaAppSecret || undefined,
       configId: ajustes[CHAVES.configId] || undefined, pageId: ajustes[CHAVES.pageId] || undefined,
+      loginTipo: ajustes[CHAVES.loginTipo] || undefined, clientBusinessId: ajustes[CHAVES.clientBusinessId] || undefined,
     });
     carregadoEm = Date.now();
   } catch { /* Banco ou chave indisponível: segue com o ambiente. */ }
@@ -27,8 +28,8 @@ export async function carregarAjustesInstagram(forcar = false) {
 export async function salvarAjustesInstagram(entrada: Record<string, unknown>, ator: string) {
   const texto = (valor: unknown, maximo: number) => (typeof valor === 'string' ? valor.slice(0, maximo) : '');
   const appId = texto(entrada.appId, 40).trim(), configId = texto(entrada.configId, 40).trim(), pageId = texto(entrada.pageId, 40).trim();
-  if (pageId && !/^\d{5,32}$/.test(pageId)) throw Object.assign(new InstagramError(400, 'O ID da página tem só números. No Facebook: página > Sobre > Transparência da página.', 'INVALID_PAGE_ID'), { field: 'pageId' });
-  if (configId && !/^\d{5,32}$/.test(configId)) throw Object.assign(new InstagramError(400, 'O ID da configuração tem só números. Copie em Login do Facebook para Empresas > Configurações.', 'INVALID_CONFIG_ID'), { field: 'configId' });
+  if (pageId && !/^\d{5,32}$/.test(pageId)) throw Object.assign(new InstagramError(400, 'O ID da página tem só números. No Facebook: página > Sobre > Transparência da página. (No login unificado esse campo fica vazio.)', 'INVALID_PAGE_ID'), { field: 'pageId' });
+  if (configId && !/^\d{5,32}$/.test(configId)) throw Object.assign(new InstagramError(400, 'O ID da configuração tem só números. Copie na Meta, em Casos de uso > Instagram > Configuração da API com login unificado.', 'INVALID_CONFIG_ID'), { field: 'configId' });
   const appSecret = limparSegredo(texto(entrada.appSecret, 400)), webhookSecret = limparSegredo(texto(entrada.webhookSecret, 400));
   if (appId && !/^\d{5,32}$/.test(appId)) throw Object.assign(new InstagramError(400, 'O App ID do Instagram tem só números. Copie em Instagram > Configuração da API com login do Instagram > Configurações do login da empresa.', 'INVALID_APP_ID'), { field: 'appId' });
   for (const [campo, valor, nome] of [['appSecret', appSecret, 'App Secret do Instagram'], ['webhookSecret', webhookSecret, 'App Secret do app']] as const) {
@@ -53,8 +54,17 @@ export async function salvarAjustesInstagram(entrada: Record<string, unknown>, a
   await carregarAjustesInstagram(true);
 }
 
-/** Página do Facebook ligada ao Instagram (login pelo Facebook): usada para inscrever os webhooks de mensagens. */
+/** Página do Facebook ligada ao Instagram (login antigo, pela página): usada para inscrever os webhooks de mensagens. */
 export async function gravarPaginaInstagram(pageId: string, ator: string) {
-  await gravarAjustesLivres({ [CHAVES.pageId]: { valor: pageId, secreto: false } }, ator);
+  await gravarAjustesLivres({ [CHAVES.pageId]: { valor: pageId, secreto: false }, [CHAVES.loginTipo]: { valor: pageId ? 'pagina' : 'unificado', secreto: false } }, ator);
+  await carregarAjustesInstagram(true);
+}
+
+/**
+ * Conexão pelo login unificado: sem página (o ID que estiver cadastrado é apagado, para nenhuma chamada cair nela) e
+ * com o portfólio da cliente guardado junto.
+ */
+export async function gravarLoginUnificado(clientBusinessId: string, ator: string) {
+  await gravarAjustesLivres({ [CHAVES.pageId]: { valor: '', secreto: false }, [CHAVES.loginTipo]: { valor: 'unificado', secreto: false }, [CHAVES.clientBusinessId]: { valor: clientBusinessId, secreto: false } }, ator);
   await carregarAjustesInstagram(true);
 }
