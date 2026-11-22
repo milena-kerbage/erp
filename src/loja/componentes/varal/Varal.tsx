@@ -6,7 +6,7 @@ import { cx } from "styled-system/css";
 import { Dialogo } from "@/loja/componentes/carrinho/Dialogo";
 import { botaoContorno, botaoEscuro, largo } from "@/loja/componentes/carrinho/estilos";
 import { salvarPreferenciasCompra } from "@/loja/componentes/carrinho/estado";
-import { Bag, CalendarCheck, Check, Copy, Tag } from "@/loja/componentes/icones";
+import { Check, Copy } from "@/loja/componentes/icones";
 import { mascararTelefone, NOME_DA_PECA, normalizarTelefoneVaral, PECAS, pecaValida, type Peca, type ResultadoVaral } from "@/loja/lib/varal/regras";
 import { guardarResultadoVaral, useResultadoVaral, varalVencido } from "./guardado";
 import { Brilho, Pregadores, Roupinha } from "./Roupinhas";
@@ -313,21 +313,13 @@ export function Varal() {
               <small>seu cupom</small>
               <code ref={codigo} className={estilos.codigo} aria-label={`Código do cupom: ${premiado.codigo}`}>{premiado.codigo}</code>
             </div>
-            <dl className={estilos.detalhes}>
-              <div>
-                <dt><CalendarCheck size={14} aria-hidden /> Validade</dt>
-                <dd>até {new Date(premiado.validoAte).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "")}</dd>
-              </div>
-              <div>
-                <dt><Tag size={14} aria-hidden /> Pedido mínimo</dt>
-                <dd>{premiado.minimoCentavos > 0 ? `R$ ${(premiado.minimoCentavos / 100).toLocaleString("pt-BR", premiado.minimoCentavos % 100 ? { minimumFractionDigits: 2 } : undefined)}` : "Sem mínimo"}</dd>
-              </div>
-              <div>
-                <dt><Bag size={14} aria-hidden /> Onde usar</dt>
-                <dd>Já está na sua sacola</dd>
-              </div>
-            </dl>
-            <p aria-live="polite" style={{ minHeight: "1.4em" }}>{copiado ? "Cupom copiado." : "Um cupom por pedido, enviado pelo WhatsApp."}</p>
+            {/* As condições numa linha só, discreta */}
+            <p className={estilos.miudos}>
+              <span>Válido até {new Date(premiado.validoAte).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "")}</span>
+              {premiado.minimoCentavos > 0 && <span>mínimo de R$ {(premiado.minimoCentavos / 100).toLocaleString("pt-BR", premiado.minimoCentavos % 100 ? { minimumFractionDigits: 2 } : undefined)}</span>}
+              <span>já está na sua sacola</span>
+            </p>
+            <p aria-live="polite" className={estilos.copiadoAviso}>{copiado ? "Cupom copiado." : ""}</p>
           </div>
         )}
       </Dialogo>

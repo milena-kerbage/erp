@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import styled from "@emotion/styled";
-import { ArrowClockwiseIcon, ArrowSquareOutIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, ArrowSquareOutIcon, PlusIcon, PowerIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconButton } from "@/components/ui/IconButton";
@@ -79,7 +79,7 @@ export function VaralMarketing({ origemLoja }: { origemLoja: string }) {
       const resposta = await erpRequest<{ config: Painel["config"] }>("marketing/varal", { method: "PUT", body: config });
       setDados((atual) => (atual ? { ...atual, config: resposta.config } : atual));
       setForm(formularioDe(resposta.config));
-      setAviso(resposta.config.ativo ? "Salvo. O varal está no ar na loja." : "Salvo. O varal está recolhido: a loja não mostra as chamadas nem aceita jogadas novas.");
+      setAviso(resposta.config.ativo ? "Salvo. O varal está ativado e no ar na loja." : "Salvo. O varal está desativado: a loja não mostra as chamadas nem aceita jogadas novas (quem já ganhou continua vendo o cupom).");
     } catch (falha) { setErroForm(requestError(falha)); } finally { setSalvando(false); }
   }
 
@@ -89,6 +89,11 @@ export function VaralMarketing({ origemLoja }: { origemLoja: string }) {
   return <Page>
     <PageHeader title="Varal de roupinhas" description="O minigame de cupom da loja: a cliente escolhe uma roupinha do varal e ganha um desconto. O sorteio acontece no servidor; a peça escolhida não muda as chances."
       actions={<Actions>
+        {/* Ligar e desligar o jogo na loja, sempre à mão: o selo mostra como está e o botão troca */}
+        {dados && form && !restrito && <>
+          <Pill $tone={dados.config.ativo ? "green" : "neutral"}>{dados.config.ativo ? "No ar na loja" : "Desativado"}</Pill>
+          <Button variant={dados.config.ativo ? "secondary" : "primary"} icon={PowerIcon} loading={salvando} onClick={() => void salvar(undefined, !dados.config.ativo)}>{dados.config.ativo ? "Desativar varal" : "Ativar varal"}</Button>
+        </>}
         <Button variant="secondary" icon={ArrowClockwiseIcon} onClick={() => void recarregar()} loading={carregando && Boolean(dados)}>Atualizar</Button>
         <Button variant="secondary" icon={ArrowSquareOutIcon} href={`${origemLoja}/varal`} target="_blank" rel="noreferrer">Abrir na loja</Button>
       </Actions>} />
@@ -98,7 +103,7 @@ export function VaralMarketing({ origemLoja }: { origemLoja: string }) {
       {!dados || !form || !resumo ? <Empty role="status">Carregando o varal…</Empty> : <>
         <Quadro>
           <Metricas>
-            <MetricCard title="Jogadas" href="#jogadas" tone="lavender" value={resumo.jogadas.toLocaleString("pt-BR")} unit={dados.config.ativo ? "varal no ar" : "varal recolhido"} ratio={resumo.jogadas ? 1 : 0} />
+            <MetricCard title="Jogadas" href="#jogadas" tone="lavender" value={resumo.jogadas.toLocaleString("pt-BR")} unit={dados.config.ativo ? "varal ativado" : "varal desativado"} ratio={resumo.jogadas ? 1 : 0} />
             <MetricCard title="Cupons usados" href="#jogadas" tone="green" value={resumo.usados.toLocaleString("pt-BR")} unit={resumo.jogadas ? `${Math.round((resumo.usados / resumo.jogadas) * 100)}% das jogadas` : "nenhuma jogada"} ratio={resumo.jogadas ? resumo.usados / resumo.jogadas : 0} />
             <MetricCard title="Cupons valendo" href="#jogadas" tone="blue" value={resumo.valendo.toLocaleString("pt-BR")} unit="ainda não usados" ratio={resumo.jogadas ? resumo.valendo / resumo.jogadas : 0} />
             <MetricCard title="Desconto concedido" href="#jogadas" tone="peach" value={dinheiro(resumo.descontoCentavos)} unit={plural(resumo.usados, "pedido", "pedidos")} ratio={resumo.usados ? 1 : 0} />
@@ -107,7 +112,7 @@ export function VaralMarketing({ origemLoja }: { origemLoja: string }) {
           <Duas>
             <CartaoForm aria-label="Regras do jogo" onSubmit={(evento: FormEvent) => void salvar(evento)} noValidate>
               <CardHead title="Regras do jogo">
-                <LigaDesliga><span>{form.ativo ? "No ar" : "Recolhido"}</span><Switch checked={form.ativo} onChange={(valor) => { setForm({ ...form, ativo: valor }); void salvar(undefined, valor); }} label="Varal no ar na loja" disabled={salvando} /></LigaDesliga>
+                <LigaDesliga><span>{form.ativo ? "Ativado" : "Desativado"}</span><Switch checked={form.ativo} onChange={(valor) => { setForm({ ...form, ativo: valor }); void salvar(undefined, valor); }} label="Varal no ar na loja" disabled={salvando} /></LigaDesliga>
               </CardHead>
               <Campos>
                 <TextField label="Validade do cupom" required inputMode="numeric" value={form.validadeDias} onChange={(evento) => setForm({ ...form, validadeDias: evento.target.value.replace(/\D/g, "") })} trailing={<Unidade>dias</Unidade>} hint="Contados a partir da jogada." />

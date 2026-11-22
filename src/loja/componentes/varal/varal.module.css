@@ -482,20 +482,10 @@
 .lembranca .lugar { top: 6px; left: 50%; display: block; --dur: 3.6s; --atraso: 0s; --giro: 3.5deg; }
 .lembranca .brilho { z-index: 0; }
 
-/* As condições, cada uma no seu quadradinho */
-.detalhes {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-  text-align: left;
-}
-@media (max-width: 420px) { .detalhes { grid-template-columns: minmax(0, 1fr); } }
-.detalhes > div { display: grid; gap: 3px; align-content: start; padding: 10px 12px; border-radius: 12px; background: #f6f1e7; box-shadow: inset 0 0 0 1px rgb(120 133 105 / 0.14); }
-.detalhes dt { display: flex; align-items: center; gap: 6px; color: var(--v-suave); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
-.detalhes dt svg { flex-shrink: 0; color: #a39274; }
-.detalhes dd { margin: 0; color: var(--v-escuro); font-size: 14px; font-weight: 600; line-height: 1.3; }
-.detalhes dd small { display: block; color: var(--v-suave); font-size: 12px; font-weight: 400; }
+/* As condições numa linha só, miúda e discreta, separadas por um pontinho */
+.premio .miudos { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 0; color: var(--v-suave); font-size: 12px; line-height: 1.5; }
+.miudos span + span::before { content: "·"; margin: 0 7px; opacity: 0.6; }
+.premio .copiadoAviso { min-height: 1.3em; margin-top: -6px; font-size: 12px; }
 
 /* O cupom como uma etiqueta de pano: trama de linho, pesponto em volta e o código bordado no meio */
 .pano {
@@ -551,25 +541,38 @@
 
 .chamada {
   position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / 0.85) 0%, transparent 62%),
+    linear-gradient(180deg, #f6f1e7 0%, #f3efe6 55%, #eef0e6 100%);
+  color: var(--v-texto);
+  text-decoration: none;
+}
+/* O varal da faixa: a corda vai de ponta a ponta, presa nos ganchos, com as cinco peças */
+.miniVaral {
+  position: relative;
+  display: block;
+  margin-top: clamp(14px, 2.4vw, 20px);
+  --peca: clamp(40px, 12cqi, 58px);
+  container-type: inline-size;
+  height: calc(34px + var(--peca) * 1.22);
+}
+.miniVaral .corda { height: 34px; }
+.miniVaral .gancho { top: -5px; height: 20px; }
+.miniVaral .lugar { display: block; }
+.conteudoChamada {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 14px 24px;
-  overflow: hidden;
-  padding: clamp(16px, 3vw, 22px) clamp(16px, 4vw, 32px);
-  border-radius: 16px;
-  background: linear-gradient(100deg, #f6f1e7 0%, #f1eee2 55%, #eaeedf 100%);
-  color: var(--v-texto);
-  text-decoration: none;
+  gap: 12px 24px;
+  padding: 4px clamp(16px, 4vw, 32px) clamp(16px, 3vw, 22px);
 }
 .chamada strong { display: block; color: var(--v-escuro); font-size: clamp(17px, 2.6vw, 22px); font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
 .chamada small { display: block; margin-top: 3px; color: var(--v-suave); font-size: 14px; line-height: 1.4; }
 .chamada .texto { flex: 1 1 14rem; min-width: 0; }
-.miniVaral { position: relative; display: block; flex: 0 0 auto; width: 168px; height: 74px; --peca: 40px; }
-.miniVaral .lugar { display: block; }
-.miniVaral .lugar { top: calc(var(--y) * 1px - 4px); }
-.miniVaral .corda { height: 26px; }
 .botaoChamada {
   display: inline-flex;
   flex-shrink: 0;
@@ -582,10 +585,9 @@
   color: #fff;
   font-size: 15px;
   font-weight: 600;
-  transition: background-color 200ms ease, transform 200ms ease;
+  transition: background-color 300ms ease, transform 300ms ease;
 }
 .chamada:hover .botaoChamada { background: #4d5743; transform: translateX(2px); }
-.chamada:hover .lugar { animation-duration: 0.9s; }
 
 /* ---------- Quem prefere menos animação ---------- */
 

@@ -8,13 +8,13 @@ import { SearchField } from "@/components/ui/SearchField";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { erpRequest, requestError } from "@/features/operations/client";
-import { Actions, Card, Empty, Notice, Page, PageHeader, Stack, Toolbar } from "@/features/operations/components/ui";
+import { Actions, Card, Empty, Notice, Page, PageHeader, Toolbar } from "@/features/operations/components/ui";
 import { STATUS_PEDIDO, type StatusPedido } from "@/loja/lib/contas/regras";
 import { transientOptions } from "@/lib/emotion/transient";
 import type { Tone } from "@/styles/theme";
 import {
   abrirJanela, AvisoRestrito, data, dataHora, diaIso, dinheiro, ETAPA_CURTA, ETAPAS, ETAPAS_AVANCO, EtapaPill, Fatos, limparParametro, Linha, Nome, parametroDaUrl,
-  plural, Rodape, Sub, CaixaTabela, TabelaResponsiva, TituloSecao, TOM_ETAPA, useDadosErp, useRestrito, whatsappHref, type DetalheCliente, type PedidoLoja,
+  plural, Rodape, Sub, CaixaTabela, TabelaResponsiva, TOM_ETAPA, useDadosErp, useRestrito, whatsappHref, type DetalheCliente, type PedidoLoja,
 } from "./comum";
 
 type Filtro = StatusPedido | "todos";
@@ -161,86 +161,113 @@ function DetalhePedido({ pedido, onFechar, onAtualizado }: { pedido: PedidoLoja 
 
   return <Dialog open={Boolean(pedido)} onClose={() => { if (!salvando) onFechar(); }} width="44rem" title={pedido ? `Pedido ${pedido.numero}` : "Pedido"} description={pedido ? `Enviado em ${dataHora(pedido.criadoEm)} · ${plural(pedido.quantidade, "peça", "peças")} · a partir de ${dinheiro(pedido.totalCentavos)}` : undefined}
     footer={<Actions>{whatsapp && <Button icon={WhatsappLogoIcon} onClick={() => abrirJanela(whatsapp)}>Conversar no WhatsApp</Button>}<Button variant="ghost" disabled={salvando} onClick={onFechar}>Fechar</Button></Actions>}>
-    {pedido && <Stack>
-      <section aria-label="Etapa do pedido">
-        <TituloSecao>Etapa</TituloSecao>
+    {pedido && <Corpo>
+      {/* A etapa: a trilha mostra onde o pedido está e, ao lado, o campo para mudar */}
+      <EtapaTopo aria-label="Etapa do pedido">
         <LinhaDoTempo pedido={pedido} />
         <EtapaCampo><Select label="Mudar etapa" options={opcoes} value={pedido.status} onChange={(status) => void mudar(status)} hint={salvando ? "Salvando…" : "A cliente vê a etapa em Minha conta."} /></EtapaCampo>
-        {erro && <Notice role="alert">{erro}</Notice>}
-      </section>
+      </EtapaTopo>
+      {erro && <Notice role="alert">{erro}</Notice>}
 
-      <section aria-label="Peças do pedido">
-        <TituloSecao>Peças ({pedido.quantidade})</TituloSecao>
-        <Itens>{pedido.itens.map((item, indice) => <li key={`${item.nome}-${indice}`}>
-          <div><strong>{item.quantidade}× {item.nome}</strong>{item.codigo && <Sub>Cód. {item.codigo}</Sub>}
-            {item.detalhes.length > 0 && <Opcoes>{item.detalhes.map((detalhe) => <li key={detalhe}>{detalhe}</li>)}</Opcoes>}
-            {item.modulos?.length ? <Opcoes>{item.modulos.map((modulo) => <li key={modulo.nome}>{modulo.nome}{modulo.detalhe ? ` (${modulo.detalhe})` : ""}: a partir de {dinheiro(modulo.precoCentavos)}</li>)}</Opcoes> : null}
-          </div>
-          <Valor>{dinheiro(item.precoCentavos * item.quantidade)}{item.quantidade > 1 && <Sub>{dinheiro(item.precoCentavos)} cada</Sub>}</Valor>
-        </li>)}</Itens>
-        <Totais>
-          <dt>Subtotal</dt><dd>{dinheiro(pedido.subtotalCentavos)}</dd>
-          {pedido.cupom && <><dt>Cupom {pedido.cupom.codigo}{pedido.cupom.percentual ? ` (${pedido.cupom.percentual}%)` : ""}</dt><dd>−{dinheiro(pedido.descontoCentavos)}</dd></>}
-          <dt><strong>Total “a partir de”</strong></dt><dd><strong>{dinheiro(pedido.totalCentavos)}</strong></dd>
-        </Totais>
-        <Sub>5% OFF no Pix e frete a consultar: o valor final é combinado pela vendedora no WhatsApp.</Sub>
-      </section>
+      {/* O resto num quadro só, dividido por linhas, no padrão do Painel */}
+      <Quadro>
+        <Bloco aria-label="Peças do pedido">
+          <TituloBloco>Peças <span>{pedido.quantidade}</span></TituloBloco>
+          <Itens>{pedido.itens.map((item, indice) => {
+            const detalhes = [item.codigo ? `Cód. ${item.codigo}` : "", ...item.detalhes, ...(item.modulos ?? []).map((modulo) => `${modulo.nome}${modulo.detalhe ? ` (${modulo.detalhe})` : ""}: a partir de ${dinheiro(modulo.precoCentavos)}`)].filter(Boolean);
+            return <li key={`${item.nome}-${indice}`}>
+              <Quantidade>{item.quantidade}×</Quantidade>
+              <div><strong>{item.nome}</strong>{detalhes.length > 0 && <Sub>{detalhes.join(" · ")}</Sub>}</div>
+              <Valor>{dinheiro(item.precoCentavos * item.quantidade)}{item.quantidade > 1 && <Sub>{dinheiro(item.precoCentavos)} cada</Sub>}</Valor>
+            </li>;
+          })}</Itens>
+          <Totais>
+            <dt>Subtotal</dt><dd>{dinheiro(pedido.subtotalCentavos)}</dd>
+            {pedido.cupom && <><dt>Cupom {pedido.cupom.codigo}{pedido.cupom.percentual ? ` (${pedido.cupom.percentual}%)` : ""}</dt><dd>−{dinheiro(pedido.descontoCentavos)}</dd></>}
+            <dt data-total>Total “a partir de”</dt><dd data-total>{dinheiro(pedido.totalCentavos)}</dd>
+          </Totais>
+          <Sub>5% OFF no Pix e frete a consultar: o valor final é combinado pela vendedora no WhatsApp.</Sub>
+        </Bloco>
 
-      <section aria-label="Cliente e entrega">
-        <TituloSecao>Cliente e entrega</TituloSecao>
-        {pedido.anonimizado ? <Notice>A cliente excluiu a conta (LGPD): o pedido ficou sem nome e contato.</Notice> : <Fatos>
-          <dt>Cliente</dt><dd>{pedido.nome}</dd>
-          <dt>E-mail</dt><dd>{pedido.email}</dd>
-          <dt>WhatsApp</dt><dd>{whatsapp ? <a href={whatsapp} target="_blank" rel="noopener noreferrer">{pedido.whatsappFormatado}</a> : pedido.whatsappFormatado}</dd>
-          <dt>Entrega</dt><dd>{pedido.retirar ? "Retirada no ateliê" : pedido.local ? `Entrega em ${pedido.local} (frete a consultar)` : "A combinar"}</dd>
-          {pedido.observacoes && <><dt>Observações</dt><dd>{pedido.observacoes}</dd></>}
-          {cliente?.lead && <><dt>Lead no CRM</dt><dd>{cliente.lead.funil} · {cliente.lead.etapa}</dd></>}
-        </Fatos>}
-        {pedido.clienteId && <Linha>
-          <Button size="sm" variant="secondary" icon={UserIcon} href={`/ecommerce/clientes?cliente=${encodeURIComponent(pedido.clienteId)}`}>Ver cliente</Button>
-          {cliente?.lead && <Button size="sm" variant="secondary" icon={UserFocusIcon} href={cliente.lead.href}>Ver lead no CRM</Button>}
-        </Linha>}
-      </section>
+        <Duplo>
+          <Bloco aria-label="Cliente">
+            <TituloBloco>Cliente</TituloBloco>
+            {pedido.anonimizado ? <Sub>A cliente excluiu a conta (LGPD): o pedido ficou sem nome e contato.</Sub> : <Fatos>
+              <dt>Nome</dt><dd>{pedido.nome}</dd>
+              <dt>E-mail</dt><dd>{pedido.email}</dd>
+              <dt>WhatsApp</dt><dd>{whatsapp ? <a href={whatsapp} target="_blank" rel="noopener noreferrer">{pedido.whatsappFormatado}</a> : pedido.whatsappFormatado}</dd>
+              {cliente?.lead && <><dt>Lead no CRM</dt><dd>{cliente.lead.funil} · {cliente.lead.etapa}</dd></>}
+            </Fatos>}
+            {pedido.clienteId && <Linha>
+              <Button size="sm" variant="secondary" icon={UserIcon} href={`/ecommerce/clientes?cliente=${encodeURIComponent(pedido.clienteId)}`}>Ver cliente</Button>
+              {cliente?.lead && <Button size="sm" variant="secondary" icon={UserFocusIcon} href={cliente.lead.href}>Ver lead</Button>}
+            </Linha>}
+          </Bloco>
+          <Bloco aria-label="Entrega">
+            <TituloBloco>Entrega</TituloBloco>
+            <Fatos>
+              <dt>Como</dt><dd>{pedido.retirar ? "Retirada no ateliê" : pedido.local ? `Entrega em ${pedido.local}` : "A combinar"}</dd>
+              {!pedido.retirar && <><dt>Frete</dt><dd>A consultar</dd></>}
+              {pedido.observacoes && <><dt>Observações</dt><dd>{pedido.observacoes}</dd></>}
+            </Fatos>
+          </Bloco>
+        </Duplo>
 
-      <section aria-label="Mensagem enviada">
-        <TituloSecao>Mensagem enviada pelo WhatsApp <Button size="sm" variant="ghost" aria-expanded={verMensagem} onClick={() => setVerMensagem(!verMensagem)}>{verMensagem ? "Esconder" : "Mostrar"}</Button></TituloSecao>
-        {verMensagem && <Mensagem>{pedido.mensagem}</Mensagem>}
-      </section>
-    </Stack>}
+        <Bloco aria-label="Mensagem enviada">
+          <TituloBloco>Mensagem enviada pelo WhatsApp <Button size="sm" variant="ghost" aria-expanded={verMensagem} onClick={() => setVerMensagem(!verMensagem)}>{verMensagem ? "Esconder" : "Mostrar"}</Button></TituloBloco>
+          {verMensagem && <Mensagem>{pedido.mensagem}</Mensagem>}
+        </Bloco>
+      </Quadro>
+    </Corpo>}
   </Dialog>;
 }
 
-/** Linha do tempo das etapas: as concluídas com ✓, a atual em destaque; cancelado mostra o cancelamento. */
+/** A trilha das etapas: um trecho por etapa (cheio até a atual), com o nome embaixo; cancelado mostra o cancelamento. */
 function LinhaDoTempo({ pedido }: { pedido: PedidoLoja }) {
   const cancelado = pedido.status === "cancelado";
-  const atual = pedido.status === "cancelado" ? -1 : ETAPAS_AVANCO.indexOf(pedido.status);
+  if (cancelado) return <Cancelado><XIcon size={14} weight="bold" aria-hidden /> Pedido cancelado em {data(pedido.atualizadoEm)}</Cancelado>;
+  const atual = ETAPAS_AVANCO.findIndex((etapa) => etapa === pedido.status);
   return <Tempo aria-label="Linha do tempo do pedido">
     {ETAPAS_AVANCO.map((chave, indice) => {
-      const feito = !cancelado && indice <= atual;
-      const quando = indice === 0 ? dataHora(pedido.criadoEm) : !cancelado && indice === atual ? `atualizado em ${dataHora(pedido.atualizadoEm)}` : feito ? "concluído" : "";
-      return <Passo key={chave} $tom={feito ? TOM_ETAPA[chave] : "neutral"} $feito={feito} $atual={!cancelado && indice === atual} aria-current={!cancelado && indice === atual ? "step" : undefined}>
-        <span aria-hidden>{feito ? <CheckIcon size={12} weight="bold" /> : indice + 1}</span>
-        <div><strong>{STATUS_PEDIDO[chave]}</strong>{quando && <Sub>{quando}</Sub>}</div>
+      const feito = indice <= atual, agora = indice === atual;
+      const quando = indice === 0 ? dataHora(pedido.criadoEm) : agora ? dataHora(pedido.atualizadoEm) : "";
+      return <Passo key={chave} $tom={TOM_ETAPA[chave]} $feito={feito} $atual={agora} aria-current={agora ? "step" : undefined}>
+        <i aria-hidden />
+        <strong>{feito && <CheckIcon size={11} weight="bold" aria-hidden />}{ETAPA_CURTA[chave]}</strong>
+        {quando && <Sub>{quando}</Sub>}
       </Passo>;
     })}
-    {cancelado && <Passo $tom="rose" $feito $atual aria-current="step"><span aria-hidden><XIcon size={12} weight="bold" /></span><div><strong>Cancelado</strong><Sub>em {data(pedido.atualizadoEm)}</Sub></div></Passo>}
   </Tempo>;
 }
 
 const SelectCurto = styled.div`&&& { flex: 0 0 13rem; } min-width: 0; ${({ theme }) => theme.media.sm} { &&& { flex: 1 1 100%; } }`;
-const EtapaCampo = styled.div`max-width: 22rem; margin-top: ${({ theme }) => theme.spacing(4)};`;
+const Corpo = styled.div`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(4)}; min-width: 0;`;
+const EtapaTopo = styled.section`display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem); align-items: start; gap: ${({ theme }) => theme.spacing(5)}; @media (max-width: 640px) { grid-template-columns: minmax(0, 1fr); }`;
+const EtapaCampo = styled.div`min-width: 0;`;
 const Bolinha = styled("span", transientOptions)<{ $tom: Tone }>`display: block; width: 0.625rem; height: 0.625rem; border-radius: 50%; background: ${({ theme, $tom }) => theme.tones[$tom].fg};`;
-const Tempo = styled.ol`display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: ${({ theme }) => theme.spacing(2)}; list-style: none;`;
+const Tempo = styled.ol`display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 3px; list-style: none; padding-top: ${({ theme }) => theme.spacing(1)};`;
 const Passo = styled("li", transientOptions)<{ $tom: Tone; $feito: boolean; $atual: boolean }>`
-  display: flex; align-items: flex-start; gap: ${({ theme }) => theme.spacing(2)}; padding: ${({ theme }) => theme.spacing(2.5, 3)};
-  border: 1px solid ${({ theme, $tom, $atual }) => ($atual ? theme.tones[$tom].soft : theme.colors.border.subtle)}; border-radius: ${({ theme }) => theme.radii.md};
-  background: ${({ theme, $tom, $atual }) => ($atual ? theme.tones[$tom].bg : "transparent")}; font-size: 0.8125rem; opacity: ${({ $feito }) => ($feito ? 1 : 0.7)};
-  > span { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; font-size: 0.6875rem; font-weight: 600;
-    background: ${({ theme, $tom, $feito }) => ($feito ? theme.tones[$tom].fg : theme.palette.neutral[100])}; color: ${({ theme, $feito }) => ($feito ? theme.palette.neutral[0] : theme.colors.text.muted)}; }
-  strong { display: block; font-weight: ${({ theme }) => theme.fontWeights.medium}; color: ${({ theme }) => theme.colors.text.primary}; line-height: 1.3; }
+  display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 0.75rem; line-height: 1.3;
+  i { display: block; height: 0.3125rem; margin-bottom: ${({ theme }) => theme.spacing(1.5)}; border-radius: 999px;
+    background: ${({ theme, $tom, $feito }) => ($feito ? (theme.mode === "dark" ? theme.tones[$tom].fg : `color-mix(in srgb, ${theme.tones[$tom].fg} 60%, ${theme.tones[$tom].soft})`) : theme.palette.neutral[100])}; }
+  strong { display: flex; align-items: center; gap: 4px; min-width: 0; font-weight: ${({ theme, $atual }) => ($atual ? theme.fontWeights.semibold : theme.fontWeights.medium)};
+    color: ${({ theme, $feito }) => ($feito ? theme.colors.text.primary : theme.colors.text.muted)}; }
+  strong svg { flex-shrink: 0; color: ${({ theme, $tom }) => theme.tones[$tom].fg}; }
 `;
-const Itens = styled.ul`display: flex; flex-direction: column; list-style: none; font-size: 0.8125rem; > li { display: flex; justify-content: space-between; gap: ${({ theme }) => theme.spacing(3)}; padding: ${({ theme }) => theme.spacing(2.5, 0)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint}; } > li > div { min-width: 0; } strong { font-weight: ${({ theme }) => theme.fontWeights.medium}; color: ${({ theme }) => theme.colors.text.primary}; }`;
-const Opcoes = styled.ul`margin-top: ${({ theme }) => theme.spacing(1)}; padding-left: ${({ theme }) => theme.spacing(4)}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.75rem; line-height: 1.6;`;
+const Cancelado = styled.p`display: inline-flex; align-items: center; gap: ${({ theme }) => theme.spacing(1.5)}; align-self: start; padding: ${({ theme }) => theme.spacing(1.5, 3)}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.tones.rose.bg}; color: ${({ theme }) => theme.tones.rose.fg}; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.medium};`;
+/** O quadro do Painel: borda fina, canto leve e os blocos divididos só por linhas. */
+const Quadro = styled.div`display: flex; flex-direction: column; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: ${({ theme }) => theme.radii.md}; overflow: hidden; > * + * { border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }`;
+const Bloco = styled.section`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(2.5)}; min-width: 0; padding: ${({ theme }) => theme.spacing(4)};`;
+const Duplo = styled.div`display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); > * + * { border-left: 1px solid ${({ theme }) => theme.colors.border.subtle}; } @media (max-width: 640px) { grid-template-columns: minmax(0, 1fr); > * + * { border-left: 0; border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; } }`;
+const TituloBloco = styled.h3`display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.spacing(2)}; min-height: 1.5rem; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary};
+  > span { margin-right: auto; padding: 0 ${({ theme }) => theme.spacing(1.5)}; border-radius: 999px; background: ${({ theme }) => theme.palette.neutral[100]}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.6875rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; line-height: 1.25rem; }`;
+const Itens = styled.ul`display: flex; flex-direction: column; list-style: none; font-size: 0.8125rem;
+  > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: ${({ theme }) => theme.spacing(2.5)}; padding: ${({ theme }) => theme.spacing(2, 0)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint}; }
+  > li:first-of-type { padding-top: 0; }
+  strong { display: block; font-weight: ${({ theme }) => theme.fontWeights.medium}; color: ${({ theme }) => theme.colors.text.primary}; }`;
+const Quantidade = styled.span`min-width: 1.75rem; padding: 1px 0; border-radius: ${({ theme }) => theme.radii.sm}; background: ${({ theme }) => theme.palette.neutral[100]}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.75rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; text-align: center;`;
 const Valor = styled.span`flex-shrink: 0; text-align: right; color: ${({ theme }) => theme.colors.text.primary}; white-space: nowrap;`;
-const Totais = styled.dl`display: grid; grid-template-columns: 1fr auto; gap: ${({ theme }) => theme.spacing(1.5, 4)}; margin: ${({ theme }) => theme.spacing(3, 0, 2)}; font-size: 0.8125rem; dt { color: ${({ theme }) => theme.colors.text.secondary}; } dd { text-align: right; color: ${({ theme }) => theme.colors.text.primary}; } strong { font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary}; }`;
+const Totais = styled.dl`display: grid; grid-template-columns: 1fr auto; gap: ${({ theme }) => theme.spacing(1.5, 4)}; font-size: 0.8125rem;
+  dt { color: ${({ theme }) => theme.colors.text.secondary}; } dd { text-align: right; color: ${({ theme }) => theme.colors.text.primary}; }
+  [data-total] { padding-top: ${({ theme }) => theme.spacing(2)}; border-top: 1px solid ${({ theme }) => theme.colors.border.faint}; font-size: 0.9375rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary}; }`;
 const Mensagem = styled.pre`padding: ${({ theme }) => theme.spacing(3, 4)}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.colors.background.surface}; font: inherit; font-size: 0.8125rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow-y: auto; color: ${({ theme }) => theme.colors.text.secondary};`;
