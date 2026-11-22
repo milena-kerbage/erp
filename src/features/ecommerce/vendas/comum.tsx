@@ -129,3 +129,36 @@ export const Rodape = styled.small`color: ${({ theme }) => theme.colors.text.mut
 export const Linha = styled.div`display: flex; flex-wrap: wrap; align-items: center; gap: ${({ theme }) => theme.spacing(2)};`;
 /** Link de texto dentro das telas (lead, cliente, pedido). */
 export const LinkTexto = styled(Link)`color: ${({ theme }) => theme.colors.text.primary}; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: ${({ theme }) => theme.colors.border.default}; &:hover { text-decoration-color: currentColor; }`;
+
+/* ---------- Janelas de detalhe (pedido, cliente) ---------- */
+
+// A mesma grade nas duas janelas: duas colunas contínuas, blocos divididos por linhas e a altura toda ocupada.
+/**
+ * Duas colunas numa grade contínua, como o Painel: os blocos se dividem só pelas linhas, ocupam a altura toda da
+ * janela e as duas colunas fecham juntas (o último bloco de cada uma estica). No celular, uma embaixo da outra.
+ */
+export const GradeModal = styled.div`
+  display: grid; flex: 1; grid-template-columns: minmax(0, 1.6fr) minmax(17rem, 1fr); align-items: stretch; min-width: 0; min-height: min-content;
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: ${({ theme }) => theme.radii.md}; overflow: hidden;
+  @media (max-width: 860px) { grid-template-columns: minmax(0, 1fr); }
+`;
+
+export const ColunaPrincipal = styled.div`display: flex; flex-direction: column; min-width: 0; > :last-child { flex: 1; }`;
+
+export const ColunaLateral = styled.aside`display: flex; flex-direction: column; min-width: 0; border-left: 1px solid ${({ theme }) => theme.colors.border.subtle}; > :last-child { flex: 1; }
+  @media (max-width: 860px) { border-left: 0; border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }`;
+
+/** Cada assunto no seu bloco, com o título em cima; a linha de baixo separa do próximo. */
+export const Bloco = styled.section`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0; padding: ${({ theme }) => theme.spacing(4)}; background: ${({ theme }) => theme.palette.neutral[0]};
+  & + & { border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }`;
+
+export const TituloBloco = styled.h3`display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.spacing(2)}; min-height: 1.5rem; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary};
+  > em { margin-right: auto; font-style: normal; padding: 0 ${({ theme }) => theme.spacing(1.5)}; border-radius: 999px; background: ${({ theme }) => theme.palette.neutral[100]}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.6875rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; line-height: 1.25rem; }`;
+
+/** Linhas com ícone (contato, bebê, lead, entrega). */
+export const Dados = styled.ul`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(2)}; list-style: none; font-size: 0.8125rem; color: ${({ theme }) => theme.colors.text.primary};
+  li { display: flex; align-items: flex-start; gap: ${({ theme }) => theme.spacing(2)}; min-width: 0; overflow-wrap: anywhere; }
+  li > svg { flex-shrink: 0; margin-top: 2px; color: ${({ theme }) => theme.colors.text.muted}; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }`;
+
+export const Observacao = styled.p`display: flex; flex-direction: column; gap: 2px; padding: ${({ theme }) => theme.spacing(2.5, 3)}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.colors.background.surface}; font-size: 0.8125rem; line-height: 1.5; color: ${({ theme }) => theme.colors.text.primary}; overflow-wrap: anywhere;`;

@@ -14,8 +14,8 @@ import { STATUS_PEDIDO, type StatusPedido } from "@/loja/lib/contas/regras";
 import { transientOptions } from "@/lib/emotion/transient";
 import type { Tone } from "@/styles/theme";
 import {
-  abrirJanela, AvisoRestrito, data, dataHora, diaIso, dinheiro, ETAPA_CURTA, ETAPAS, ETAPAS_AVANCO, EtapaPill, limparParametro, Linha, Nome, parametroDaUrl,
-  plural, Rodape, Sub, CaixaTabela, TabelaResponsiva, TOM_ETAPA, useDadosErp, useRestrito, whatsappHref, type DetalheCliente, type PedidoLoja,
+  abrirJanela, AvisoRestrito, data, dataHora, diaIso, dinheiro, ETAPA_CURTA, ETAPAS, ETAPAS_AVANCO, EtapaPill, limparParametro, Linha, Nome, parametroDaUrl, Quem,
+  plural, Rodape, Sub, CaixaTabela, TabelaResponsiva, TOM_ETAPA, GradeModal as Corpo, ColunaPrincipal as Principal, ColunaLateral as Lateral, Bloco, TituloBloco, Dados, Observacao, useDadosErp, useRestrito, whatsappHref, type DetalheCliente, type PedidoLoja,
 } from "./comum";
 
 type Filtro = StatusPedido | "todos";
@@ -280,24 +280,7 @@ function LinhaDoTempo({ pedido }: { pedido: PedidoLoja }) {
 }
 
 const SelectCurto = styled.div`&&& { flex: 0 0 13rem; } min-width: 0; ${({ theme }) => theme.media.sm} { &&& { flex: 1 1 100%; } }`;
-/**
- * Duas colunas numa grade contínua, como o Painel: os blocos se dividem só pelas linhas, ocupam a altura toda da
- * janela e as duas colunas fecham juntas (o último bloco de cada uma estica). No celular, uma embaixo da outra.
- */
-const Corpo = styled.div`
-  display: grid; flex: 1; grid-template-columns: minmax(0, 1.6fr) minmax(17rem, 1fr); align-items: stretch; min-width: 0; min-height: min-content;
-  border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: ${({ theme }) => theme.radii.md}; overflow: hidden;
-  @media (max-width: 860px) { grid-template-columns: minmax(0, 1fr); }
-`;
-const Principal = styled.div`display: flex; flex-direction: column; min-width: 0; > :last-child { flex: 1; }`;
-const Lateral = styled.aside`display: flex; flex-direction: column; min-width: 0; border-left: 1px solid ${({ theme }) => theme.colors.border.subtle}; > :last-child { flex: 1; }
-  @media (max-width: 860px) { border-left: 0; border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }`;
 const Bolinha = styled("span", transientOptions)<{ $tom: Tone }>`display: block; width: 0.625rem; height: 0.625rem; border-radius: 50%; background: ${({ theme, $tom }) => theme.tones[$tom].fg};`;
-/** Cada assunto no seu bloco, com o título em cima; a linha de baixo separa do próximo. */
-const Bloco = styled.section`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0; padding: ${({ theme }) => theme.spacing(4)}; background: ${({ theme }) => theme.palette.neutral[0]};
-  & + & { border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; }`;
-const TituloBloco = styled.h3`display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.spacing(2)}; min-height: 1.5rem; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary};
-  > em { margin-right: auto; font-style: normal; padding: 0 ${({ theme }) => theme.spacing(1.5)}; border-radius: 999px; background: ${({ theme }) => theme.palette.neutral[100]}; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 0.6875rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; line-height: 1.25rem; }`;
 /** A etapa atual ao lado do título, na sálvia da marca (cancelado em rosa). */
 const Selo = styled.span`padding: 0 ${({ theme }) => theme.spacing(2)}; border-radius: ${({ theme }) => theme.radii.sm}; background: ${({ theme }) => theme.palette.sage[100]}; color: ${({ theme }) => theme.palette.sage[700]}; font-size: 0.75rem; font-weight: ${({ theme }) => theme.fontWeights.medium}; line-height: 1.375rem; white-space: nowrap;
   &[data-cancelado] { background: ${({ theme }) => theme.tones.rose.soft}; color: ${({ theme }) => theme.tones.rose.fg}; }`;
@@ -336,11 +319,4 @@ const Totais = styled.dl`display: grid; grid-template-columns: 1fr auto; gap: ${
   code { padding: 1px 6px; border-radius: ${({ theme }) => theme.radii.sm}; background: ${({ theme }) => theme.palette.neutral[100]}; font-family: ${({ theme }) => theme.fonts.mono}; font-size: 0.75rem; }
   [data-desconto] { color: ${({ theme }) => theme.tones.green.fg}; }
   [data-total] { padding-top: ${({ theme }) => theme.spacing(2.5)}; border-top: 1px solid ${({ theme }) => theme.colors.border.subtle}; font-size: 1rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary}; }`;
-/** Linhas com ícone (contato, bebê, lead, entrega). */
-const Dados = styled.ul`display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(2)}; list-style: none; font-size: 0.8125rem; color: ${({ theme }) => theme.colors.text.primary};
-  li { display: flex; align-items: flex-start; gap: ${({ theme }) => theme.spacing(2)}; min-width: 0; overflow-wrap: anywhere; }
-  li > svg { flex-shrink: 0; margin-top: 2px; color: ${({ theme }) => theme.colors.text.muted}; }
-  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }`;
-const Quem = styled.div`display: flex; align-items: center; gap: ${({ theme }) => theme.spacing(3)}; min-width: 0; > span { min-width: 0; }`;
-const Observacao = styled.p`display: flex; flex-direction: column; gap: 2px; padding: ${({ theme }) => theme.spacing(2.5, 3)}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.colors.background.surface}; font-size: 0.8125rem; line-height: 1.5; color: ${({ theme }) => theme.colors.text.primary}; overflow-wrap: anywhere;`;
 const Mensagem = styled.pre`padding: ${({ theme }) => theme.spacing(3, 4)}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.colors.background.surface}; font: inherit; font-size: 0.8125rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow-y: auto; color: ${({ theme }) => theme.colors.text.secondary};`;

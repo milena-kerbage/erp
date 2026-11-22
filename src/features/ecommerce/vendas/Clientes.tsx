@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import styled from "@emotion/styled";
-import { ArrowClockwiseIcon, CopyIcon, EyeIcon, KeyIcon, ShoppingBagIcon, UserFocusIcon, WhatsappLogoIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, BabyIcon, ClockIcon, CopyIcon, EnvelopeSimpleIcon, EyeIcon, IdentificationCardIcon, KeyIcon, MapPinIcon, ShoppingBagIcon, StarIcon, UserFocusIcon, WhatsappLogoIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -9,11 +9,11 @@ import { SearchField } from "@/components/ui/SearchField";
 import { Tag } from "@/components/ui/Tag";
 import { copyText } from "@/lib/clipboard";
 import { erpRequest, requestError } from "@/features/operations/client";
-import { Actions, Card, Empty, Notice, Page, PageHeader, Pill, Stack, Toolbar } from "@/features/operations/components/ui";
+import { Actions, Card, Empty, Notice, Page, PageHeader, Pill, Toolbar } from "@/features/operations/components/ui";
 import { COMO_CONHECEU, TIPO_DATA_BEBE } from "@/loja/lib/contas/regras";
 import {
-  AvisoRestrito, data, dataHora, dinheiro, EtapaPill, Fatos, haTempo, limparParametro, Linha, LinkTexto, Nome, parametroDaUrl, plural, Quem, Rodape, Sub, CaixaTabela, TabelaResponsiva,
-  TituloSecao, useDadosErp, useRestrito, whatsappHref, type ClienteLoja, type DetalheCliente,
+  AvisoRestrito, Bloco, ColunaLateral, ColunaPrincipal, Dados, data, dataHora, dinheiro, EtapaPill, GradeModal, haTempo, limparParametro, Linha, LinkTexto, Nome, Observacao, parametroDaUrl, plural, Quem, Rodape, Sub,
+  CaixaTabela, TabelaResponsiva, TituloBloco, useDadosErp, useRestrito, whatsappHref, type ClienteLoja, type DetalheCliente,
 } from "./comum";
 import { PrepararMensagemCarrinho } from "./Carrinhos";
 
@@ -104,66 +104,91 @@ function DetalheClienteDialog({ id, onFechar, onErro }: { id: string | null; onF
   const mensagemRedefinicao = cliente && redefinicao ? `Olá, ${cliente.nome.split(" ")[0]}! Aqui é do Ateliê Milena Kerbage. Para criar uma nova senha da sua conta na loja, abra este link (vale por 2 horas e só uma vez):\n${redefinicao.link}` : "";
   const fechar = () => { if (!ocupado) onFechar(); };
 
-  return <Dialog open={Boolean(id)} onClose={fechar} width="44rem" title={cliente?.nome ?? "Cliente"} description={cliente ? `Conta criada em ${dataHora(cliente.criadaEm)}` : "Carregando…"}
-    footer={<Actions>{cliente && <Button variant="secondary" icon={WhatsappLogoIcon} href={whatsappHref(cliente.whatsapp)} target="_blank" rel="noopener noreferrer">Conversar no WhatsApp</Button>}<Button variant="ghost" disabled={ocupado} onClick={fechar}>Fechar</Button></Actions>}>
-    {!detalhe || !cliente || !perfil ? <Empty role="status">Carregando cliente…</Empty> : <Stack>
-      <Quem><Avatar name={cliente.nome} src={cliente.avatar} seed={cliente.id} size="lg" shape="circle" /><span><Nome>{cliente.nome}</Nome><Sub>Cliente da loja online · {plural(detalhe.pedidos.length, "pedido", "pedidos")}{cliente.status === "bloqueada" ? " · conta bloqueada" : ""}</Sub></span></Quem>
-      <Fatos>
-        <dt>E-mail</dt><dd>{cliente.email}</dd>
-        <dt>WhatsApp</dt><dd><a href={whatsappHref(cliente.whatsapp)} target="_blank" rel="noopener noreferrer">{cliente.whatsappFormatado}</a></dd>
-        <dt>Último acesso</dt><dd>{cliente.ultimoAcesso ? dataHora(cliente.ultimoAcesso) : "—"}</dd>
-        <dt>Termos aceitos</dt><dd>versão {cliente.termosVersao}, em {dataHora(cliente.termosAceitosEm)}</dd>
-        {perfil.cpf && <><dt>CPF</dt><dd>{perfil.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</dd></>}
-        {(perfil.endereco || perfil.cidade) && <><dt>Endereço</dt><dd>{[perfil.endereco, [perfil.cidade, perfil.uf].filter(Boolean).join("/"), perfil.cep && `CEP ${perfil.cep.replace(/(\d{5})(\d{3})/, "$1-$2")}`].filter(Boolean).join(" · ")}</dd></>}
-        {perfil.bebeData && <><dt>{TIPO_DATA_BEBE[perfil.bebeDataTipo as keyof typeof TIPO_DATA_BEBE] ?? "Data do bebê"}</dt><dd>{perfil.bebeData.split("-").reverse().join("/")}</dd></>}
-        {perfil.bebeNome && <><dt>Nome do bebê</dt><dd>{perfil.bebeNome}</dd></>}
-        {perfil.comoConheceu && <><dt>Como conheceu</dt><dd>{COMO_CONHECEU[perfil.comoConheceu as keyof typeof COMO_CONHECEU] ?? perfil.comoConheceu}</dd></>}
-        {perfil.preferencias && <><dt>Preferências</dt><dd>{perfil.preferencias}</dd></>}
-        {detalhe.cliente.faltando.length > 0 && <><dt>Dados opcionais</dt><dd><Sub>{plural(detalhe.cliente.faltando.length, "campo opcional ainda vazio", "campos opcionais ainda vazios")} (a cliente completa em Minha conta)</Sub></dd></>}
-      </Fatos>
+  const endereco = perfil ? [perfil.endereco, [perfil.cidade, perfil.uf].filter(Boolean).join("/"), perfil.cep && `CEP ${perfil.cep.replace(/(\d{5})(\d{3})/, "$1-$2")}`].filter(Boolean).join(" · ") : "";
+  const totalPedidos = detalhe ? detalhe.pedidos.filter((pedido) => pedido.status !== "cancelado").reduce((soma, pedido) => soma + pedido.totalCentavos, 0) : 0;
 
-      <section aria-label="Lead no CRM">
-        <TituloSecao>Lead no CRM</TituloSecao>
-        {detalhe.lead ? <Linha><span><Nome>{detalhe.lead.nome}</Nome><Sub>{detalhe.lead.funil} · {detalhe.lead.etapa}</Sub></span><Button size="sm" variant="secondary" icon={UserFocusIcon} href={detalhe.lead.href}>Abrir lead</Button></Linha>
-          : <Sub>Ainda sem lead vinculado. O vínculo é feito no cadastro e refeito no próximo pedido (pelo e-mail ou WhatsApp).</Sub>}
-      </section>
+  // A mesma grade do modal de pedido: à esquerda o que a cliente fez na loja (pedidos, sacola, senha); à direita quem
+  // ela é (contato, bebê), o lead e o cupom.
+  return <Dialog open={Boolean(id)} onClose={fechar} width="66rem" height="56rem" title={cliente?.nome ?? "Cliente"} description={cliente ? `Conta criada em ${dataHora(cliente.criadaEm)}${cliente.status === "bloqueada" ? " · conta bloqueada" : ""}` : "Carregando…"}
+    footer={<Actions>{cliente && <Button icon={WhatsappLogoIcon} href={whatsappHref(cliente.whatsapp)} target="_blank" rel="noopener noreferrer">Conversar no WhatsApp</Button>}<Button variant="ghost" disabled={ocupado} onClick={fechar}>Fechar</Button></Actions>}>
+    {!detalhe || !cliente || !perfil ? <Empty role="status">Carregando cliente…</Empty> : <GradeModal>
+      <ColunaPrincipal>
+        <Bloco aria-label="Pedidos da cliente">
+          <TituloBloco>Pedidos <em>{detalhe.pedidos.length}</em>{detalhe.pedidos.length > 0 && <Sub>a partir de {dinheiro(totalPedidos)} no total</Sub>}</TituloBloco>
+          {detalhe.pedidos.length ? <Lista>{detalhe.pedidos.map((pedido) => <li key={pedido.numero}>
+            <span><LinkTexto href={`/ecommerce/pedidos?pedido=${encodeURIComponent(pedido.numero)}`}>{pedido.numero}</LinkTexto><Sub>{dataHora(pedido.criadoEm)}{pedido.cupom ? ` · cupom ${pedido.cupom.codigo}` : ""}</Sub></span>
+            <Valor>{dinheiro(pedido.totalCentavos)}</Valor>
+            <EtapaPill status={pedido.status} curta />
+          </li>)}</Lista> : <Sub>Nenhum pedido ainda.</Sub>}
+        </Bloco>
 
-      <section aria-label="Cupom de primeira compra">
-        <TituloSecao>Cupom de primeira compra</TituloSecao>
-        {detalhe.cupom ? <Linha><Tag tone={detalhe.cupom.usado ? "neutral" : "green"}>{detalhe.cupom.codigo}</Tag><Sub>{detalhe.cupom.percentual}% OFF · {detalhe.cupom.usado ? <>usado{detalhe.cupom.pedido && <> no pedido <LinkTexto href={`/ecommerce/pedidos?pedido=${encodeURIComponent(detalhe.cupom.pedido)}`}>{detalhe.cupom.pedido}</LinkTexto></>}{detalhe.cupom.usadoEm && ` em ${data(detalhe.cupom.usadoEm)}`}</> : "disponível"}</Sub></Linha> : <Sub>—</Sub>}
-      </section>
+        <Bloco aria-label="Sacola aberta">
+          <TituloBloco>Sacola aberta {detalhe.carrinho && <em>{detalhe.carrinho.quantidade}</em>}{detalhe.carrinho && <Button size="sm" variant="secondary" icon={ShoppingBagIcon} onClick={() => setLembrete(true)}>Chamar no WhatsApp</Button>}</TituloBloco>
+          {detalhe.carrinho ? <>
+            <Sub>A partir de {dinheiro(detalhe.carrinho.totalCentavos)} · mexida {haTempo(detalhe.carrinho.horasParado)}{detalhe.carrinho.lembreteEm ? ` · lembrete preparado em ${dataHora(detalhe.carrinho.lembreteEm)}` : ""}</Sub>
+            <Lista>{detalhe.carrinho.itens.map((item, indice) => <li key={`${item.nome}-${indice}`}>
+              <span><Nome>{item.quantidade}× {item.nome}{!item.disponivel && " (indisponível)"}</Nome>{item.detalhes.length > 0 && <Sub>{item.detalhes.join(" · ")}</Sub>}</span>
+              <Valor>{dinheiro(item.precoCentavos * item.quantidade)}</Valor>
+            </li>)}</Lista>
+          </> : <Sub>Nenhuma peça na sacola (ou a cliente ainda não entrou com a conta neste aparelho).</Sub>}
+        </Bloco>
 
-      <section aria-label="Sacola aberta">
-        <TituloSecao>Sacola aberta</TituloSecao>
-        {detalhe.carrinho ? <Stack>
-          <Sub>{plural(detalhe.carrinho.quantidade, "peça", "peças")} · a partir de {dinheiro(detalhe.carrinho.totalCentavos)} · mexida {haTempo(detalhe.carrinho.horasParado)}{detalhe.carrinho.lembreteEm ? ` · lembrete preparado em ${dataHora(detalhe.carrinho.lembreteEm)}` : ""}</Sub>
-          <Lista>{detalhe.carrinho.itens.map((item, indice) => <li key={`${item.nome}-${indice}`}><span>{item.quantidade}× {item.nome}{!item.disponivel && " (indisponível)"}{item.detalhes.length > 0 && <Sub>{item.detalhes.join(" · ")}</Sub>}</span><span>{dinheiro(item.precoCentavos * item.quantidade)}</span></li>)}</Lista>
-          <div><Button size="sm" variant="secondary" icon={ShoppingBagIcon} onClick={() => setLembrete(true)}>Chamar no WhatsApp</Button></div>
-        </Stack> : <Sub>Nenhuma peça na sacola (ou a cliente ainda não entrou com a conta neste aparelho).</Sub>}
-      </section>
+        <Bloco aria-label="Redefinição de senha">
+          <TituloBloco>Senha {!redefinicao && <Button size="sm" variant="secondary" icon={KeyIcon} loading={ocupado} onClick={() => void gerar()}>Gerar link de redefinição</Button>}</TituloBloco>
+          {detalhe.redefinicao && !redefinicao && <Sub>Último link gerado em {dataHora(detalhe.redefinicao.criadaEm)} · {detalhe.redefinicao.usadaEm ? `usado em ${dataHora(detalhe.redefinicao.usadaEm)}` : new Date(detalhe.redefinicao.expiraEm) < new Date() ? "expirado" : `vale até ${dataHora(detalhe.redefinicao.expiraEm)}`}</Sub>}
+          {!detalhe.redefinicao && !redefinicao && <Sub>A loja não envia e-mail: gere o link e mande pelo WhatsApp da cliente. Ele vale por 2 horas e funciona uma vez.</Sub>}
+          {redefinicao && <>
+            <Notice role="status">Link gerado. Ele aparece só agora: copie e envie pelo WhatsApp da cliente. Vale até {dataHora(redefinicao.expiraEm)} e funciona uma vez; gerar outro invalida este.</Notice>
+            <CaixaLink aria-label="Link de redefinição">{redefinicao.link}</CaixaLink>
+            <Actions>
+              <Button size="sm" icon={CopyIcon} onClick={async () => setCopiado(await copyText(redefinicao.link))}>{copiado ? "Copiado" : "Copiar link"}</Button>
+              <Button size="sm" variant="secondary" icon={WhatsappLogoIcon} href={whatsappHref(cliente.whatsapp, mensagemRedefinicao)} target="_blank" rel="noopener noreferrer">Abrir conversa com a mensagem</Button>
+            </Actions>
+          </>}
+          {erro && <Notice role="alert">{erro}</Notice>}
+        </Bloco>
+      </ColunaPrincipal>
 
-      <section aria-label="Pedidos da cliente">
-        <TituloSecao>Pedidos ({detalhe.pedidos.length})</TituloSecao>
-        {detalhe.pedidos.length ? <Lista>{detalhe.pedidos.map((pedido) => <li key={pedido.numero}><span><LinkTexto href={`/ecommerce/pedidos?pedido=${encodeURIComponent(pedido.numero)}`}>{pedido.numero}</LinkTexto><Sub>{dataHora(pedido.criadoEm)} · a partir de {dinheiro(pedido.totalCentavos)}{pedido.cupom ? ` · ${pedido.cupom.codigo}` : ""}</Sub></span><EtapaPill status={pedido.status} curta /></li>)}</Lista> : <Sub>Nenhum pedido ainda.</Sub>}
-      </section>
+      <ColunaLateral>
+        <Bloco aria-label="Cliente">
+          <TituloBloco>Cliente</TituloBloco>
+          <Quem><Avatar name={cliente.nome} src={cliente.avatar} seed={cliente.id} size="lg" shape="circle" /><span><Nome>{cliente.nome}</Nome><Sub>Cliente da loja online · {plural(detalhe.pedidos.length, "pedido", "pedidos")}</Sub></span></Quem>
+          <Dados>
+            <li><EnvelopeSimpleIcon size={15} aria-hidden /><span>{cliente.email}</span></li>
+            <li><WhatsappLogoIcon size={15} aria-hidden /><a href={whatsappHref(cliente.whatsapp)} target="_blank" rel="noopener noreferrer">{cliente.whatsappFormatado}</a></li>
+            {endereco && <li><MapPinIcon size={15} aria-hidden /><span>{endereco}</span></li>}
+            {perfil.cpf && <li><IdentificationCardIcon size={15} aria-hidden /><span>CPF {perfil.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</span></li>}
+            <li><ClockIcon size={15} aria-hidden /><span>{cliente.ultimoAcesso ? `Último acesso em ${dataHora(cliente.ultimoAcesso)}` : "Ainda não entrou depois do cadastro"}<Sub>Termos versão {cliente.termosVersao}, aceitos em {data(cliente.termosAceitosEm)}</Sub></span></li>
+          </Dados>
+          {detalhe.cliente.faltando.length > 0 && <Sub>{plural(detalhe.cliente.faltando.length, "campo opcional ainda vazio", "campos opcionais ainda vazios")} (a cliente completa em Minha conta).</Sub>}
+        </Bloco>
 
-      <section aria-label="Redefinição de senha">
-        <TituloSecao>Senha</TituloSecao>
-        {detalhe.redefinicao && !redefinicao && <Sub>Último link gerado em {dataHora(detalhe.redefinicao.criadaEm)} · {detalhe.redefinicao.usadaEm ? `usado em ${dataHora(detalhe.redefinicao.usadaEm)}` : new Date(detalhe.redefinicao.expiraEm) < new Date() ? "expirado" : `vale até ${dataHora(detalhe.redefinicao.expiraEm)}`}</Sub>}
-        {redefinicao ? <Stack>
-          <Notice role="status">Link gerado. Ele aparece só agora: copie e envie pelo WhatsApp da cliente. Vale até {dataHora(redefinicao.expiraEm)} e funciona uma vez; gerar outro invalida este.</Notice>
-          <CaixaLink aria-label="Link de redefinição">{redefinicao.link}</CaixaLink>
-          <Actions>
-            <Button size="sm" icon={CopyIcon} onClick={async () => setCopiado(await copyText(redefinicao.link))}>{copiado ? "Copiado" : "Copiar link"}</Button>
-            <Button size="sm" variant="secondary" icon={WhatsappLogoIcon} href={whatsappHref(cliente.whatsapp, mensagemRedefinicao)} target="_blank" rel="noopener noreferrer">Abrir conversa com a mensagem</Button>
-          </Actions>
-        </Stack> : <div><Button size="sm" variant="secondary" icon={KeyIcon} loading={ocupado} onClick={() => void gerar()}>Gerar link de redefinição de senha</Button></div>}
-        {erro && <Notice role="alert">{erro}</Notice>}
-      </section>
-    </Stack>}
+        {(perfil.bebeNome || perfil.bebeData || perfil.comoConheceu || perfil.preferencias) && <Bloco aria-label="Bebê e preferências">
+          <TituloBloco>Bebê e preferências</TituloBloco>
+          <Dados>
+            {(perfil.bebeNome || perfil.bebeData) && <li><BabyIcon size={15} aria-hidden /><span>{perfil.bebeNome || "Bebê"}{perfil.bebeData && <Sub>{TIPO_DATA_BEBE[perfil.bebeDataTipo as keyof typeof TIPO_DATA_BEBE] ?? "Data do bebê"}: {perfil.bebeData.split("-").reverse().join("/")}</Sub>}</span></li>}
+            {perfil.comoConheceu && <li><StarIcon size={15} aria-hidden /><span>Conheceu por {COMO_CONHECEU[perfil.comoConheceu as keyof typeof COMO_CONHECEU] ?? perfil.comoConheceu}</span></li>}
+          </Dados>
+          {perfil.preferencias && <Observacao><Sub>Preferências</Sub>{perfil.preferencias}</Observacao>}
+        </Bloco>}
+
+        <Bloco aria-label="Lead no CRM">
+          <TituloBloco>Lead no CRM {detalhe.lead && <Button size="sm" variant="secondary" icon={UserFocusIcon} href={detalhe.lead.href}>Abrir lead</Button>}</TituloBloco>
+          {detalhe.lead ? <span><Nome>{detalhe.lead.nome}</Nome><Sub>{detalhe.lead.funil} · {detalhe.lead.etapa}</Sub></span>
+            : <Sub>Ainda sem lead vinculado. O vínculo é feito no cadastro e refeito no próximo pedido (pelo e-mail ou WhatsApp).</Sub>}
+        </Bloco>
+
+        <Bloco aria-label="Cupom de primeira compra">
+          <TituloBloco>Cupom de primeira compra</TituloBloco>
+          {detalhe.cupom ? <Linha><Tag tone={detalhe.cupom.usado ? "neutral" : "green"}>{detalhe.cupom.codigo}</Tag><Sub>{detalhe.cupom.percentual}% OFF · {detalhe.cupom.usado ? <>usado{detalhe.cupom.pedido && <> no pedido <LinkTexto href={`/ecommerce/pedidos?pedido=${encodeURIComponent(detalhe.cupom.pedido)}`}>{detalhe.cupom.pedido}</LinkTexto></>}{detalhe.cupom.usadoEm && ` em ${data(detalhe.cupom.usadoEm)}`}</> : "disponível"}</Sub></Linha> : <Sub>—</Sub>}
+        </Bloco>
+      </ColunaLateral>
+    </GradeModal>}
     {detalhe?.carrinho && <PrepararMensagemCarrinho clienteId={lembrete ? detalhe.cliente.id : null} nome={detalhe.cliente.nome} onFechar={(lembreteEm) => { setLembrete(false); if (lembreteEm) setDetalhe((atual) => atual && atual.carrinho ? { ...atual, carrinho: { ...atual.carrinho, lembreteEm } } : atual); }} />}
   </Dialog>;
 }
 
-const Lista = styled.ul`display: flex; flex-direction: column; list-style: none; font-size: 0.8125rem; > li { display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.spacing(3)}; padding: ${({ theme }) => theme.spacing(2, 0)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint}; } > li:last-of-type { border-bottom: 0; } > li > span:first-of-type { min-width: 0; } > li > span:last-of-type { flex-shrink: 0; }`;
+/** Linhas de pedido e de peça da sacola: o que é à esquerda, o valor e a etapa à direita. */
+const Lista = styled.ul`display: flex; flex-direction: column; list-style: none; font-size: 0.8125rem; > li { display: flex; align-items: center; gap: ${({ theme }) => theme.spacing(3)}; padding: ${({ theme }) => theme.spacing(2.5, 0)}; border-bottom: 1px solid ${({ theme }) => theme.colors.border.faint}; } > li:first-of-type { padding-top: 0; } > li:last-of-type { padding-bottom: 0; border-bottom: 0; } > li > span:first-of-type { flex: 1; min-width: 0; }`;
+const Valor = styled.span`flex-shrink: 0; font-weight: ${({ theme }) => theme.fontWeights.medium}; color: ${({ theme }) => theme.colors.text.primary}; white-space: nowrap;`;
 const CaixaLink = styled.code`display: block; padding: ${({ theme }) => theme.spacing(3)}; border-radius: ${({ theme }) => theme.radii.md}; background: ${({ theme }) => theme.colors.background.surface}; font-size: 0.75rem; overflow-wrap: anywhere; user-select: all;`;
