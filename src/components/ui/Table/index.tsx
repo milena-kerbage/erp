@@ -51,6 +51,11 @@ export const TableCard = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: ${({ theme }) => theme.radii.md};
   background-color: ${({ theme }) => theme.palette.neutral[0]};
+
+  /* Logo abaixo de abas, a tabela respira: não encosta na linha das abas */
+  [role="tabpanel"] > & {
+    margin-top: ${({ theme }) => theme.spacing(3)};
+  }
 `;
 
 export const Table = styled.table`

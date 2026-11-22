@@ -240,8 +240,6 @@ const dataCurta = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { d
 
 /** A moldura da tabela do sistema; no celular a lista vira cartões (abaixo). */
 const TabelaRolagem = styled(TableCard)`
-  margin-top: ${({ theme }) => theme.spacing(2)};
-
   ${({ theme }) => theme.media.md} { display: none; }
 `;
 
