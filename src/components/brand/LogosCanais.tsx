@@ -1,5 +1,5 @@
 import type { Icon } from "@phosphor-icons/react";
-import type { SVGProps } from "react";
+import { useId, type SVGProps } from "react";
 
 // Logos dos canais no formato de ícone de aplicativo, com as cores oficiais: WhatsApp no círculo verde e Instagram no
 // quadrado com o degradê, os dois com o símbolo branco. Ficam coloridas e legíveis em fundo claro ou escuro (inclusive
@@ -21,23 +21,27 @@ export function LogoWhatsApp(props: Props) {
 }
 
 export function LogoInstagram(props: Props) {
+  // Um id por logo: com id fixo, todas as logos da página apontam para o degradê da primeira, e se ela estiver
+  // escondida (menu fechado, lista que só aparece no celular) as outras ficam sem cor.
+  const id = useId().replace(/:/g, "");
+  const degrade = `logo-instagram-degrade-${id}`, azul = `logo-instagram-azul-${id}`;
   return (
     <svg viewBox="0 0 24 24" role="img" aria-hidden {...limpar(props)}>
       <defs>
-        <radialGradient id="logo-instagram-degrade" cx="6.4" cy="25.8" r="25.7" gradientUnits="userSpaceOnUse">
+        <radialGradient id={degrade} cx="6.4" cy="25.8" r="25.7" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#FFDD55" />
           <stop offset="0.1" stopColor="#FFDD55" />
           <stop offset="0.5" stopColor="#FF543E" />
           <stop offset="1" stopColor="#C837AB" />
         </radialGradient>
-        <radialGradient id="logo-instagram-azul" cx="-4" cy="1.7" r="11.5" gradientTransform="matrix(.2 1 -4.1 .8 4 -2.6)" gradientUnits="userSpaceOnUse">
+        <radialGradient id={azul} cx="-4" cy="1.7" r="11.5" gradientTransform="matrix(.2 1 -4.1 .8 4 -2.6)" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#3771C8" />
           <stop offset="0.13" stopColor="#3771C8" />
           <stop offset="1" stopColor="#6600FF" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <rect width="24" height="24" rx="6.5" fill="url(#logo-instagram-degrade)" />
-      <rect width="24" height="24" rx="6.5" fill="url(#logo-instagram-azul)" />
+      <rect width="24" height="24" rx="6.5" fill={`url(#${degrade})`} />
+      <rect width="24" height="24" rx="6.5" fill={`url(#${azul})`} />
       <path fill="#fff" transform="translate(4.8 4.8) scale(0.6)" d={SIMBOLO_INSTAGRAM} />
     </svg>
   );

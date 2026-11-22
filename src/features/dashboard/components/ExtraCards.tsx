@@ -28,7 +28,8 @@ const JANELAS: readonly { de: number; ate: 30 | 60 | 90; rotulo: string; tom: To
   { de: 60, ate: 90, rotulo: "61 a 90 dias", tom: "green" },
 ];
 
-const janelaDe = (dias: number) => JANELAS.find((janela) => dias <= janela.ate) ?? JANELAS[JANELAS.length - 1];
+/** A cor do selo de quanto falta esquenta conforme o nascimento chega perto: de azul-esverdeado (longe) a rosa (dias). */
+const tomDoPrazo = (dias: number): Tone => (dias <= 7 ? "rose" : dias <= 14 ? "peach" : dias <= 30 ? "yellow" : dias <= 60 ? "green" : "teal");
 
 /** A cor cheia de cada janela na barra: o tom pastel com mais presença (o destaque puro some numa barra fina). */
 const corDaJanela = (theme: Theme, tom: Tone) => (theme.mode === "dark" ? theme.tones[tom].fg : `color-mix(in srgb, ${theme.tones[tom].fg} 42%, ${theme.tones[tom].soft})`);
@@ -99,7 +100,7 @@ const Bebes = styled.ul`
   .quem small { overflow: hidden; font-size: 0.6875rem; color: ${({ theme }) => theme.colors.text.muted}; white-space: nowrap; text-overflow: ellipsis; }
 `;
 
-/** Quanto falta: selo com o relógio, na cor da janela. */
+/** Quanto falta: selo com o relógio; a cor acompanha o quão perto está (ver tomDoPrazo). */
 const Falta = styled("span", transientOptions)<{ $tom: Tone }>`
   display: inline-flex;
   flex-shrink: 0;
@@ -158,7 +159,7 @@ export function BirthsCard({ births }: { births: Births }) {
                       </strong>
                       <small>{item.name} · {diaEMes.format(data).replace(".", "")}</small>
                     </span>
-                    <Falta $tom={janelaDe(dias).tom}>
+                    <Falta $tom={tomDoPrazo(dias)}>
                       <ClockIcon size={12} weight="bold" aria-hidden />
                       {dias <= 0 ? "hoje" : quandoNasce(item.date, hoje).replace("nasce em ", "")}
                     </Falta>
@@ -176,108 +177,120 @@ export function BirthsCard({ births }: { births: Births }) {
 /* ---------- Conversão por canal ---------- */
 
 /**
- * Uma barra grossa por canal, todas na mesma escala (0 a 100%, marcada em cima): o trecho cheio é quem virou cliente,
- * o hachurado é quem ainda não fechou. À esquerda o canal, à direita a taxa.
+ * Uma barra só para os clientes do mês, repartida por canal (cada trecho tem a largura da parte dele): o canal que
+ * mais converteu vem cheio, os seguintes em tons mais claros e o último hachurado. Em cima a escala; em cada divisa
+ * uma linha que passa pela barra; embaixo de cada trecho, o canal e a conversão dele.
  */
 const Conversao = styled.div`
-  --rotulo: 8.5rem;
-  --taxa: 2.75rem;
-  --vao: ${({ theme }) => theme.spacing(3)};
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing(1.5)};
 
-  @container (max-width: 520px) {
-    --rotulo: 5.5rem;
-    --vao: ${({ theme }) => theme.spacing(2)};
-    .dentro { display: none; }
-  }
-
-  /* A escala e as linhas de 25 em 25% ocupam só a coluna das barras */
-  .escala, .grade { margin: 0 calc(var(--taxa) + var(--vao)) 0 calc(var(--rotulo) + var(--vao)); }
-  .escala { position: relative; height: 0.875rem; font-size: 0.625rem; letter-spacing: 0.06em; color: ${({ theme }) => theme.colors.text.muted}; }
+  .escala { position: relative; height: 0.875rem; font-size: 0.625rem; letter-spacing: 0.08em; color: ${({ theme }) => theme.colors.text.muted}; text-transform: uppercase; white-space: nowrap; }
   .escala span { position: absolute; top: 0; transform: translateX(-50%); }
   .escala span:first-of-type { transform: none; }
-  .escala span:last-of-type { transform: translateX(-100%); }
-  .grade {
-    position: absolute;
-    top: 1.125rem;
-    right: 0;
-    bottom: -4px;
-    left: 0;
-    border-right: 1px solid ${({ theme }) => theme.colors.border.subtle};
-    background: linear-gradient(to right, ${({ theme }) => theme.colors.border.subtle} 1px, transparent 1px) 0 0 / 25% 100%;
-    pointer-events: none;
-  }
+  .escala span:last-of-type { right: 0; transform: none; }
 
-  ul { position: relative; display: flex; flex-direction: column; gap: ${({ theme }) => theme.spacing(1.5)}; }
-  a { display: grid; grid-template-columns: var(--rotulo) minmax(0, 1fr) var(--taxa); align-items: center; gap: var(--vao); color: inherit; font-size: 0.8125rem; text-decoration: none; }
+  /* Os trechos lado a lado; a linha do fim (o total) fecha a barra, como na referência */
+  .trechos { position: relative; display: flex; padding-top: 0.75rem; }
+  .trechos::after { content: ""; position: absolute; top: 0; right: 0; bottom: 1.5rem; width: 2px; background: ${({ theme }) => theme.palette.sage[700]}; }
+
+  a { position: relative; display: flex; flex-direction: column; min-width: 2.75rem; color: inherit; text-decoration: none; }
   a:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary.main}; outline-offset: 2px; border-radius: ${({ theme }) => theme.radii.sm}; }
-  .canal { display: flex; align-items: center; gap: ${({ theme }) => theme.spacing(2)}; min-width: 0; }
-  .logo { display: grid; flex-shrink: 0; place-items: center; width: 1.25rem; color: ${({ theme }) => theme.colors.text.muted}; }
-  .nome { overflow: hidden; color: ${({ theme }) => theme.colors.text.secondary}; white-space: nowrap; text-overflow: ellipsis; }
-  .taxa { font-size: 0.9375rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; letter-spacing: -0.01em; color: ${({ theme }) => theme.colors.text.primary}; text-align: right; white-space: nowrap; }
+  /* A linha da divisa: nasce acima da barra e desce até o rótulo */
+  a + a::before { content: ""; position: absolute; top: -0.75rem; bottom: 1.5rem; left: 0; z-index: 1; width: 1px; background: ${({ theme }) => theme.colors.border.default}; }
 
-  .barra {
-    display: flex;
-    height: 1.75rem;
-    border-radius: 6px;
-    /* Quem ainda não fechou: hachurado claro */
+  .parte { display: flex; align-items: center; height: 1.875rem; padding: 0 ${({ theme }) => theme.spacing(3)}; overflow: hidden; font-size: 0.75rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; white-space: nowrap; transition: filter 160ms; }
+  a:hover .parte { filter: brightness(0.95); }
+  .parte[data-tom="1"] { background: ${({ theme }) => theme.palette.sage[600]}; color: ${({ theme }) => theme.palette.neutral[0]}; }
+  .parte[data-tom="2"] { background: ${({ theme }) => theme.palette.sage[400]}; color: ${({ theme }) => theme.palette.neutral[0]}; }
+  .parte[data-tom="3"] { background: ${({ theme }) => theme.palette.sage[200]}; color: ${({ theme }) => theme.palette.sage[800]}; }
+  .parte[data-tom="4"] {
     background:
-      repeating-linear-gradient(135deg, ${({ theme }) => theme.palette.neutral[200]} 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(135deg, ${({ theme }) => theme.palette.neutral[300]} 0 1px, transparent 1px 7px),
       ${({ theme }) => theme.palette.neutral[50]};
-    overflow: hidden;
-    font-size: 0.6875rem;
-    font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    white-space: nowrap;
-    transition: filter 160ms;
+    box-shadow: inset 0 0 0 1px ${({ theme }) => theme.palette.neutral[200]};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
-  a:hover .barra { filter: brightness(0.96); }
-  .cheia, .resto { display: flex; align-items: center; min-width: 0; overflow: hidden; }
-  .cheia { background: ${({ theme }) => theme.palette.sage[500]}; color: ${({ theme }) => theme.palette.neutral[0]}; box-shadow: 2px 0 0 ${({ theme }) => theme.palette.neutral[0]}; transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .resto { flex: 1; color: ${({ theme }) => theme.colors.text.muted}; font-weight: ${({ theme }) => theme.fontWeights.medium}; }
-  .dentro { padding: 0 ${({ theme }) => theme.spacing(2.5)}; }
+
+  .rotulo { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: ${({ theme }) => theme.spacing(3, 2, 0, 2.5)}; line-height: 1.2; }
+  a:first-of-type .rotulo { padding-left: 0; }
+  .rotulo strong { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.8125rem; font-weight: ${({ theme }) => theme.fontWeights.semibold}; color: ${({ theme }) => theme.colors.text.primary}; }
+  .rotulo strong > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .rotulo strong > svg, .rotulo strong > i { flex-shrink: 0; }
+  .rotulo small { overflow: hidden; font-size: 0.625rem; letter-spacing: 0.08em; color: ${({ theme }) => theme.colors.text.muted}; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; }
+
+  /* Cartão estreito: os rótulos não cabem embaixo dos trechos; viram uma lista */
+  .lista { display: none; }
+  @container (max-width: 520px) {
+    a { min-width: 1.25rem; }
+    .parte { padding: 0; justify-content: center; }
+    .parte > span, .rotulo { display: none; }
+    .trechos::after, a + a::before { bottom: 0; }
+    .lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: ${({ theme }) => theme.spacing(2.5, 3)}; margin-top: ${({ theme }) => theme.spacing(3.5)}; }
+    .lista .rotulo { display: flex; padding: 0; }
+  }
 `;
 
 /**
- * De cada canal, quantos leads do mês viraram cliente. Diz onde vale investir, sem depender de quantas campanhas
+ * De onde vieram os clientes do mês e quanto cada canal converte, numa barra só. Não depende de quantas campanhas
  * existem: os canais são sempre os mesmos.
  */
 export function ChannelsCard({ rows }: { rows: SourceRow[] }) {
-  const canais = joinSources(rows).sort((a, b) => b.count - a.count || b.converted - a.converted).slice(0, 4);
+  const todos = joinSources(rows);
+  const leads = todos.reduce((soma, row) => soma + row.count, 0);
+  // Quem converteu, do maior para o menor: até quatro trechos (do quarto em diante, juntos em "Outros").
+  const comClientes = todos.filter((row) => row.converted > 0).sort((a, b) => b.converted - a.converted || b.count - a.count);
+  const resto = comClientes.slice(3);
+  const partes = [
+    ...comClientes.slice(0, 3).map((row) => ({ nome: row.source, origens: origensDoCanal(row.source), clientes: row.converted, leads: row.count, logo: true })),
+    ...(resto.length === 1
+      ? [{ nome: resto[0].source, origens: origensDoCanal(resto[0].source), clientes: resto[0].converted, leads: resto[0].count, logo: true }]
+      : resto.length > 1
+        ? [{ nome: "Outros", origens: resto.flatMap((row) => origensDoCanal(row.source)), clientes: resto.reduce((soma, row) => soma + row.converted, 0), leads: resto.reduce((soma, row) => soma + row.count, 0), logo: false }]
+        : []),
+  ];
+  const clientes = partes.reduce((soma, parte) => soma + parte.clientes, 0);
+  const rotulo = (parte: (typeof partes)[number]) => {
+    const Icone = findChoice(leadSources, parte.nome)?.icon ?? DotsThreeCircleIcon;
+    return (
+      <span className="rotulo">
+        <strong>
+          {(parte.logo && logoDaOrigem(parte.nome, 15)) || <Icone size={15} aria-hidden />}
+          <span>{parte.nome}</span>
+        </strong>
+        <small>{parte.clientes} de {parte.leads} · {Math.round((parte.clientes / parte.leads) * 100)}%</small>
+      </span>
+    );
+  };
   return (
     <Card aria-label="Conversão por canal">
       <CardHead title="Conversão por canal" />
-      {canais.length === 0 ? (
-        <EmptyNote>Nenhum lead chegou neste mês ainda.</EmptyNote>
+      {partes.length === 0 ? (
+        <EmptyNote>{leads ? "Nenhum lead deste mês virou cliente ainda." : "Nenhum lead chegou neste mês ainda."}</EmptyNote>
       ) : (
         <Conversao>
           <div className="escala" aria-hidden>
-            {[0, 25, 50, 75, 100].map((marca) => <span key={marca} style={{ left: `${marca}%` }}>{marca}%</span>)}
+            {[0, 25, 50, 75].map((marca) => <span key={marca} style={{ left: `${marca}%` }}>{marca}%</span>)}
+            <span>{plural(clientes, "cliente", "clientes")} de {plural(leads, "lead", "leads")}</span>
           </div>
-          <div className="grade" aria-hidden />
-          <ul>
-            {canais.map((row) => {
-              const Icone = findChoice(leadSources, row.source)?.icon ?? DotsThreeCircleIcon;
-              const taxa = row.count ? (row.converted / row.count) * 100 : 0, abertos = row.count - row.converted;
-              return (
-                <li key={row.source}>
-                  <Link href={leadsHref({ origens: origensDoCanal(row.source), criados: 30 })} aria-label={`${row.source}: ${row.converted} de ${plural(row.count, "lead virou", "leads viraram")} cliente, ${Math.round(taxa)}%. Abrir a lista`}>
-                    <span className="canal">
-                      <span className="logo" aria-hidden>{logoDaOrigem(row.source, 18) ?? <Icone size={17} />}</span>
-                      <span className="nome">{row.source}</span>
-                    </span>
-                    <span className="barra" aria-hidden>
-                      {taxa > 0 && <span className="cheia" style={{ width: `${taxa}%` }}>{taxa >= 14 && <span className="dentro">{plural(row.converted, "cliente", "clientes")}</span>}</span>}
-                      <span className="resto">{100 - taxa >= 14 && <span className="dentro">{abertos} em aberto</span>}</span>
-                    </span>
-                    <span className="taxa">{Math.round(taxa)}%</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="trechos">
+            {partes.map((parte, indice) => (
+              <Link
+                key={parte.nome}
+                href={leadsHref({ origens: parte.origens, criados: 30 })}
+                style={{ flex: `${parte.clientes} 1 0` }}
+                aria-label={`${parte.nome}: ${plural(parte.clientes, "cliente", "clientes")} de ${plural(parte.leads, "lead", "leads")}, ${Math.round((parte.clientes / parte.leads) * 100)}% de conversão. Abrir a lista`}
+              >
+                <span className="parte" data-tom={indice === partes.length - 1 && partes.length > 1 ? 4 : indice + 1} aria-hidden>
+                  <span>{plural(parte.clientes, "cliente", "clientes")}</span>
+                </span>
+                {rotulo(parte)}
+              </Link>
+            ))}
+          </div>
+          <div className="lista" aria-hidden>
+            {partes.map((parte) => <div key={parte.nome}>{rotulo(parte)}</div>)}
+          </div>
         </Conversao>
       )}
     </Card>
