@@ -55,7 +55,8 @@
     "test:images": "node --experimental-strip-types --test tests/image-compression.test.mjs",
     "test:performance:http": "node --experimental-strip-types tests/performance-http.mjs",
     "loja:segmentacoes": "node --env-file-if-exists=.env.local --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --no-warnings scripts/loja-segmentacoes.mjs",
-    "loja:albuns": "node --env-file-if-exists=.env.local --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --no-warnings scripts/loja-albuns.mjs"
+    "loja:albuns": "node --env-file-if-exists=.env.local --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --no-warnings scripts/loja-albuns.mjs",
+    "loja:duplicados": "node --env-file-if-exists=.env.local --import ./scripts/lib/registrar-ts.mjs --experimental-strip-types --no-warnings scripts/loja-duplicados.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1164.0",

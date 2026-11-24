@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { css } from "styled-system/css";
 import { Avaliacoes } from "@/loja/componentes/produto/Avaliacoes";
 import { abasDe, coresDe, destaquesDe, dividirNome, fotosDoProduto, linhaDe, usoDe } from "@/loja/componentes/produto/dados";
@@ -13,6 +13,7 @@ import { JsonLd } from "@/loja/componentes/seo/JsonLd";
 import { indiceDaLoja } from "@/lib/loja/catalogo";
 import { condicoesDePagamento, PRONTA_ENTREGA, type Produto } from "@/loja/lib/catalogo/exemplos";
 import { fotoPrincipal } from "@/loja/lib/catalogo/fotos";
+import { destinoDoUnido } from "@/loja/lib/catalogo/unidos";
 import { comVersao, compartilhamento, robotsDoCatalogo, semMarca, SITE } from "@/loja/lib/seo/compartilhar";
 import { schemaProduto, schemaTrilha } from "@/loja/lib/seo/produto";
 import { avaliacoesIniciais } from "@/loja/lib/avaliacoes/servidor";
@@ -55,8 +56,14 @@ export async function generateMetadata({ params }: PageProps<"/loja/produto/[slu
 
 export default async function PaginaProduto({ params }: PageProps<"/loja/produto/[slug]">) {
   const { buscarProduto, buscarVarios } = await indiceDaLoja();
-  const produto = buscarProduto((await params).slug);
-  if (!produto) notFound();
+  const { slug } = await params;
+  const produto = buscarProduto(slug);
+  if (!produto) {
+    // Produto repetido que foi unido a outro: o endereço antigo leva ao que ficou.
+    const destino = destinoDoUnido(slug);
+    if (destino && buscarProduto(destino)) permanentRedirect(`/produto/${destino}`);
+    notFound();
+  }
   const complementos = buscarVarios(produto.complementos).slice(0, 4);
   const semelhantes = buscarVarios(produto.semelhantes).slice(0, 8);
   const pagamento = condicoesDePagamento(produto.preco);

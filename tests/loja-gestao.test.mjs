@@ -25,6 +25,8 @@ import { jogarVaral, painelVaral, salvarConfigVaral, varalPublico } from '../src
 import { listarCarrinhosAbandonados, mensagemDoCarrinho, sincronizarCarrinho } from '../src/lib/loja/gestao/carrinhos.ts';
 import { enviarImagem, arquivoDaImagem, reordenarImagens, removerImagem } from '../src/lib/loja/gestao/imagens.ts';
 import { painelDaLoja } from '../src/lib/loja/gestao/painel.ts';
+import { retratoDosPares, unirDuplicados } from '../src/lib/loja/gestao/duplicados.ts';
+import { destinoDoUnido, PRODUTOS_UNIDOS } from '../src/loja/lib/catalogo/unidos.ts';
 import { catalogoParaCarrinho } from '../src/loja/lib/carrinho/catalogo.ts';
 import { arvoreDoCatalogo, catalogoEstatico } from '../src/loja/lib/catalogo/fonte.ts';
 import { montarMenu } from '../src/loja/componentes/layout/cabecalho/menu.ts';
@@ -503,4 +505,44 @@ test('varal de roupinhas: sorteio no servidor, um cupom por telefone, fora da li
   await salvarConfigVaral({ ativo: true, premios: [{ tipo: 'valor', valor: 3000, chance: 100, prefixo: 'MIMO30' }], validadeDias: 10, minimoCentavos: 0 }, gestora);
   const fixo = await jogarVaral({ telefone: '(11) 98888-0003', peca: 'babador', consentimento: true });
   assert.equal(fixo.premio, 'R$ 30 de desconto'); assert.match(fixo.codigo, /^MIMO30-/); assert.equal(fixo.condicoes, 'Válido por 10 dias.');
+});
+
+test('duplicados: o repetido é arquivado, as fotos que faltavam mudam para o mantido, o endereço antigo tem destino e repetir não muda nada', async () => {
+  await importarCatalogoDeExemplo('teste');
+  const [mantido, repetido] = await gestaoDb().prepare("SELECT id, slug, revisao FROM loja_produtos WHERE status = 'ativo' ORDER BY slug LIMIT 2").all();
+  const foto = (cor) => sharp({ create: { width: 800, height: 600, channels: 3, background: cor } }).png().toBuffer();
+  await enviarImagem(mantido.id, { conteudo: await foto('#d9c7b8'), revisao: mantido.revisao }, gestora);
+  let revisao = Number(repetido.revisao);
+  // A 1ª foto do repetido é a mesma do mantido (não muda de lugar); a 3ª é a que faltava.
+  for (const cor of ['#d9c7b8', '#a8b89c', '#7f8fa6']) revisao = (await enviarImagem(repetido.id, { conteudo: await foto(cor), revisao }, gestora)).revisao;
+  const categoria = (await listarCategorias()).categorias.find((item) => item.caminho === 'enxoval/mantas');
+  const pares = [{ arquivar: repetido.slug, manter: mantido.slug, moverFotos: [0, 2], categoriaExtra: categoria.caminho }, { arquivar: 'nao-existe', manter: mantido.slug }];
+
+  const ensaio = await unirDuplicados(pares, { simular: true });
+  assert.deepEqual(ensaio.pares.map((par) => par.situacao), ['a_unir', 'nao_encontrado']);
+  assert.equal((await produtoPorSlug(repetido.slug)).status, 'ativo');
+  const antes = await retratoDosPares(pares);
+  assert.deepEqual(antes.map((produto) => produto.fotos.length).sort(), [1, 3]);
+
+  const resumo = await unirDuplicados(pares);
+  assert.deepEqual([resumo.unidos, resumo.fotosMovidas, resumo.naoEncontrados], [1, 1, 1]);
+  assert.equal((await produtoPorSlug(repetido.slug)).status, 'arquivado');
+  const fotos = (id) => gestaoDb().prepare('SELECT posicao, tipo FROM loja_produto_imagens WHERE produto_id = ? ORDER BY posicao').all(id);
+  assert.deepEqual(normal(await fotos(mantido.id)).map((item) => [Number(item.posicao), item.tipo]), [[0, 'principal'], [1, 'detalhe']]);
+  assert.deepEqual(normal(await fotos(repetido.id)).map((item) => Number(item.posicao)), [0, 1]);
+  const loja = await lerCatalogoDoBanco();
+  assert.equal(loja.produtos.some((produto) => produto.slug === repetido.slug), false);
+  assert.equal((await obterProduto(mantido.id)).produto.categoriasExtras.includes(categoria.id) || (await produtoPorSlug(mantido.slug)).categoria_id === categoria.id, true);
+
+  const denovo = await unirDuplicados(pares);
+  assert.deepEqual([denovo.unidos, denovo.jaUnidos, denovo.fotosMovidas], [0, 1, 0]);
+  // Reativar no ERP desfaz o arquivamento.
+  await atualizarProduto(repetido.id, { revisao: (await produtoPorSlug(repetido.slug)).revisao, status: 'ativo' }, gestora);
+  assert.equal((await lerCatalogoDoBanco()).produtos.some((produto) => produto.slug === repetido.slug), true);
+
+  // A lista de verdade: sem slug repetido, sem cadeia e com destino para cada endereço antigo.
+  const arquivados = PRODUTOS_UNIDOS.map((par) => par.arquivar);
+  assert.equal(new Set(arquivados).size, arquivados.length);
+  for (const par of PRODUTOS_UNIDOS) { assert.equal(arquivados.includes(par.manter), false); assert.equal(destinoDoUnido(par.arquivar), par.manter); }
+  assert.equal(destinoDoUnido('kit-cama-kids-maria-julia'), undefined);
 });
