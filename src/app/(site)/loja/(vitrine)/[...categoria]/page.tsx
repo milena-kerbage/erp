@@ -8,6 +8,7 @@ import { ResultadoNaUrl } from "@/loja/componentes/listagem/ResultadoNaUrl";
 import { arvoreDaLoja, catalogoDaLoja } from "@/lib/loja/catalogo";
 import { blocosDaCategoria, LINHA_BLOCOS_CATEGORIA } from "@/loja/lib/catalogo/edicoes";
 import { filtrar, noCaminho, paraListagem } from "@/loja/lib/catalogo/listagem";
+import { MODULOS } from "@/loja/lib/modulos";
 import { comVersao, compartilhamento, robotsDoCatalogo, SITE } from "@/loja/lib/seo/compartilhar";
 import { JsonLd } from "@/loja/componentes/seo/JsonLd";
 import { ORIGEM, REGRAS_SEO } from "@/loja/lib/seo/config";
@@ -82,7 +83,8 @@ export default async function PaginaCategoria({ params }: Props) {
   const categoria = semQuery.listagem.categoria;
   const itensBase = noCaminho(catalogo.produtos, `/${categoria}`).map(paraListagem);
   // Categorias principais com bloco editorial configurado (edicoes.ts), depois de 2 linhas de cards.
-  const blocos = blocosDaCategoria(categoria);
+  // Com as propagandas desligadas, os blocos editoriais nem vão para a página (src/loja/lib/modulos.ts).
+  const blocos = MODULOS.propagandasNaListagem ? blocosDaCategoria(categoria) : [];
   // Dados estruturados da listagem: a trilha e as primeiras peças, na ordem em que aparecem (ItemList).
   const listados = filtrar(itensBase, semQuery.listagem.filtros).slice(0, 24);
   return (

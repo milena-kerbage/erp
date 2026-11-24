@@ -37,7 +37,9 @@ function lerUmaVez() {
   return leituraEmAndamento;
 }
 
-const doBanco = unstable_cache(async () => lerUmaVez(), ["loja-catalogo-v1"], {
+// A versão na chave troca o retrato guardado de uma vez: suba o número quando o cadastro mudar por fora do
+// ERP (scripts como loja:duplicados não passam pelo revalidateTag) e a loja precisar refletir já.
+const doBanco = unstable_cache(async () => lerUmaVez(), ["loja-catalogo-v2"], {
   tags: [TAGS_LOJA.catalogo, TAGS_LOJA.menu, TAGS_LOJA.cupons],
   revalidate: 3600,
 });
