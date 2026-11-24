@@ -29,7 +29,8 @@ try {
   }
   const resumo = await unirDuplicados(PRODUTOS_UNIDOS, { simular: !aplicar });
   for (const par of resumo.pares) console.log(`  · ${par.situacao.padEnd(14)} ${par.arquivar} → ${par.manter}${par.fotosMovidas.length ? ` (+${par.fotosMovidas.length} foto${par.fotosMovidas.length > 1 ? 's' : ''})` : ''}${par.categoriaExtra ? ` [+${par.categoriaExtra}]` : ''}${par.situacao === 'nao_encontrado' ? ` — ${par.detalhe}` : ''}`);
-  console.log(aplicar ? `Unidos: ${resumo.unidos} · já estavam: ${resumo.jaUnidos} · não encontrados: ${resumo.naoEncontrados} · fotos movidas: ${resumo.fotosMovidas}` : 'Só conferência (nada gravado). Use --aplicar para unir.');
+  console.log(aplicar ? `Unidos: ${resumo.unidos} · já estavam: ${resumo.jaUnidos} · não encontrados: ${resumo.naoEncontrados} · fotos movidas: ${resumo.fotosMovidas} · textos de foto corrigidos: ${resumo.textosCorrigidos}` : `Só conferência (nada gravado): ${resumo.textosCorrigidos} texto(s) de foto a corrigir. Use --aplicar para gravar.`);
+  if (aplicar && (resumo.unidos || resumo.textosCorrigidos)) console.log('A loja reflete em até 1 h (cache do catálogo); salvar qualquer produto no ERP faz valer na hora.');
 } catch (erro) {
   console.log(`\nFalhou (${erro?.code || erro?.name || 'erro'}): ${erro?.message ?? ''}`);
   process.exitCode = 1;

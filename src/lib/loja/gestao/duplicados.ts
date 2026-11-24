@@ -16,7 +16,7 @@ export type ParUnido = {
   arquivar: string; manter: string; situacao: 'unido' | 'ja_unido' | 'a_unir' | 'nao_encontrado';
   fotosMovidas: string[]; categoriaExtra: string; detalhe: string;
 };
-export type ResumoDuplicados = { unidos: number; jaUnidos: number; naoEncontrados: number; fotosMovidas: number; pares: ParUnido[] };
+export type ResumoDuplicados = { unidos: number; jaUnidos: number; naoEncontrados: number; fotosMovidas: number; textosCorrigidos: number; pares: ParUnido[] };
 
 type LinhaProduto = { id: string; slug: string; nome: string; status: string; revisao: number };
 
@@ -28,6 +28,20 @@ async function produtoPorSlug(slug: string): Promise<LinhaProduto | null> {
 const fotosDe = async (produtoId: string) =>
   (await gestaoDb().prepare('SELECT id, posicao, hash FROM loja_produto_imagens WHERE produto_id = ? ORDER BY posicao').all(produtoId))
     .map((linha) => ({ id: texto(linha.id), posicao: Number(linha.posicao), hash: texto(linha.hash) }));
+
+/**
+ * Foto que veio do repetido não fica com o nome dele no texto alternativo ("Ninho Benjamin - foto 3" dentro
+ * do Ninho): passa a "<nome do mantido> - foto N". Devolve quantas trocou (ou trocaria, em `simular`).
+ */
+async function corrigirTextosDasFotos(mantido: LinhaProduto, nomeDoRepetido: string, simular: boolean) {
+  const database = gestaoDb();
+  const fotos = (await database.prepare('SELECT id, posicao, alt FROM loja_produto_imagens WHERE produto_id = ? ORDER BY posicao').all(mantido.id))
+    .filter((foto) => texto(foto.alt).startsWith(`${nomeDoRepetido} - foto`));
+  if (simular || !fotos.length) return fotos.length;
+  for (const foto of fotos) await database.prepare('UPDATE loja_produto_imagens SET alt = ? WHERE id = ?').run(`${mantido.nome} - foto ${Number(foto.posicao) + 1}`.slice(0, 200), texto(foto.id));
+  await database.prepare('UPDATE loja_produtos SET revisao = revisao + 1, atualizado = ? WHERE id = ?').run(Date.now(), mantido.id);
+  return fotos.length;
+}
 
 /** Retrato do que a união vai mexer (produtos e fotos dos pares), para guardar antes de aplicar. */
 export async function retratoDosPares(pares: readonly ProdutoUnido[]) {
@@ -48,14 +62,19 @@ export async function retratoDosPares(pares: readonly ProdutoUnido[]) {
 export async function unirDuplicados(pares: readonly ProdutoUnido[], { simular = false } = {}): Promise<ResumoDuplicados> {
   if (!simular) exigirGravacaoGestao();
   const database = gestaoDb();
-  const resumo: ResumoDuplicados = { unidos: 0, jaUnidos: 0, naoEncontrados: 0, fotosMovidas: 0, pares: [] };
+  const resumo: ResumoDuplicados = { unidos: 0, jaUnidos: 0, naoEncontrados: 0, fotosMovidas: 0, textosCorrigidos: 0, pares: [] };
 
   for (const par of pares) {
     const relato: ParUnido = { arquivar: par.arquivar, manter: par.manter, situacao: 'a_unir', fotosMovidas: [], categoriaExtra: '', detalhe: '' };
     resumo.pares.push(relato);
     const repetido = await produtoPorSlug(par.arquivar), mantido = await produtoPorSlug(par.manter);
     if (!repetido || !mantido) { relato.situacao = 'nao_encontrado'; relato.detalhe = `${!repetido ? par.arquivar : par.manter} não existe neste banco.`; resumo.naoEncontrados++; continue; }
-    if (repetido.status === 'arquivado') { relato.situacao = 'ja_unido'; resumo.jaUnidos++; continue; }
+    if (repetido.status === 'arquivado') {
+      relato.situacao = 'ja_unido'; resumo.jaUnidos++;
+      // Par unido antes desta correção: só acerta o texto das fotos que mudaram de produto.
+      resumo.textosCorrigidos += simular ? await corrigirTextosDasFotos(mantido, repetido.nome, true) : await database.transaction(async () => { await travarGestao(); return corrigirTextosDasFotos(mantido, repetido.nome, false); });
+      continue;
+    }
     // O mantido tem de estar na loja: arquivar o repetido de um produto fora do ar tiraria os dois.
     if (mantido.status !== 'ativo') throw new Error(`${par.manter} não está ativo (${mantido.status}); a união de ${par.arquivar} foi recusada.`);
 
@@ -79,6 +98,7 @@ export async function unirDuplicados(pares: readonly ProdutoUnido[], { simular =
         const restantes = (await fotosDe(repetido.id)).map((foto) => foto.id);
         for (const [nova, id] of restantes.entries()) await database.prepare('UPDATE loja_produto_imagens SET posicao = ? WHERE id = ?').run(nova, id);
         for (const id of [mantido.id, repetido.id]) await database.prepare('UPDATE loja_produtos SET revisao = revisao + 1, atualizado = ? WHERE id = ?').run(Date.now(), id);
+        resumo.textosCorrigidos += await corrigirTextosDasFotos(mantido, repetido.nome, false);
       }
       if (categoria) {
         const principal = await database.prepare('SELECT categoria_id FROM loja_produtos WHERE id = ?').get(mantido.id);

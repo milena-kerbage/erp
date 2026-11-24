@@ -514,7 +514,8 @@ test('duplicados: o repetido é arquivado, as fotos que faltavam mudam para o ma
   await enviarImagem(mantido.id, { conteudo: await foto('#d9c7b8'), revisao: mantido.revisao }, gestora);
   let revisao = Number(repetido.revisao);
   // A 1ª foto do repetido é a mesma do mantido (não muda de lugar); a 3ª é a que faltava.
-  for (const cor of ['#d9c7b8', '#a8b89c', '#7f8fa6']) revisao = (await enviarImagem(repetido.id, { conteudo: await foto(cor), revisao }, gestora)).revisao;
+  const nomeDoRepetido = (await produtoPorSlug(repetido.slug)).nome, nomeDoMantido = (await produtoPorSlug(mantido.slug)).nome;
+  for (const [n, cor] of ['#d9c7b8', '#a8b89c', '#7f8fa6'].entries()) revisao = (await enviarImagem(repetido.id, { conteudo: await foto(cor), revisao, alt: `${nomeDoRepetido} - foto ${n + 1}` }, gestora)).revisao;
   const categoria = (await listarCategorias()).categorias.find((item) => item.caminho === 'enxoval/mantas');
   const pares = [{ arquivar: repetido.slug, manter: mantido.slug, moverFotos: [0, 2], categoriaExtra: categoria.caminho }, { arquivar: 'nao-existe', manter: mantido.slug }];
 
@@ -528,6 +529,9 @@ test('duplicados: o repetido é arquivado, as fotos que faltavam mudam para o ma
   assert.deepEqual([resumo.unidos, resumo.fotosMovidas, resumo.naoEncontrados], [1, 1, 1]);
   assert.equal((await produtoPorSlug(repetido.slug)).status, 'arquivado');
   const fotos = (id) => gestaoDb().prepare('SELECT posicao, tipo FROM loja_produto_imagens WHERE produto_id = ? ORDER BY posicao').all(id);
+  // A foto que mudou de produto leva o nome do mantido no texto alternativo.
+  assert.equal((await gestaoDb().prepare('SELECT alt FROM loja_produto_imagens WHERE produto_id = ? AND posicao = 1').get(mantido.id)).alt, `${nomeDoMantido} - foto 2`);
+  assert.equal(resumo.textosCorrigidos, 1);
   assert.deepEqual(normal(await fotos(mantido.id)).map((item) => [Number(item.posicao), item.tipo]), [[0, 'principal'], [1, 'detalhe']]);
   assert.deepEqual(normal(await fotos(repetido.id)).map((item) => Number(item.posicao)), [0, 1]);
   const loja = await lerCatalogoDoBanco();
@@ -535,7 +539,12 @@ test('duplicados: o repetido é arquivado, as fotos que faltavam mudam para o ma
   assert.equal((await obterProduto(mantido.id)).produto.categoriasExtras.includes(categoria.id) || (await produtoPorSlug(mantido.slug)).categoria_id === categoria.id, true);
 
   const denovo = await unirDuplicados(pares);
-  assert.deepEqual([denovo.unidos, denovo.jaUnidos, denovo.fotosMovidas], [0, 1, 0]);
+  assert.deepEqual([denovo.unidos, denovo.jaUnidos, denovo.fotosMovidas, denovo.textosCorrigidos], [0, 1, 0, 0]);
+  // Par unido antes da correção do texto (foto ainda com o nome do repetido): repetir a rotina acerta.
+  await gestaoDb().prepare('UPDATE loja_produto_imagens SET alt = ? WHERE produto_id = ? AND posicao = 1').run(`${nomeDoRepetido} - foto 3`, mantido.id);
+  assert.equal((await unirDuplicados(pares, { simular: true })).textosCorrigidos, 1);
+  assert.equal((await unirDuplicados(pares)).textosCorrigidos, 1);
+  assert.equal((await gestaoDb().prepare('SELECT alt FROM loja_produto_imagens WHERE produto_id = ? AND posicao = 1').get(mantido.id)).alt, `${nomeDoMantido} - foto 2`);
   // Reativar no ERP desfaz o arquivamento.
   await atualizarProduto(repetido.id, { revisao: (await produtoPorSlug(repetido.slug)).revisao, status: 'ativo' }, gestora);
   assert.equal((await lerCatalogoDoBanco()).produtos.some((produto) => produto.slug === repetido.slug), true);
