@@ -6,6 +6,7 @@ import type { Produto } from "@/loja/lib/catalogo/exemplos";
 import type { BlocoEditorial as Bloco } from "@/loja/lib/catalogo/edicoes";
 import { intercalarBlocos, intercalarPropagandas, type LadoBloco } from "@/loja/lib/catalogo/listagem";
 import { ESTILOS, type Propaganda } from "@/loja/lib/catalogo/propagandas";
+import { MODULOS } from "@/loja/lib/modulos";
 import { BlocoEditorial } from "./BlocoEditorial";
 import { CardListagem, type DadosCard } from "./CardListagem";
 import { CardPropaganda } from "./CardPropaganda";
@@ -32,6 +33,8 @@ export function GradeListagem({
   blocos?: Bloco[];
   primeiraLinhaBlocos?: number;
 }) {
+  // Com as propagandas desligadas (src/loja/lib/modulos.ts), a grade é só de produtos, todos no mesmo padrão.
+  if (!MODULOS.propagandasNaListagem) { todasPropagandas = []; blocos = []; }
   const destinosBlocos = new Set(blocos.map((bloco) => bloco.href).filter(Boolean));
   const propagandas = todasPropagandas.filter((propaganda) => !destinosBlocos.has(propaganda.href));
   const lados: LadoBloco[] = blocos.map((bloco, indice) => bloco.lado ?? (indice % 2 === 0 ? "esquerda" : "direita"));

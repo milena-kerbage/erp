@@ -3,9 +3,14 @@
 // no código; o que muda é que eles somem do menu, da página inicial, do rodapé, do sitemap e do llms.txt, e os
 // endereços deles levam à página inicial (src/loja/proxy.ts). Para voltar: troque para `true` aqui.
 // Puro (sem React nem Next): usado no proxy, em rotas e em componentes.
+//
+// A pedido (24/11/2026), as PROPAGANDAS no meio das listagens também saem: os cartões de convite ("Neutro, para menina
+// ou menino") e os blocos editoriais largos ("Babados, flores e o nome"). As páginas de categoria e a busca mostram só
+// produtos, todos no mesmo padrão. O conteúdo continua no código (src/loja/lib/catalogo/propagandas.ts e edicoes.ts).
 export const MODULOS = {
   personalizado: false,
   prontaEntrega: false,
+  propagandasNaListagem: false,
 } as const;
 
 const caminhoDe = (href: string) => href.split(/[?#]/)[0];
